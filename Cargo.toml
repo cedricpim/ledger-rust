@@ -2,6 +2,13 @@
 name = "ledger"
 version = "0.1.0"
 authors = ["Cedric Pimenta <cedricpim@users.noreply.github.com>"]
+description = "A command line ledger."
+homepage = "https://github.com/cedricpim/ledger-rust"
+repository = "https://github.com/cedricpim/ledger-rust"
+readme = "README.md"
+keywords = ["ledger", "command"]
+license = "GNU General Public License v3.0"
 edition = "2019"
+autotests = false
 
 [dependencies]

@@ -8,7 +8,28 @@ repository = "https://github.com/cedricpim/ledger-rust"
 readme = "README.md"
 keywords = ["ledger", "command"]
 license = "GNU General Public License v3.0"
-edition = "2019"
+edition = "2018"
 autotests = false
 
+[[bin]]
+name = "ledger"
+test = false
+bench = false
+doctest = false
+
+# [[test]]
+# name = "tests"
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.release]
+opt-level = 3
+debug = false
+
 [dependencies]
+docopt="1"
+serde = { version = "1", features = ["derive"] }
+csv = "1.1"
+xdg = "^2.1"

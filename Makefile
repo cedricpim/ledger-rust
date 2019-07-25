@@ -7,3 +7,4 @@ debug:
 
 dev:
 	cargo build
+	target/debug/ledger

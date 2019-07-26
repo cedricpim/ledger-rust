@@ -1,0 +1,89 @@
+# Location for the ledger file holding all the information
+:ledger: "<%= XDG['CONFIG'] %>/ledger/ledger.csv"
+
+# Networth related options
+:networth:
+  :file: "<%= XDG['CONFIG'] %>/ledger/networth.csv"
+  :investments:
+    - 'Investment'
+  :exclude:
+    :accounts:
+      - 'Vacation'
+
+# Settings to be used by the gem that handles the exchange rates
+# For more information, see https://github.com/spk/money-open-exchange-rates#usage
+:exchange:
+  :api_key: 'your app id from https://openexchangerates.org/signup'
+  :cache_file: 'path/to/file/cache.json'
+  :ttl: 86400 # set the seconds after than the current rates are automatically expired
+
+# Fields that are present on the ledger as well as configurations for each field
+# Each field can contain the following:
+#   - default: "value" - Default value for the field when adding a transaction
+#   - presence: true/false - Value is required or not
+#   - values: List<"value"> - List of values available on TAB completion
+:fields:
+  :account:
+    :default: 'Account'
+    :presence: true
+  :date:
+    :default: "<%= Date.today %>"
+    :presence: true
+  :category:
+    :presence: true
+  :description:
+    :presence: false
+  :quantity:
+    :presence: false
+  :venue:
+    :presence: false
+  :amount:
+    :presence: true
+  :currency:
+    :default: 'USD'
+    :presence: true
+  :trip:
+    :presence: false
+
+# Configure values to be always excluded from reports
+:report:
+  :exclude:
+    :categories:
+      - 'Exchange'
+    :accounts:
+      - 'Vacation'
+
+# Define the set of formats to be used across the application
+:format:
+  :fields:
+    # For more information on the configuration values, please read:
+    # http://www.rubydoc.info/gems/money/Money/Formatting
+    :money:
+      # Format of the money when displaying it on the UI
+      :display:
+        :sign_positive: true
+        :decimal_mark: '.'
+        :thousands_separator: ','
+        :format: '%n%u'
+      # Format of the money when writing it to the ledger
+      :ledger:
+        :sign_positive: true
+        :decimal_mark: '.'
+        :thousands_separator: ''
+        :format: '%n%u'
+        :symbol: false
+
+# Values for configuring encryption on the ledger file
+:encryption:
+  # Enable or disable encryption
+  # The other settings are not required if enabled is set to false
+  :enabled: false
+  # Choose the algorithm encryption
+  # Options: `ruby -r openssl -e "puts OpenSSL::Cipher.ciphers.join('|')"`
+  :algorithm: AES-256-CBC
+  # Add credentials to encrypt the file. This is a shell command.
+  :credentials:
+    :salt: some_salt
+    :password: some_password
+    :salteval: gpg -q --for-your-eyes-only --no-tty -d salt.gpg
+    :passwordeval: gpg -q --for-your-eyes-only --no-tty -d password.gpg

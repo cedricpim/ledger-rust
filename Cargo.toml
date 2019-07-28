@@ -10,6 +10,7 @@ keywords = ["ledger", "command"]
 license = "GNU General Public License v3.0"
 edition = "2018"
 autotests = false
+include = ["**/*.rs", "Cargo.toml", "config/default"]
 
 [[bin]]
 name = "ledger"
@@ -33,3 +34,5 @@ docopt="1"
 serde = { version = "1", features = ["derive"] }
 csv = "1.1"
 xdg = "^2.1"
+serde_yaml = "0.8"
+shellexpand = "1.0"

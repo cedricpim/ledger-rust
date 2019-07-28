@@ -3,9 +3,11 @@ use serde::Deserialize;
 
 use std::env;
 use std::fmt;
+use std::io;
 use std::process;
 
 mod cmd;
+mod config;
 mod util;
 
 macro_rules! wout {
@@ -20,12 +22,6 @@ macro_rules! werr {
         use std::io::Write;
         (writeln!(&mut ::std::io::stderr(), $($arg)*)).unwrap();
     });
-}
-
-macro_rules! fail {
-    ($e:expr) => {
-        Err(::std::convert::From::from($e))
-    };
 }
 
 macro_rules! command_list {
@@ -50,12 +46,14 @@ macro_rules! command_list {
 static USAGE: &'static str = concat!(
     "
 Usage:
-    ledger <command> [<args>...] [options]
-    ledger --list
-    ledger --help
-    ledger --version
+    ledger <command> [<args>...]
+    ledger [options]
+
 Options:
-    <command> -h  Display the command help message
+    -l, --list      List commands
+    -h, --help      Display this message
+    -v, --version   Print version info and exit
+
 Commands:",
     command_list!()
 );
@@ -64,8 +62,6 @@ Commands:",
 struct Args {
     arg_command: Option<Command>,
     flag_list: bool,
-    flag_help: bool,
-    flag_version: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -76,30 +72,34 @@ enum Command {
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
-        .and_then(|d| d.version(Some(util::version())).deserialize())
+        .and_then(|d| {
+            d.options_first(true)
+                .version(Some(util::version()))
+                .deserialize()
+        })
         .unwrap_or_else(|e| e.exit());
 
-    println!("{:?}", args);
-
     if args.flag_list {
-        wout!(concat!("Installed commands:", command_list!()));
-        return;
+        return wout!(concat!("Installed commands:", command_list!()));
     }
 
     match args.arg_command {
         None => {
-            werr!(concat!(
-                "ledger is a command line tool for tracking expenses.
-
-Please choose one of the following commands:",
-                command_list!()
-            ));
-            process::exit(0);
+            werr!("ledger: try 'ledger --help' for more information");
+            process::exit(2);
         }
         Some(cmd) => match cmd.run() {
             Ok(()) => process::exit(0),
             Err(CliError::Flag(err)) => err.exit(),
             Err(CliError::Csv(err)) => {
+                werr!("{}", err);
+                process::exit(1);
+            }
+            Err(CliError::Io(err)) => {
+                werr!("{}", err);
+                process::exit(1);
+            }
+            Err(CliError::Yaml(err)) => {
                 werr!("{}", err);
                 process::exit(1);
             }
@@ -127,9 +127,9 @@ impl Command {
             ));
         }
 
-        match self {
+        return match self {
             Command::Edit => cmd::edit::run(argv),
-        }
+        };
     }
 }
 
@@ -139,6 +139,8 @@ pub type CliResult<T> = Result<T, CliError>;
 pub enum CliError {
     Flag(docopt::Error),
     Csv(csv::Error),
+    Io(io::Error),
+    Yaml(serde_yaml::Error),
     Other(String),
 }
 
@@ -147,6 +149,8 @@ impl fmt::Display for CliError {
         match *self {
             CliError::Flag(ref e) => e.fmt(f),
             CliError::Csv(ref e) => e.fmt(f),
+            CliError::Io(ref e) => e.fmt(f),
+            CliError::Yaml(ref e) => e.fmt(f),
             CliError::Other(ref s) => f.write_str(&**s),
         }
     }
@@ -161,6 +165,18 @@ impl From<docopt::Error> for CliError {
 impl From<csv::Error> for CliError {
     fn from(err: csv::Error) -> CliError {
         CliError::Csv(err)
+    }
+}
+
+impl From<io::Error> for CliError {
+    fn from(err: io::Error) -> CliError {
+        CliError::Io(err)
+    }
+}
+
+impl From<serde_yaml::Error> for CliError {
+    fn from(err: serde_yaml::Error) -> CliError {
+        CliError::Yaml(err)
     }
 }
 

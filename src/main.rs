@@ -1,17 +1,14 @@
 use docopt::Docopt;
 use serde::Deserialize;
-use custom_error::custom_error;
 
-use std::env;
-use std::fmt;
-use std::io;
-use std::process;
+use std::{env, process};
 
 mod cmd;
 mod config;
-mod util;
-mod repository;
 mod crypto;
+mod error;
+mod repository;
+mod util;
 
 macro_rules! wout {
     ($($arg:tt)*) => ({
@@ -46,6 +43,8 @@ macro_rules! command_list {
     )
 }
 
+static EXECUTABLE: &'static str = "ledger: try 'ledger --help' for more information";
+
 static USAGE: &'static str = concat!(
     "
 Usage:
@@ -60,6 +59,8 @@ Options:
 Commands:",
     command_list!()
 );
+
+pub type CliResult<T> = Result<T, error::CliError>;
 
 #[derive(Debug, Deserialize)]
 struct Args {
@@ -90,30 +91,13 @@ fn main() {
 
     match args.arg_command {
         None => {
-            werr!("ledger: try 'ledger --help' for more information");
+            werr!("{}", EXECUTABLE);
             process::exit(2);
         }
         Some(cmd) => match cmd.run() {
             Ok(()) => process::exit(0),
-            Err(CliError::Flag(err)) => err.exit(),
-            Err(CliError::Csv(err)) => {
+            Err(err) => {
                 werr!("{}", err);
-                process::exit(1);
-            }
-            Err(CliError::Io(err)) => {
-                werr!("{}", err);
-                process::exit(1);
-            }
-            Err(CliError::Yaml(err)) => {
-                werr!("{}", err);
-                process::exit(1);
-            }
-            Err(CliError::Custom(err)) => {
-                werr!("{}", err);
-                process::exit(1);
-            }
-            Err(CliError::Other(msg)) => {
-                werr!("{}", msg);
                 process::exit(1);
             }
         },
@@ -127,90 +111,13 @@ impl Command {
         let argv = &*argv;
 
         if !argv[1].chars().all(char::is_lowercase) {
-            return Err(CliError::Other(
-                format!(
-                    "ledger expects commands in lowercase. Did you mean '{}'?",
-                    argv[1].to_lowercase()
-                )
-                .to_string(),
-            ));
+            return Err(error::CliError::InvalidCommand {
+                command: argv[1].to_lowercase(),
+            });
         }
 
         return match self {
             Command::Edit => cmd::edit::run(argv),
         };
-    }
-}
-
-pub type CliResult<T> = Result<T, CliError>;
-
-#[derive(Debug)]
-pub enum CliError {
-    Flag(docopt::Error),
-    Csv(csv::Error),
-    Io(io::Error),
-    Yaml(serde_yaml::Error),
-    Custom(CustomError),
-    Other(String),
-}
-
-custom_error!{ pub CustomError
-    MissingFile{file:String} = "Missing key '{file}' under file on configuration file",
-    MissingConfiguration     = "Configuration file does not exist",
-    Err41                  = "Sit by a lake"
-}
-
-impl fmt::Display for CliError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            CliError::Flag(ref e) => e.fmt(f),
-            CliError::Csv(ref e) => e.fmt(f),
-            CliError::Io(ref e) => e.fmt(f),
-            CliError::Yaml(ref e) => e.fmt(f),
-            CliError::Custom(ref e) => e.fmt(f),
-            CliError::Other(ref s) => f.write_str(&**s),
-        }
-    }
-}
-
-impl From<docopt::Error> for CliError {
-    fn from(err: docopt::Error) -> CliError {
-        CliError::Flag(err)
-    }
-}
-
-impl From<csv::Error> for CliError {
-    fn from(err: csv::Error) -> CliError {
-        CliError::Csv(err)
-    }
-}
-
-impl From<io::Error> for CliError {
-    fn from(err: io::Error) -> CliError {
-        CliError::Io(err)
-    }
-}
-
-impl From<serde_yaml::Error> for CliError {
-    fn from(err: serde_yaml::Error) -> CliError {
-        CliError::Yaml(err)
-    }
-}
-
-impl From<CustomError> for CliError {
-    fn from(err: CustomError) -> CliError {
-        CliError::Custom(err)
-    }
-}
-
-impl From<String> for CliError {
-    fn from(err: String) -> CliError {
-        CliError::Other(err)
-    }
-}
-
-impl<'a> From<&'a str> for CliError {
-    fn from(err: &'a str) -> CliError {
-        CliError::Other(err.to_owned())
     }
 }

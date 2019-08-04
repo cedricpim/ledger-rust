@@ -2,16 +2,14 @@ use serde::Deserialize;
 
 use std::process::Command;
 
-use crate::CliResult;
-use crate::CliError;
-use crate::util;
-use crate::config;
-
+use crate::{config,util,CliResult};
 
 static USAGE: &'static str = "
 Allows editing of the CSV (ledger or networth).
 
-Sometimes the best way to do any changes to the CSV is by opening the preferred editor (defined on $EDITOR) and do the changes directly. This command does just that, while handling the decryption/encryption (if enabled).
+Sometimes the best way to do any changes to the CSV is by opening the preferred editor (defined on
+$EDITOR) and do the changes directly. This command does just that, while handling the
+decryption/encryption (if enabled).
 
 Usage:
     ledger edit [options]
@@ -38,25 +36,19 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 
 impl Args {
     fn edit(&self, config: config::Config) -> CliResult<()> {
-        let editor = Args::editor()?;
-
-        let key = if self.flag_networth { "networth" } else { "ledger" };
-        let mut filepath = config.filepath(&key)?;
-
-        if self.flag_line != 0 {
-            let suffix = ":".to_owned() + &self.flag_line.to_string();
-            filepath.push_str(&suffix);
-        }
+        let editor = util::editor()?;
+        let filepath = self.filepath(config)?;
 
         Command::new(editor).arg(filepath).status()?;
 
         return Ok(());
     }
 
-    fn editor() -> CliResult<String> {
-        return match option_env!("EDITOR") {
-            None => Err(CliError::from("EDITOR variable is not set")),
-            Some(val) => Ok(val.to_string())
+    fn filepath(&self, config: config::Config) -> CliResult<String> {
+        return if self.flag_line == 0 {
+            config.filepath(self.flag_networth)
+        } else {
+            Ok(format!("{}:{}", config.filepath(self.flag_networth)?, self.flag_line))
         };
     }
 }

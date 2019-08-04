@@ -1,6 +1,8 @@
-use crate::CliResult;
 use docopt::Docopt;
 use serde::de::DeserializeOwned;
+
+use crate::CliResult;
+use crate::error::CliError;
 
 pub fn version() -> String {
     let (maj, min, pat) = (
@@ -21,4 +23,11 @@ pub fn get_args<T>(usage: &str, argv: &[&str]) -> CliResult<T>
                                 .version(Some(version()))
                                 .deserialize())
                 .map_err(From::from)
+}
+
+pub fn editor() -> CliResult<String> {
+    return match option_env!("EDITOR") {
+        None => Err(CliError::UndefinedEditor),
+        Some(val) => Ok(val.to_string()),
+    };
 }

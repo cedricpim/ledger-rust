@@ -1,15 +1,13 @@
 use std::str::FromStr;
 
-use crate::config;
-use crate::CliResult;
-use crate::crypto;
+use crate::{config,CliResult,crypto};
 
 pub fn ledger() -> CliResult<()> {
     let config = config::load()?;
 
     match config.pass() {
         Some(pass) => {
-            let filepath = config.filepath(&"ledger")?;
+            let filepath = config.filepath(false)?;
 
             let mut in_file = std::fs::File::open(filepath)?;
 

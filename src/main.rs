@@ -1,5 +1,6 @@
 use docopt::Docopt;
 use serde::Deserialize;
+use custom_error::custom_error;
 
 use std::env;
 use std::fmt;
@@ -9,6 +10,8 @@ use std::process;
 mod cmd;
 mod config;
 mod util;
+mod repository;
+mod crypto;
 
 macro_rules! wout {
     ($($arg:tt)*) => ({
@@ -71,6 +74,8 @@ enum Command {
 }
 
 fn main() {
+    let _x = repository::ledger();
+
     let args: Args = Docopt::new(USAGE)
         .and_then(|d| {
             d.options_first(true)
@@ -100,6 +105,10 @@ fn main() {
                 process::exit(1);
             }
             Err(CliError::Yaml(err)) => {
+                werr!("{}", err);
+                process::exit(1);
+            }
+            Err(CliError::Custom(err)) => {
                 werr!("{}", err);
                 process::exit(1);
             }
@@ -141,7 +150,14 @@ pub enum CliError {
     Csv(csv::Error),
     Io(io::Error),
     Yaml(serde_yaml::Error),
+    Custom(CustomError),
     Other(String),
+}
+
+custom_error!{ pub CustomError
+    MissingFile{file:String} = "Missing key '{file}' under file on configuration file",
+    MissingConfiguration     = "Configuration file does not exist",
+    Err41                  = "Sit by a lake"
 }
 
 impl fmt::Display for CliError {
@@ -151,6 +167,7 @@ impl fmt::Display for CliError {
             CliError::Csv(ref e) => e.fmt(f),
             CliError::Io(ref e) => e.fmt(f),
             CliError::Yaml(ref e) => e.fmt(f),
+            CliError::Custom(ref e) => e.fmt(f),
             CliError::Other(ref s) => f.write_str(&**s),
         }
     }
@@ -177,6 +194,12 @@ impl From<io::Error> for CliError {
 impl From<serde_yaml::Error> for CliError {
     fn from(err: serde_yaml::Error) -> CliError {
         CliError::Yaml(err)
+    }
+}
+
+impl From<CustomError> for CliError {
+    fn from(err: CustomError) -> CliError {
+        CliError::Custom(err)
     }
 }
 

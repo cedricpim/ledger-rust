@@ -37,10 +37,11 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 }
 
 impl Args {
-    fn edit(&self, config: serde_yaml::Value) -> CliResult<()> {
+    fn edit(&self, config: config::Config) -> CliResult<()> {
         let editor = Args::editor()?;
 
-        let mut filepath = self.filepath(config)?;
+        let key = if self.flag_networth { "networth" } else { "ledger" };
+        let mut filepath = config.filepath(&key)?;
 
         if self.flag_line != 0 {
             let suffix = ":".to_owned() + &self.flag_line.to_string();
@@ -50,15 +51,6 @@ impl Args {
         Command::new(editor).arg(filepath).status()?;
 
         return Ok(());
-    }
-
-    fn filepath(&self, config: serde_yaml::Value) -> CliResult<String> {
-        let key = if self.flag_networth { "networth" } else { "ledger" };
-
-        return match config.get("file").and_then(|v| v.get(key)).and_then(|v| v.as_str()) {
-            None => Err(CliError::from("Missing key 'ledger' on configuration file")),
-            Some(val) => Ok(shellexpand::tilde(val).to_string())
-        };
     }
 
     fn editor() -> CliResult<String> {

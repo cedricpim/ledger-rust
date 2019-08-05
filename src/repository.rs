@@ -1,35 +1,56 @@
-use std::str::FromStr;
+use std::fs::File;
+use std::io::{Read, Write};
 
-use crate::{config,CliResult,crypto};
+use crate::{config, crypto, CliResult};
 
-pub fn ledger() -> CliResult<()> {
-    let config = config::load()?;
-
-    match config.pass() {
-        Some(pass) => {
-            let filepath = config.filepath(false)?;
-
-            let mut in_file = std::fs::File::open(filepath)?;
-
-            let mut out_file = std::fs::File::create("x2")?;
-
-            crypto::encrypt(&mut in_file, &mut out_file, &pass)?;
-
-            let path2 = std::path::PathBuf::from_str("x2").unwrap();
-            let mut in_file2 = std::fs::File::open(path2)?;
-            let mut out_file2 = std::fs::File::create("x3")?;
-
-            crypto::decrypt(&mut in_file2, &mut out_file2, &pass)?;
-        },
-        None => {
-
-        }
-    }
-
-    // Check if it has encryption if enabled. If not, just return file (or tempfile?)
-    return Ok(());
+pub struct Resource {
+    pass: Option<String>,
+    filepath: String,
+    tempfile: tempfile::NamedTempFile,
 }
 
-// pub fn networth() {
-//
-// }
+impl Resource {
+    pub fn new(config: config::Config, networth: Option<bool>) -> CliResult<Resource> {
+        return Ok(Resource {
+            pass: config.pass(),
+            filepath: config.filepath(networth)?,
+            tempfile: tempfile::NamedTempFile::new()?,
+        });
+    }
+
+    pub fn apply<F>(&self, action: F) -> CliResult<()>
+    where
+        F: FnOnce(&tempfile::NamedTempFile) -> CliResult<()>,
+    {
+        match &self.pass {
+            Some(pass) => {
+                let mut in_file = File::open(&self.filepath)?;
+                let mut out_file = self.tempfile.reopen()?;
+                crypto::decrypt(&mut in_file, &mut out_file, &pass)?;
+
+                action(&self.tempfile)?;
+
+                let mut in_file = File::create(&self.filepath)?;
+                let mut out_file = self.tempfile.reopen()?;
+                crypto::encrypt(&mut out_file, &mut in_file, &pass)?;
+            }
+            None => {
+                let mut out_file = self.tempfile.reopen()?;
+                let mut in_file = File::open(&self.filepath)?;
+                let mut buf = String::new();
+                in_file.read_to_string(&mut buf)?;
+                out_file.write_all(buf.as_bytes())?;
+
+                action(&self.tempfile)?;
+
+                let mut in_file = File::create(&self.filepath)?;
+                let mut out_file = self.tempfile.reopen()?;
+                let mut buf = String::new();
+                out_file.read_to_string(&mut buf)?;
+                in_file.write_all(buf.as_bytes())?;
+            }
+        };
+
+        return Ok(());
+    }
+}

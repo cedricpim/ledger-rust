@@ -75,8 +75,6 @@ enum Command {
 }
 
 fn main() {
-    let _x = repository::ledger();
-
     let args: Args = Docopt::new(USAGE)
         .and_then(|d| {
             d.options_first(true)

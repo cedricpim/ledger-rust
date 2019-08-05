@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 use std::process::Command;
 
-use crate::{config,util,CliResult};
+use crate::{config, repository, util, CliResult};
 
 static USAGE: &'static str = "
 Allows editing of the CSV (ledger or networth).
@@ -23,7 +23,7 @@ Options:
 #[derive(Debug, Deserialize)]
 struct Args {
     flag_line: i32,
-    flag_networth: bool,
+    flag_networth: bool
 }
 
 pub fn run(argv: &[&str]) -> CliResult<()> {
@@ -37,18 +37,20 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 impl Args {
     fn edit(&self, config: config::Config) -> CliResult<()> {
         let editor = util::editor()?;
-        let filepath = self.filepath(config)?;
+        let resource = repository::Resource::new(config, Some(self.flag_networth))?;
 
-        Command::new(editor).arg(filepath).status()?;
-
-        return Ok(());
+        return resource.apply(|file| {
+            let filepath = self.filepath(file.path().display());
+            Command::new(editor).arg(filepath).status()?;
+            return Ok(());
+        });
     }
 
-    fn filepath(&self, config: config::Config) -> CliResult<String> {
+    fn filepath(&self, filepath: std::path::Display) -> String {
         return if self.flag_line == 0 {
-            config.filepath(self.flag_networth)
+            format!("{}", filepath)
         } else {
-            Ok(format!("{}:{}", config.filepath(self.flag_networth)?, self.flag_line))
+            format!("{}:{}", filepath, self.flag_line)
         };
     }
 }

@@ -15,11 +15,10 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn filepath(&self, networth: bool) -> CliResult<String> {
-        let key = if networth {
-            "networth"
-        } else {
-            "ledger"
+    pub fn filepath(&self, networth: Option<bool>) -> CliResult<String> {
+        let key = match networth {
+            Some(true) => "networth",
+            _ => "ledger"
         };
 
         return match self

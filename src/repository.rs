@@ -24,30 +24,22 @@ impl Resource {
     {
         match &self.pass {
             Some(pass) => {
-                let mut in_file = File::open(&self.filepath)?;
                 let mut out_file = self.tempfile.reopen()?;
+                let mut in_file = File::open(&self.filepath)?;
                 crypto::decrypt(&mut in_file, &mut out_file, &pass)?;
 
                 action(&self.tempfile)?;
 
-                let mut in_file = File::create(&self.filepath)?;
-                let mut out_file = self.tempfile.reopen()?;
-                crypto::encrypt(&mut out_file, &mut in_file, &pass)?;
+                let mut in_file = self.tempfile.reopen()?;
+                let mut out_file = File::create(&self.filepath)?;
+                crypto::encrypt(&mut in_file, &mut out_file, &pass)?;
             }
             None => {
-                let mut out_file = self.tempfile.reopen()?;
-                let mut in_file = File::open(&self.filepath)?;
-                let mut buf = String::new();
-                in_file.read_to_string(&mut buf)?;
-                out_file.write_all(buf.as_bytes())?;
+                std::fs::copy(&self.filepath, self.tempfile.path())?;
 
                 action(&self.tempfile)?;
 
-                let mut in_file = File::create(&self.filepath)?;
-                let mut out_file = self.tempfile.reopen()?;
-                let mut buf = String::new();
-                out_file.read_to_string(&mut buf)?;
-                in_file.write_all(buf.as_bytes())?;
+                std::fs::copy(self.tempfile.path(), &self.filepath)?;
             }
         };
 

@@ -1,5 +1,4 @@
 use std::fs::File;
-use std::io::{Read, Write};
 
 use crate::{config, crypto, CliResult};
 

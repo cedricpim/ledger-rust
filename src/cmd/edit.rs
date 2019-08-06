@@ -23,7 +23,7 @@ Options:
 #[derive(Debug, Deserialize)]
 struct Args {
     flag_line: i32,
-    flag_networth: bool
+    flag_networth: bool,
 }
 
 pub fn run(argv: &[&str]) -> CliResult<()> {

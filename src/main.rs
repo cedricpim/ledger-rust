@@ -1,8 +1,8 @@
 use docopt::Docopt;
 use serde::Deserialize;
 
-use std::{env, process};
 use std::io::Write;
+use std::{env, process};
 
 mod cmd;
 mod config;
@@ -71,7 +71,11 @@ fn main() {
         .unwrap_or_else(|e| e.exit());
 
     if args.flag_list {
-        return writeln!(&mut ::std::io::stdout(), concat!("Installed commands:", command_list!())).unwrap();
+        return writeln!(
+            &mut ::std::io::stdout(),
+            concat!("Installed commands:", command_list!())
+        )
+        .unwrap();
     }
 
     match args.arg_command {

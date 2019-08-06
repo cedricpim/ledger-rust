@@ -4,8 +4,8 @@ use xdg;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
-use crate::CliResult;
 use crate::error::CliError;
+use crate::CliResult;
 
 const CONFIGURATION_FILENAME: &'static str = "rust-config";
 
@@ -18,7 +18,7 @@ impl Config {
     pub fn filepath(&self, networth: Option<bool>) -> CliResult<String> {
         let key = match networth {
             Some(true) => "networth",
-            _ => "ledger"
+            _ => "ledger",
         };
 
         return match self

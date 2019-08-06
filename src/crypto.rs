@@ -14,15 +14,15 @@ pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str) -> CliRe
     let mut buf = [0; CHUNK_SIZE];
     let mut bytes_left = in_file.metadata()?.len();
 
-    out_file.write(&SIGNATURE)?;
+    out_file.write_all(&SIGNATURE)?;
 
     let salt = pwhash::gen_salt();
-    out_file.write(&salt.0)?;
+    out_file.write_all(&salt.0)?;
 
     let key = key(&password, &salt)?;
     let (mut stream, header) =
         secretstream::Stream::init_push(&key).map_err(|_| CliError::CryptoPushFailed)?;
-    out_file.write(&header.0)?;
+    out_file.write_all(&header.0)?;
 
     loop {
         match (*in_file).read(&mut buf) {
@@ -32,7 +32,7 @@ pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str) -> CliRe
                     0 => secretstream::Tag::Final,
                     _ => secretstream::Tag::Message,
                 };
-                out_file.write(
+                out_file.write_all(
                     &stream
                         .push(&buf[..num_read], None, tag)
                         .map_err(|_| CliError::EncryptionFailed)?,
@@ -43,12 +43,12 @@ pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str) -> CliRe
         }
     }
 
-    return Ok(());
+    Ok(())
 }
 
 pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str) -> CliResult<()> {
-    if !(in_file.metadata()?.len()
-        > (pwhash::SALTBYTES + secretstream::HEADERBYTES + SIGNATURE.len()) as u64)
+    if in_file.metadata()?.len()
+        <= (pwhash::SALTBYTES + secretstream::HEADERBYTES + SIGNATURE.len()) as u64
     {
         return Err(CliError::NotEncrypted);
     }
@@ -62,7 +62,7 @@ pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str) -> CliRe
         in_file.read_exact(&mut salt)?;
     } else {
         // or take the bytes from signature and read the rest from file
-        &mut salt[..4].copy_from_slice(&signature);
+        salt[..4].copy_from_slice(&signature);
         in_file.read_exact(&mut salt[4..])?;
     }
     let salt = pwhash::Salt(salt);
@@ -83,19 +83,19 @@ pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str) -> CliRe
                 let (decrypted, _tag) = stream
                     .pull(&buffer[..num_read], None)
                     .map_err(|_| CliError::CryptoIncorrectPassword)?;
-                out_file.write(&decrypted)?;
+                out_file.write_all(&decrypted)?;
             }
             Err(_) => return Err(CliError::CryptoIncorrectPassword),
             _ => return Err(CliError::DecryptionFailed),
         }
     }
-    return Ok(());
+    Ok(())
 }
 
 fn key(password: &str, salt: &pwhash::Salt) -> CliResult<secretstream::Key> {
     let mut key = [0u8; secretstream::KEYBYTES];
 
-    return match pwhash::derive_key(
+    match pwhash::derive_key(
         &mut key,
         password.as_bytes(),
         &salt,
@@ -103,6 +103,6 @@ fn key(password: &str, salt: &pwhash::Salt) -> CliResult<secretstream::Key> {
         pwhash::MEMLIMIT_INTERACTIVE,
     ) {
         Ok(_) => Ok(secretstream::Key(key)),
-        Err(_) => return Err(CliError::CryptoDerivingKeyFailed),
-    };
+        Err(_) => Err(CliError::CryptoDerivingKeyFailed),
+    }
 }

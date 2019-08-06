@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use crate::error::CliError;
 use crate::CliResult;
 
-const CONFIGURATION_FILENAME: &'static str = "rust-config";
+const CONFIGURATION_FILENAME: &str = "rust-config";
 
 #[derive(Debug)]
 pub struct Config {
@@ -21,7 +21,7 @@ impl Config {
             _ => "ledger",
         };
 
-        return match self
+        match self
             .data
             .get("file")
             .and_then(|v| v.get(key))
@@ -31,15 +31,14 @@ impl Config {
                 file: key.to_string(),
             }),
             Some(val) => Ok(shellexpand::tilde(val).to_string()),
-        };
+        }
     }
 
     pub fn pass(&self) -> Option<String> {
-        return self
-            .data
+        self.data
             .get("encryption")
             .and_then(|v| v.as_str())
-            .and_then(|v| Some(v.to_string()));
+            .and_then(|v| Some(v.to_string()))
     }
 }
 
@@ -52,11 +51,11 @@ pub fn load() -> CliResult<Config> {
 
     let file = File::open(config_path)?;
     let data: serde_yaml::Value = serde_yaml::from_reader(file)?;
-    return Ok(Config { data });
+    Ok(Config { data })
 }
 
 fn configuration() -> std::io::Result<PathBuf> {
     let xdg_dirs = xdg::BaseDirectories::with_prefix(env!("CARGO_PKG_NAME")).unwrap();
     let config_path = xdg_dirs.place_config_file(CONFIGURATION_FILENAME)?;
-    return Ok(config_path);
+    Ok(config_path)
 }

@@ -10,11 +10,11 @@ pub struct Resource {
 
 impl Resource {
     pub fn new(config: config::Config, networth: Option<bool>) -> CliResult<Resource> {
-        return Ok(Resource {
+        Ok(Resource {
             pass: config.pass(),
             filepath: config.filepath(networth)?,
             tempfile: tempfile::NamedTempFile::new()?,
-        });
+        })
     }
 
     pub fn apply<F>(&self, action: F) -> CliResult<()>
@@ -42,6 +42,6 @@ impl Resource {
             }
         };
 
-        return Ok(());
+        Ok(())
     }
 }

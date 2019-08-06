@@ -31,7 +31,7 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 
     let args: Args = util::get_args(USAGE, argv)?;
 
-    return args.edit(config);
+    args.edit(config)
 }
 
 impl Args {
@@ -39,18 +39,18 @@ impl Args {
         let editor = util::editor()?;
         let resource = repository::Resource::new(config, Some(self.flag_networth))?;
 
-        return resource.apply(|file| {
+        resource.apply(|file| {
             let filepath = self.filepath(file.path().display());
             Command::new(editor).arg(filepath).status()?;
-            return Ok(());
-        });
+            Ok(())
+        })
     }
 
     fn filepath(&self, filepath: std::path::Display) -> String {
-        return if self.flag_line == 0 {
+        if self.flag_line == 0 {
             format!("{}", filepath)
         } else {
             format!("{}:{}", filepath, self.flag_line)
-        };
+        }
     }
 }

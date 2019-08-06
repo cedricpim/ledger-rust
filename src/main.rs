@@ -105,8 +105,8 @@ impl Command {
             });
         }
 
-        return match self {
+        match self {
             Command::Edit => cmd::edit::run(argv),
-        };
+        }
     }
 }

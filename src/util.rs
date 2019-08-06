@@ -22,7 +22,7 @@ where
 {
     Docopt::new(usage)
         .and_then(|d| {
-            d.argv(argv.iter().map(|&x| x))
+            d.argv(argv.iter().copied())
                 .version(Some(version()))
                 .deserialize()
         })
@@ -30,8 +30,8 @@ where
 }
 
 pub fn editor() -> CliResult<String> {
-    return match option_env!("EDITOR") {
+    match option_env!("EDITOR") {
         None => Err(CliError::UndefinedEditor),
         Some(val) => Ok(val.to_string()),
-    };
+    }
 }

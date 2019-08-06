@@ -2,6 +2,7 @@ use docopt::Docopt;
 use serde::Deserialize;
 
 use std::{env, process};
+use std::io::Write;
 
 mod cmd;
 mod config;
@@ -9,20 +10,6 @@ mod crypto;
 mod error;
 mod repository;
 mod util;
-
-macro_rules! wout {
-    ($($arg:tt)*) => ({
-        use std::io::Write;
-        (writeln!(&mut ::std::io::stdout(), $($arg)*)).unwrap();
-    });
-}
-
-macro_rules! werr {
-    ($($arg:tt)*) => ({
-        use std::io::Write;
-        (writeln!(&mut ::std::io::stderr(), $($arg)*)).unwrap();
-    });
-}
 
 macro_rules! command_list {
     () => (
@@ -84,18 +71,18 @@ fn main() {
         .unwrap_or_else(|e| e.exit());
 
     if args.flag_list {
-        return wout!(concat!("Installed commands:", command_list!()));
+        return writeln!(&mut ::std::io::stdout(), concat!("Installed commands:", command_list!())).unwrap();
     }
 
     match args.arg_command {
         None => {
-            werr!("{}", EXECUTABLE);
+            writeln!(&mut ::std::io::stderr(), "{}", EXECUTABLE).unwrap();
             process::exit(2);
         }
         Some(cmd) => match cmd.run() {
             Ok(()) => process::exit(0),
             Err(err) => {
-                werr!("{}", err);
+                writeln!(&mut ::std::io::stderr(), "{}", err).unwrap();
                 process::exit(1);
             }
         },

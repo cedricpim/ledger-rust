@@ -12,7 +12,7 @@ impl Resource {
     pub fn new(config: config::Config, networth: Option<bool>) -> CliResult<Resource> {
         Ok(Resource {
             pass: config.pass(),
-            filepath: config.filepath(networth)?,
+            filepath: config.filepath(networth),
             tempfile: tempfile::NamedTempFile::new()?,
         })
     }

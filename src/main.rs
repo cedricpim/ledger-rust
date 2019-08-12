@@ -59,6 +59,7 @@ struct Args {
 #[serde(rename_all = "lowercase")]
 enum Command {
     Edit,
+    Configure,
 }
 
 fn main() {
@@ -107,6 +108,7 @@ impl Command {
 
         match self {
             Command::Edit => cmd::edit::run(argv),
+            Command::Configure => cmd::configure::run(argv),
         }
     }
 }

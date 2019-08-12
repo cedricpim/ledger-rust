@@ -10,7 +10,6 @@ keywords = ["ledger", "command"]
 license = "GNU General Public License v3.0"
 edition = "2018"
 autotests = false
-include = ["**/*.rs", "Cargo.toml", "config/default"]
 
 [[bin]]
 name = "ledger"
@@ -39,3 +38,4 @@ shellexpand = "1.0"
 sodiumoxide = "0.2.2"
 custom_error = "1.7.1"
 tempfile = "3"
+rand = "0.7.0"

@@ -42,13 +42,13 @@ impl Args {
             Err(CliError::ExistingConfiguration)
         } else {
             config::create_default_file(&config_path)?;
-            writeln!(
-                &mut ::std::io::stdout(),
-                "{} {}.",
-                SUCCESS,
-                config_path.as_path().display()
-            )?;
+            Args::message(config_path.as_path().display().to_string())?;
             Ok(())
         }
+    }
+
+    fn message(filepath: String) -> CliResult<()> {
+        writeln!(&mut ::std::io::stdout(), "{} {}.", SUCCESS, filepath)?;
+        Ok(())
     }
 }

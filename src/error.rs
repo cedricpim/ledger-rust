@@ -9,6 +9,7 @@ custom_error! { pub CliError
 
     IncorrectPath { filename: String } = "An error occurred while determining the path to {filename}",
     ExistingConfiguration              = "Configuration file already exists, use --force to overwrite it",
+    ExistingFile  { filepath: String } = "File {filepath} already exists, use --force to overwrite it",
     InvalidCommand { command: String } = "ledger expects commands in lowercase. Did you mean '{command}'?",
     UndefinedEditor                    = "EDITOR variable is not set",
     CryptoPushFailed                   = "init_push failed",

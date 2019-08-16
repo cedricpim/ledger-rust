@@ -27,9 +27,9 @@ struct Args {
 }
 
 pub fn run(argv: &[&str]) -> CliResult<()> {
-    let config = config::load()?;
-
     let args: Args = util::get_args(USAGE, argv)?;
+
+    let config = config::load()?;
 
     args.edit(config)
 }
@@ -37,7 +37,7 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 impl Args {
     fn edit(&self, config: config::Config) -> CliResult<()> {
         let editor = util::editor()?;
-        let resource = repository::Resource::new(config, Some(self.flag_networth))?;
+        let resource = repository::Resource::new(config, self.flag_networth)?;
 
         resource.apply(|file| {
             let filepath = self.filepath(file.path().display());

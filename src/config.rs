@@ -27,10 +27,11 @@ struct Files {
 }
 
 impl Config {
-    pub fn filepath(&self, networth: Option<bool>) -> String {
-        let val = match networth {
-            Some(true) => &self.files.networth,
-            _ => &self.files.ledger,
+    pub fn filepath(&self, networth: bool) -> String {
+        let val = if networth {
+            &self.files.networth
+        } else {
+            &self.files.ledger
         };
 
         shellexpand::tilde(val).to_string()

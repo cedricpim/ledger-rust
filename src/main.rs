@@ -1,21 +1,38 @@
 use docopt::Docopt;
 use serde::Deserialize;
 
-use std::io::Write;
 use std::{env, process};
 
 mod cmd;
 mod config;
 mod crypto;
+mod entry;
 mod error;
 mod repository;
+mod transaction;
 mod util;
+
+#[macro_export]
+macro_rules! wout {
+    ($($arg:tt)*) => ({
+        use std::io::Write;
+        (writeln!(&mut ::std::io::stdout(), $($arg)*)).unwrap();
+    });
+}
+
+macro_rules! werr {
+    ($($arg:tt)*) => ({
+        use std::io::Write;
+        (writeln!(&mut ::std::io::stderr(), $($arg)*)).unwrap();
+    });
+}
 
 macro_rules! command_list {
     () => (
 "
 Implemented:
     configure   Copy provided configuration file to the default location
+    create      Create a new ledger/networth file
     edit        Open ledger/networth file in your editor
 
 To be implemented:
@@ -24,7 +41,6 @@ To be implemented:
     book        Add a transaction to the ledger
     compare     Compare multiple periods
     convert     Convert other currencies to main currency of the account
-    create      Create a new ledger/networth file
     networth    Calculate current networth
     report      Create a report about the transactions on the ledger according to any params provided
     show        Display all transactions
@@ -63,6 +79,7 @@ struct Args {
 enum Command {
     Edit,
     Configure,
+    Create,
 }
 
 fn main() {
@@ -75,22 +92,18 @@ fn main() {
         .unwrap_or_else(|e| e.exit());
 
     if args.flag_list {
-        return writeln!(
-            &mut ::std::io::stdout(),
-            concat!("Installed commands:", command_list!())
-        )
-        .unwrap();
+        return wout!(concat!("Installed commands:", command_list!()));
     }
 
     match args.arg_command {
         None => {
-            writeln!(&mut ::std::io::stderr(), "{}", EXECUTABLE).unwrap();
+            werr!("{}", EXECUTABLE);
             process::exit(2);
         }
         Some(cmd) => match cmd.run() {
             Ok(()) => process::exit(0),
             Err(err) => {
-                writeln!(&mut ::std::io::stderr(), "{}", err).unwrap();
+                werr!("{}", err);
                 process::exit(1);
             }
         },
@@ -112,6 +125,7 @@ impl Command {
         match self {
             Command::Edit => cmd::edit::run(argv),
             Command::Configure => cmd::configure::run(argv),
+            Command::Create => cmd::create::run(argv),
         }
     }
 }

@@ -1,6 +1,5 @@
 use serde::Deserialize;
 
-use std::io::Write;
 use std::path::Path;
 
 use crate::error::CliError;
@@ -35,20 +34,19 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 }
 
 impl Args {
-    pub fn configure(&self) -> CliResult<()> {
+    fn configure(&self) -> CliResult<()> {
         let config_path = config::configuration()?;
 
         if Path::new(&config_path).exists() && !self.flag_force {
             Err(CliError::ExistingConfiguration)
         } else {
             config::create_default_file(&config_path)?;
-            Args::message(config_path.as_path().display().to_string())?;
+            crate::wout!(
+                "{} {}",
+                SUCCESS,
+                config_path.as_path().display().to_string()
+            );
             Ok(())
         }
-    }
-
-    fn message(filepath: String) -> CliResult<()> {
-        writeln!(&mut ::std::io::stdout(), "{} {}.", SUCCESS, filepath)?;
-        Ok(())
     }
 }

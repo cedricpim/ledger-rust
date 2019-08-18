@@ -2,7 +2,8 @@ use serde::Deserialize;
 
 use std::process::Command;
 
-use crate::{config, repository, util, CliResult};
+use crate::config::Config;
+use crate::{repository, util, CliResult};
 
 static USAGE: &'static str = "
 Allows editing of the CSV (ledger or networth).
@@ -29,13 +30,13 @@ struct Args {
 pub fn run(argv: &[&str]) -> CliResult<()> {
     let args: Args = util::get_args(USAGE, argv)?;
 
-    let config = config::load()?;
+    let config = Config::new()?;
 
     args.edit(config)
 }
 
 impl Args {
-    fn edit(&self, config: config::Config) -> CliResult<()> {
+    fn edit(&self, config: Config) -> CliResult<()> {
         let editor = util::editor()?;
         let resource = repository::Resource::new(config, self.flag_networth)?;
 

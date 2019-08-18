@@ -2,8 +2,9 @@ use serde::Deserialize;
 
 use std::path::Path;
 
+use crate::config::Config;
 use crate::error::CliError;
-use crate::{config, repository, util, CliResult};
+use crate::{repository, util, CliResult};
 
 static USAGE: &'static str = "
 Creates the ledger or networth file that will be used to store the entries.
@@ -32,13 +33,13 @@ struct Args {
 pub fn run(argv: &[&str]) -> CliResult<()> {
     let args: Args = util::get_args(USAGE, argv)?;
 
-    let config = config::load()?;
+    let config = Config::new()?;
 
     args.create(config)
 }
 
 impl Args {
-    fn create(&self, config: config::Config) -> CliResult<()> {
+    fn create(&self, config: Config) -> CliResult<()> {
         let resource = repository::Resource::new(config, self.flag_networth)?;
 
         if Path::new(&resource.filepath).exists() && !self.flag_force {
@@ -46,7 +47,6 @@ impl Args {
                 filepath: resource.filepath,
             })
         } else {
-            // Get write STDOUT macro
             resource.create()?;
             crate::wout!("{} {}", SUCCESS, resource.filepath);
             Ok(())

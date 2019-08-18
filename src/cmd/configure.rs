@@ -2,8 +2,9 @@ use serde::Deserialize;
 
 use std::path::Path;
 
+use crate::config::Config;
 use crate::error::CliError;
-use crate::{config, util, CliResult};
+use crate::{util, CliResult};
 
 static USAGE: &'static str = "
 Copies the default configuration file for the application.
@@ -35,12 +36,12 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 
 impl Args {
     fn configure(&self) -> CliResult<()> {
-        let config_path = config::configuration()?;
+        let config_path = Config::location()?;
 
         if Path::new(&config_path).exists() && !self.flag_force {
             Err(CliError::ExistingConfiguration)
         } else {
-            config::create_default_file(&config_path)?;
+            Config::default(&config_path)?;
             crate::wout!(
                 "{} {}",
                 SUCCESS,

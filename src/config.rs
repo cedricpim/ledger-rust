@@ -56,8 +56,7 @@ impl Config {
     }
 
     pub fn location() -> CliResult<PathBuf> {
-        let xdg_dirs = Config::root()?;
-        let config_path = xdg_dirs
+        let config_path = Config::root()?
             .place_config_file(CONFIGURATION_FILENAME)
             .map_err(CliError::from)?;
         Ok(config_path)
@@ -92,7 +91,9 @@ impl Config {
     }
 
     fn default_filepath(filename: &str) -> CliResult<String> {
-        let dir = Config::root()?.place_config_file(filename).map_err(CliError::from)?;
+        let dir = Config::root()?
+            .place_config_file(filename)
+            .map_err(CliError::from)?;
 
         dir.to_str()
             .map(|v| v.to_string())

@@ -1,5 +1,9 @@
 use docopt::Docopt;
+use rand::Rng;
 use serde::de::DeserializeOwned;
+use xdg::BaseDirectories;
+
+use std::iter;
 
 use crate::error::CliError;
 use crate::CliResult;
@@ -34,4 +38,30 @@ pub fn editor() -> CliResult<String> {
         None => Err(CliError::UndefinedEditor),
         Some(val) => Ok(val.to_string()),
     }
+}
+
+pub fn main_directory() -> CliResult<BaseDirectories> {
+    BaseDirectories::with_prefix(env!("CARGO_PKG_NAME")).map_err(CliError::from)
+}
+
+pub fn random_pass() -> Option<String> {
+    let mut rng = rand::thread_rng();
+    let chars: String = iter::repeat(())
+        .map(|()| rng.sample(rand::distributions::Alphanumeric))
+        .take(32)
+        .collect();
+
+    Some(chars)
+}
+
+pub fn config_filepath(filename: &str) -> CliResult<String> {
+    let dir = main_directory()?
+        .place_config_file(filename)
+        .map_err(CliError::from)?;
+
+    dir.to_str()
+        .map(|v| v.to_string())
+        .ok_or(CliError::IncorrectPath {
+            filename: filename.to_string(),
+        })
 }

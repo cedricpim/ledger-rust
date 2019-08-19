@@ -1,16 +1,12 @@
 use serde_yaml;
-use xdg;
 
-use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use std::fs::File;
 use std::io::Write;
-use std::iter;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use crate::error::CliError;
-use crate::CliResult;
+use crate::{util, CliResult};
 
 const CONFIGURATION_FILENAME: &str = "rust-config";
 
@@ -28,7 +24,7 @@ struct Files {
 
 impl Config {
     pub fn new() -> CliResult<Config> {
-        let config_path = Config::location()?;
+        let config_path = Config::path()?;
 
         let data: Config = if Path::new(&config_path).exists() {
             let file = File::open(&config_path)?;
@@ -40,12 +36,12 @@ impl Config {
         Ok(data)
     }
 
-    pub fn default(config_path: &PathBuf) -> CliResult<Config> {
+    pub fn default(config_path: &str) -> CliResult<Config> {
         let default = Config {
-            encryption: Config::random_pass(),
+            encryption: util::random_pass(),
             files: Files {
-                ledger: Config::default_filepath("ledger.csv")?,
-                networth: Config::default_filepath("networth.csv")?,
+                ledger: util::config_filepath("ledger.csv")?,
+                networth: util::config_filepath("networth.csv")?,
             },
         };
 
@@ -55,11 +51,8 @@ impl Config {
         Ok(default)
     }
 
-    pub fn location() -> CliResult<PathBuf> {
-        let config_path = Config::root()?
-            .place_config_file(CONFIGURATION_FILENAME)
-            .map_err(CliError::from)?;
-        Ok(config_path)
+    pub fn path() -> CliResult<String> {
+        util::config_filepath(CONFIGURATION_FILENAME)
     }
 
     pub fn filepath(&self, networth: bool) -> String {
@@ -74,31 +67,5 @@ impl Config {
 
     pub fn pass(&self) -> Option<String> {
         self.encryption.to_owned()
-    }
-
-    fn root() -> CliResult<xdg::BaseDirectories> {
-        xdg::BaseDirectories::with_prefix(env!("CARGO_PKG_NAME")).map_err(CliError::from)
-    }
-
-    fn random_pass() -> Option<String> {
-        let mut rng = rand::thread_rng();
-        let chars: String = iter::repeat(())
-            .map(|()| rng.sample(rand::distributions::Alphanumeric))
-            .take(32)
-            .collect();
-
-        Some(chars)
-    }
-
-    fn default_filepath(filename: &str) -> CliResult<String> {
-        let dir = Config::root()?
-            .place_config_file(filename)
-            .map_err(CliError::from)?;
-
-        dir.to_str()
-            .map(|v| v.to_string())
-            .ok_or(CliError::IncorrectPath {
-                filename: filename.to_string(),
-            })
     }
 }

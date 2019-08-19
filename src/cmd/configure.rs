@@ -36,17 +36,13 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 
 impl Args {
     fn configure(&self) -> CliResult<()> {
-        let config_path = Config::location()?;
+        let config_path = Config::path()?;
 
         if Path::new(&config_path).exists() && !self.flag_force {
             Err(CliError::ExistingConfiguration)
         } else {
             Config::default(&config_path)?;
-            crate::wout!(
-                "{} {}",
-                SUCCESS,
-                config_path.as_path().display().to_string()
-            );
+            crate::wout!("{} {}", SUCCESS, config_path);
             Ok(())
         }
     }

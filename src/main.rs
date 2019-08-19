@@ -31,6 +31,7 @@ macro_rules! command_list {
     () => (
 "
 Implemented:
+    book        Add a transaction to the ledger
     configure   Copy provided configuration file to the default location
     create      Create a new ledger/networth file
     edit        Open ledger/networth file in your editor
@@ -38,7 +39,6 @@ Implemented:
 To be implemented:
     analysis    List all transactions on the ledger for the specified category
     balance     List the current balance of each account
-    book        Add a transaction to the ledger
     compare     Compare multiple periods
     convert     Convert other currencies to main currency of the account
     networth    Calculate current networth
@@ -77,9 +77,10 @@ struct Args {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum Command {
-    Edit,
+    Book,
     Configure,
     Create,
+    Edit,
 }
 
 fn main() {
@@ -126,6 +127,7 @@ impl Command {
             Command::Edit => cmd::edit::run(argv),
             Command::Configure => cmd::configure::run(argv),
             Command::Create => cmd::create::run(argv),
+            Command::Book => cmd::book::run(argv),
         }
     }
 }

@@ -1,11 +1,14 @@
 use custom_error::custom_error;
 
 custom_error! { pub CliError
-    Flag { source: docopt::Error }            = @{ source },
-    Csv { source: csv::Error }                = @{ source },
-    Io { source: std::io::Error }             = @{ source },
-    Yaml { source: serde_yaml::Error }        = @{ source },
-    Xdg { source: xdg::BaseDirectoriesError } = @{ source },
+    Flag { source: docopt::Error }                    = @{ source },
+    Csv { source: csv::Error }                        = @{ source },
+    Io { source: std::io::Error }                     = @{ source },
+    Yaml { source: serde_yaml::Error }                = @{ source },
+    Xdg { source: xdg::BaseDirectoriesError }         = @{ source },
+    Value { source: std::num::ParseIntError }         = @{ source },
+    DateFormat { source: chrono::format::ParseError } = @{ source },
+    DecimalFormat { source: rust_decimal::Error }     = @{ source },
 
     IncorrectPath { filename: String } = "An error occurred while determining the path to {filename}",
     ExistingConfiguration              = "Configuration file already exists, use --force to overwrite it",

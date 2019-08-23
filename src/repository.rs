@@ -1,12 +1,13 @@
 use std::fs::File;
 
-use crate::{config, crypto, entry, transaction, CliResult};
+use crate::line::{Line, Liner};
+use crate::{config, crypto, CliResult};
 
 pub struct Resource {
     pub filepath: String,
-    headers: Vec<&'static str>,
     tempfile: tempfile::NamedTempFile,
     pass: Option<String>,
+    kind: Line,
 }
 
 impl Resource {
@@ -15,20 +16,44 @@ impl Resource {
             pass: config.pass(),
             filepath: config.filepath(networth),
             tempfile: tempfile::NamedTempFile::new()?,
-            headers: if networth {
-                entry::Entry::headers()
-            } else {
-                transaction::Transaction::headers()
-            },
+            kind: Line::default(networth),
         })
     }
 
     pub fn create(&self) -> CliResult<()> {
         let mut wtr = csv::WriterBuilder::new().from_writer(&self.tempfile);
-        wtr.write_record(&self.headers)?;
+
+        wtr.write_record(self.kind.headers())?;
+
         wtr.flush()?;
 
         self.close()?;
+
+        Ok(())
+    }
+
+    pub fn line<F>(&self, action: &mut F) -> CliResult<()>
+    where
+        F: FnMut(&Line) -> CliResult<()>,
+    {
+        self.apply(|file| {
+            let mut rdr = csv::Reader::from_reader(file);
+
+            match self.kind {
+                Line::Entry(_) => {
+                    for result in rdr.deserialize() {
+                        action(&Line::Entry(result?))?;
+                    }
+                }
+                Line::Transaction(_) => {
+                    for result in rdr.deserialize() {
+                        action(&Line::Transaction(result?))?;
+                    }
+                }
+            };
+
+            Ok(())
+        })?;
 
         Ok(())
     }

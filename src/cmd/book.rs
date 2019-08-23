@@ -5,7 +5,7 @@ use std::io;
 use std::io::prelude::*;
 
 use crate::config::Config;
-use crate::transaction::Transaction;
+use crate::line::{Line, Liner, Transaction};
 use crate::{repository, util, CliResult};
 
 static USAGE: &'static str = "
@@ -67,7 +67,9 @@ impl Args {
         let stdout = io::stdout();
         let mut handle = stdout.lock();
 
-        for name in Transaction::headers().iter() {
+        let line: Line = Transaction::default().into();
+
+        for name in line.headers().iter() {
             handle
                 .write_all(format!("{}: ", name).as_bytes())
                 .and_then(|_v| handle.flush())?;

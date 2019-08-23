@@ -1,3 +1,5 @@
+use chrono::naive::NaiveDate;
+use chrono::Utc;
 use docopt::Docopt;
 use rand::Rng;
 use serde::de::DeserializeOwned;
@@ -64,4 +66,15 @@ pub fn config_filepath(filename: &str) -> CliResult<String> {
         .ok_or(CliError::IncorrectPath {
             filename: filename.to_string(),
         })
+}
+
+pub fn parse_date(value: &str) -> CliResult<NaiveDate> {
+    match value {
+        "" => Ok(default_date()),
+        val => NaiveDate::parse_from_str(val, "%Y-%m-%d").map_err(CliError::from),
+    }
+}
+
+pub fn default_date() -> NaiveDate {
+    Utc::today().naive_local()
 }

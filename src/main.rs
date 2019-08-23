@@ -1,15 +1,18 @@
 use docopt::Docopt;
 use serde::Deserialize;
 
+#[macro_use]
+extern crate derivative;
+
 use std::{env, process};
 
 mod cmd;
 mod config;
 mod crypto;
-mod entry;
 mod error;
+mod filter;
+mod line;
 mod repository;
-mod transaction;
 mod util;
 
 #[macro_export]
@@ -35,6 +38,7 @@ Implemented:
     configure   Copy provided configuration file to the default location
     create      Create a new ledger/networth file
     edit        Open ledger/networth file in your editor
+    show        Display all transactions
 
 To be implemented:
     analysis    List all transactions on the ledger for the specified category
@@ -43,7 +47,6 @@ To be implemented:
     convert     Convert other currencies to main currency of the account
     networth    Calculate current networth
     report      Create a report about the transactions on the ledger according to any params provided
-    show        Display all transactions
     trip        Create a report about the trips present on the ledger
 "
     )
@@ -81,6 +84,7 @@ enum Command {
     Configure,
     Create,
     Edit,
+    Show,
 }
 
 fn main() {
@@ -124,10 +128,11 @@ impl Command {
         }
 
         match self {
+            Command::Book => cmd::book::run(argv),
             Command::Edit => cmd::edit::run(argv),
             Command::Configure => cmd::configure::run(argv),
             Command::Create => cmd::create::run(argv),
-            Command::Book => cmd::book::run(argv),
+            Command::Show => cmd::show::run(argv),
         }
     }
 }

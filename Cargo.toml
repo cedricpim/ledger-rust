@@ -41,3 +41,5 @@ tempfile = "3"
 rand = "0.7.0"
 chrono = { version = "0.4", features = ["serde"] }
 rust_decimal = "1.0.2"
+derivate = "0.1.0"
+enum_dispatch = "0.1.3"

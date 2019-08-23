@@ -5,27 +5,34 @@ use std::io;
 use std::io::prelude::*;
 
 use crate::config::Config;
-use crate::line::{Line, Liner, Transaction};
-use crate::{repository, util, CliResult};
+use crate::line::{Line, Liner};
+use crate::repository::Resource;
+use crate::{util, CliResult};
 
 static USAGE: &'static str = "
 Adds a transaction to the ledger.
 
 This command will, if used without any arguments, request all the fields that compose a single
-transaction or create a transaction based in the arguments provided. It will then store the
-transaction in the ledger file.
+transaction/entry or create a transaction/entry based in the arguments provided. It will then store
+the transaction in the ledger file (or the entry in the networth file).
+
+Order of attribute:
+    - Transaction: account, date, category, description, quantity, venue, amount, currency, trip
+    - Entry: date, invested, investment, amount, currency
 
 Usage:
-    ledger book [options] [--transaction=<transaction>...]
+    ledger book [options] [--attributes=<attributes>...]
 
 Options:
-    -t, --transaction=<transaction>     Define the list of values that compose a transaction, separated by comma (order: account, date, category, description, quantity, venue, amount, currency, trip).
-    -h, --help                          Display this message
+    -a, --attributes=<attributes>     Define the list of values that compose an transaction/entry
+    -n, --networth                    Create an entry for networth CSV instead of for ledger CSV
+    -h, --help                        Display this message
 ";
 
 #[derive(Debug, Deserialize)]
 struct Args {
-    flag_transaction: Vec<String>,
+    flag_attributes: Vec<String>,
+    flag_networth: bool,
 }
 
 pub fn run(argv: &[&str]) -> CliResult<()> {
@@ -38,38 +45,45 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 
 impl Args {
     fn book(&self, config: Config) -> CliResult<()> {
-        let mut values = self.flag_transaction.clone();
+        let resource = Resource::new(config, self.flag_networth)?;
 
-        if self.flag_transaction.is_empty() {
-            self.request_transaction_values(&mut values)?
+        let mut values = self.flag_attributes.clone();
+
+        if values.is_empty() {
+            self.collect_attributes(&mut values, &resource)?
         };
 
-        let transaction = Transaction::build(values)?;
+        let line = if self.flag_networth {
+            Line::entry(values)?
+        } else {
+            Line::transaction(values)?
+        };
 
-        self.save(config, transaction)
+        self.save(line, resource)
     }
 
-    fn save(&self, config: Config, transaction: Transaction) -> CliResult<()> {
-        let resource = repository::Resource::new(config, false)?;
-
+    fn save(&self, line: Line, resource: Resource) -> CliResult<()> {
         resource.apply(|file| {
             let afile = OpenOptions::new().append(true).open(file.path())?;
             let mut wtr = csv::WriterBuilder::new()
                 .has_headers(false)
                 .from_writer(afile);
-            wtr.serialize(transaction)?;
+
+            match line {
+                Line::Transaction(val) => wtr.serialize(val)?,
+                Line::Entry(val) => wtr.serialize(val)?,
+            };
+
             wtr.flush()?;
             Ok(())
         })
     }
 
-    fn request_transaction_values(&self, values: &mut Vec<String>) -> CliResult<()> {
+    fn collect_attributes(&self, values: &mut Vec<String>, resource: &Resource) -> CliResult<()> {
         let stdout = io::stdout();
         let mut handle = stdout.lock();
 
-        let line: Line = Transaction::default().into();
-
-        for name in line.headers().iter() {
+        for name in resource.kind.headers().iter() {
             handle
                 .write_all(format!("{}: ", name).as_bytes())
                 .and_then(|_v| handle.flush())?;

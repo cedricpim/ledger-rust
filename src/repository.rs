@@ -4,10 +4,10 @@ use crate::line::{Line, Liner};
 use crate::{config, crypto, CliResult};
 
 pub struct Resource {
+    pub kind: Line,
     pub filepath: String,
     tempfile: tempfile::NamedTempFile,
     pass: Option<String>,
-    kind: Line,
 }
 
 impl Resource {

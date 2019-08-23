@@ -14,11 +14,38 @@ pub enum Line {
 }
 
 impl Line {
-    pub fn default(networth: bool) -> Self {
-        match networth {
-            false => Transaction::default().into(),
-            true => Entry::default().into(),
+    pub fn default(networth: bool) -> Line {
+        if networth {
+            Entry::default().into()
+        } else {
+            Transaction::default().into()
         }
+    }
+
+    pub fn transaction(values: Vec<String>) -> CliResult<Line> {
+        Ok(Transaction {
+            account: values[0].to_string(),
+            date: util::parse_date(&values[1])?,
+            category: values[2].to_string(),
+            description: values[3].to_string(),
+            quantity: Decimal::from_str(&values[4]).map_err(error::CliError::from)?,
+            venue: values[5].to_string(),
+            amount: Decimal::from_str(&values[6]).map_err(error::CliError::from)?,
+            currency: values[7].to_string(),
+            trip: values[8].to_string(),
+        }
+        .into())
+    }
+
+    pub fn entry(values: Vec<String>) -> CliResult<Line> {
+        Ok(Entry {
+            date: util::parse_date(&values[0])?,
+            invested: Decimal::from_str(&values[1]).map_err(error::CliError::from)?,
+            investment: Decimal::from_str(&values[2]).map_err(error::CliError::from)?,
+            amount: Decimal::from_str(&values[3]).map_err(error::CliError::from)?,
+            currency: values[4].to_string(),
+        }
+        .into())
     }
 }
 
@@ -66,22 +93,6 @@ impl Liner for Transaction {
 
     fn date(&self) -> NaiveDate {
         self.date
-    }
-}
-
-impl Transaction {
-    pub fn build(values: Vec<String>) -> CliResult<Transaction> {
-        Ok(Transaction {
-            account: values[0].to_string(),
-            date: util::parse_date(&values[1])?,
-            category: values[2].to_string(),
-            description: values[3].to_string(),
-            quantity: Decimal::from_str(&values[4]).map_err(error::CliError::from)?,
-            venue: values[5].to_string(),
-            amount: Decimal::from_str(&values[6]).map_err(error::CliError::from)?,
-            currency: values[7].to_string(),
-            trip: values[8].to_string(),
-        })
     }
 }
 

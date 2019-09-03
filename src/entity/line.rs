@@ -35,8 +35,10 @@ impl Line {
 #[enum_dispatch(Line)]
 pub trait Liner {
     fn headers(&self) -> Vec<&'static str>;
+    fn account(&self) -> String;
     fn category(&self) -> String;
     fn date(&self) -> NaiveDate;
+    fn currency(&self) -> Currency;
     fn exchange(&self, to: &Option<Currency>, exchange: &Exchange) -> CliResult<Line>;
     fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()>;
 }

@@ -34,6 +34,7 @@ macro_rules! command_list {
 Implemented:
     book        Add a transaction to the ledger
     configure   Copy provided configuration file to the default location
+    convert     Convert other currencies to main currency of the account
     create      Create a new ledger/networth file
     edit        Open ledger/networth file in your editor
     show        Display all transactions
@@ -42,7 +43,6 @@ To be implemented:
     analysis    List all transactions on the ledger for the specified category
     balance     List the current balance of each account
     compare     Compare multiple periods
-    convert     Convert other currencies to main currency of the account
     networth    Calculate current networth
     report      Create a report about the transactions on the ledger according to any params provided
     trip        Create a report about the trips present on the ledger
@@ -80,6 +80,7 @@ struct Args {
 enum Command {
     Book,
     Configure,
+    Convert,
     Create,
     Edit,
     Show,
@@ -129,6 +130,7 @@ impl Command {
             Command::Book => cmd::book::run(argv),
             Command::Edit => cmd::edit::run(argv),
             Command::Configure => cmd::configure::run(argv),
+            Command::Convert => cmd::convert::run(argv),
             Command::Create => cmd::create::run(argv),
             Command::Show => cmd::show::run(argv),
         }

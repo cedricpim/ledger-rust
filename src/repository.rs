@@ -6,7 +6,7 @@ use crate::{config, crypto, CliResult};
 pub struct Resource {
     pub kind: Line,
     pub filepath: String,
-    tempfile: tempfile::NamedTempFile,
+    pub tempfile: tempfile::NamedTempFile,
     pass: Option<String>,
 }
 

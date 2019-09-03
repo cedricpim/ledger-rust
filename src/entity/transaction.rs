@@ -58,12 +58,20 @@ impl Liner for Transaction {
         ]
     }
 
+    fn account(&self) -> String {
+        self.account.to_owned()
+    }
+
     fn category(&self) -> String {
         self.category.to_owned()
     }
 
     fn date(&self) -> NaiveDate {
         self.date.clone().into()
+    }
+
+    fn currency(&self) -> Currency {
+        self.currency.to_owned()
     }
 
     fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()> {

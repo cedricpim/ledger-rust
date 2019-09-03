@@ -108,15 +108,15 @@ impl Serialize for Money {
     where
         S: serde::Serializer,
     {
-        let format_spec = FormatSpec::new('\0', '.', vec![FormatPart::Amount]);
+        let format_spec = FormatSpec::new(',', '.', vec![FormatPart::Amount]);
 
-        let formatted = if self.value > Money::default().into() {
+        let formatted = if self.value == self.value.abs() {
             format!("+{}", format_spec.display_for(&self.value))
         } else {
             format!("-{}", format_spec.display_for(&self.value))
         };
 
-        serializer.serialize_str(&formatted)
+        serializer.serialize_str(&formatted.replace(",", ""))
     }
 }
 

@@ -40,12 +40,20 @@ impl Liner for Entry {
         vec!["Date", "Invested", "Investment", "Amount", "Currency"]
     }
 
+    fn account(&self) -> String {
+        "Networth".to_string()
+    }
+
     fn category(&self) -> String {
         "".to_string()
     }
 
     fn date(&self) -> NaiveDate {
         self.date.clone().into()
+    }
+
+    fn currency(&self) -> Currency {
+        self.currency.to_owned()
     }
 
     fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()> {

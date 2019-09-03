@@ -32,13 +32,13 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 
     let config = Config::new()?;
 
-    args.edit(config)
+    args.edit(&config)
 }
 
 impl Args {
-    fn edit(&self, config: Config) -> CliResult<()> {
+    fn edit(&self, config: &Config) -> CliResult<()> {
         let editor = util::editor()?;
-        let resource = repository::Resource::new(config, self.flag_networth)?;
+        let resource = repository::Resource::new(&config, self.flag_networth)?;
 
         resource.apply(|file| {
             let filepath = self.filepath(file.path().display());

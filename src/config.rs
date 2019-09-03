@@ -14,12 +14,20 @@ const CONFIGURATION_FILENAME: &str = "rust-config";
 pub struct Config {
     encryption: Option<String>,
     files: Files,
+    pub exchange: Exchange,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Files {
     ledger: String,
     networth: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Exchange {
+    pub api_key: String,
+    pub cache_file: String,
+    pub ttl: u64,
 }
 
 impl Config {
@@ -42,6 +50,11 @@ impl Config {
             files: Files {
                 ledger: util::config_filepath("ledger.csv")?,
                 networth: util::config_filepath("networth.csv")?,
+            },
+            exchange: Exchange {
+                api_key: "your app id from https://openexchangerates.org/signup".to_string(),
+                cache_file: "/tmp/exchange-cache-rust.yml".to_string(),
+                ttl: 86400, // 1 day
             },
         };
 

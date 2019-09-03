@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use crate::line::{Line, Liner};
+use crate::entity::line::{Line, Liner};
 use crate::{config, crypto, CliResult};
 
 pub struct Resource {
@@ -11,7 +11,7 @@ pub struct Resource {
 }
 
 impl Resource {
-    pub fn new(config: config::Config, networth: bool) -> CliResult<Resource> {
+    pub fn new(config: &config::Config, networth: bool) -> CliResult<Resource> {
         Ok(Resource {
             pass: config.pass(),
             filepath: config.filepath(networth),

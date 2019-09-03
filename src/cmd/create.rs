@@ -35,12 +35,12 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 
     let config = Config::new()?;
 
-    args.create(config)
+    args.create(&config)
 }
 
 impl Args {
-    fn create(&self, config: Config) -> CliResult<()> {
-        let resource = repository::Resource::new(config, self.flag_networth)?;
+    fn create(&self, config: &Config) -> CliResult<()> {
+        let resource = repository::Resource::new(&config, self.flag_networth)?;
 
         if Path::new(&resource.filepath).exists() && !self.flag_force {
             Err(CliError::ExistingFile {

@@ -1,5 +1,3 @@
-use chrono::naive::NaiveDate;
-use chrono::Utc;
 use docopt::Docopt;
 use rand::Rng;
 use serde::de::DeserializeOwned;
@@ -7,6 +5,7 @@ use xdg::BaseDirectories;
 
 use std::iter;
 
+use crate::entity::money::Currency;
 use crate::error::CliError;
 use crate::CliResult;
 
@@ -68,13 +67,15 @@ pub fn config_filepath(filename: &str) -> CliResult<String> {
         })
 }
 
-pub fn parse_date(value: &str) -> CliResult<NaiveDate> {
-    match value {
-        "" => Ok(default_date()),
-        val => NaiveDate::parse_from_str(val, "%Y-%m-%d").map_err(CliError::from),
-    }
-}
+pub fn currency(value: &str) -> CliResult<Option<Currency>> {
+    if value.is_empty() {
+        return Ok(None);
+    };
 
-pub fn default_date() -> NaiveDate {
-    Utc::today().naive_local()
+    let code = value.to_uppercase();
+
+    match steel_cent::currency::with_code(&code) {
+        Some(val) => Ok(Some(val.into())),
+        None => Err(CliError::IncorrectCurrencyCode { code }),
+    }
 }

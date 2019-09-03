@@ -5,7 +5,7 @@ use std::io;
 use std::io::prelude::*;
 
 use crate::config::Config;
-use crate::line::{Line, Liner};
+use crate::entity::line::{Line, Liner};
 use crate::repository::Resource;
 use crate::{util, CliResult};
 
@@ -40,12 +40,12 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 
     let config = Config::new()?;
 
-    args.book(config)
+    args.book(&config)
 }
 
 impl Args {
-    fn book(&self, config: Config) -> CliResult<()> {
-        let resource = Resource::new(config, self.flag_networth)?;
+    fn book(&self, config: &Config) -> CliResult<()> {
+        let resource = Resource::new(&config, self.flag_networth)?;
 
         let mut values = self.flag_attributes.clone();
 
@@ -53,11 +53,7 @@ impl Args {
             self.collect_attributes(&mut values, &resource)?
         };
 
-        let line = if self.flag_networth {
-            Line::entry(values)?
-        } else {
-            Line::transaction(values)?
-        };
+        let line = Line::build(values, self.flag_networth)?;
 
         self.save(line, resource)
     }
@@ -69,10 +65,7 @@ impl Args {
                 .has_headers(false)
                 .from_writer(afile);
 
-            match line {
-                Line::Transaction(val) => wtr.serialize(val)?,
-                Line::Entry(val) => wtr.serialize(val)?,
-            };
+            line.write(&mut wtr)?;
 
             wtr.flush()?;
             Ok(())

@@ -2,8 +2,9 @@ use chrono::naive::NaiveDate;
 use serde::Deserialize;
 
 use crate::config::Config;
+use crate::entity::line::Liner;
+use crate::exchange::Exchange;
 use crate::filter::Filter;
-use crate::line::Line;
 use crate::{repository, util, CliResult};
 
 static USAGE: &'static str = "
@@ -45,12 +46,12 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 
     let config = Config::new()?;
 
-    args.show(config)
+    args.show(&config)
 }
 
 impl Args {
-    fn show(&self, config: Config) -> CliResult<()> {
-        let resource = repository::Resource::new(config, self.flag_networth)?;
+    fn show(&self, config: &Config) -> CliResult<()> {
+        let resource = repository::Resource::new(&config, self.flag_networth)?;
 
         let filter = Filter::new(
             self.flag_year,
@@ -60,19 +61,21 @@ impl Args {
             self.flag_categories.clone(),
         );
 
+        let currency = util::currency(&self.flag_currency)?;
+
+        let exchange = Exchange::new(&config)?;
+
         let mut wtr = csv::Writer::from_path(&self.flag_output)?;
 
         resource.line(&mut |record| {
             if filter.apply(&record) {
-                match record {
-                    Line::Transaction(val) => wtr.serialize(val)?,
-                    Line::Entry(val) => wtr.serialize(val)?,
-                };
+                record.exchange(&currency, &exchange)?.write(&mut wtr)?;
             };
+
+            wtr.flush()?;
+
             Ok(())
         })?;
-
-        wtr.flush()?;
 
         Ok(())
     }

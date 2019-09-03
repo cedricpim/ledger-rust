@@ -3,7 +3,7 @@ use chrono::{Datelike, Utc};
 
 use std::ops::RangeInclusive;
 
-use crate::line::{Line, Liner};
+use crate::entity::line::{Line, Liner};
 
 #[derive(Debug)]
 pub struct Filter {

@@ -1,17 +1,15 @@
 use docopt::Docopt;
 use serde::Deserialize;
 
-#[macro_use]
-extern crate derivative;
-
 use std::{env, process};
 
 mod cmd;
 mod config;
 mod crypto;
+mod entity;
 mod error;
+mod exchange;
 mod filter;
-mod line;
 mod repository;
 mod util;
 

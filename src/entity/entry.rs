@@ -151,8 +151,7 @@ impl<'de> Deserialize<'de> for Entry {
             }
         }
 
-        const FIELDS: &[&str] =
-            &["date", "invested", "investment", "amount", "currency"];
+        const FIELDS: &[&str] = &["date", "invested", "investment", "amount", "currency"];
         deserializer.deserialize_struct("Entry", FIELDS, EntryVisitor)
     }
 }

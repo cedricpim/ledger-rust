@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
-use steel_cent::formatting::FormatPart::*;
-use steel_cent::formatting::FormatSpec;
-// use steel_cent::formatting::FormattableMoney;
+use steel_cent::formatting::{FormatPart, FormatSpec};
 
 use crate::error::CliError;
 use crate::exchange::Exchange;
@@ -110,22 +108,40 @@ impl Serialize for Money {
     where
         S: serde::Serializer,
     {
-        let custom_spec = FormatSpec::new(',', '.', vec![OptionalMinus, Amount]);
-        serializer.serialize_str(&format!("{}", custom_spec.display_for(&self.value)))
+        let format_spec = FormatSpec::new('\0', '.', vec![FormatPart::Amount]);
+
+        let formatted = if self.value > Money::default().into() {
+            format!("+{}", format_spec.display_for(&self.value))
+        } else {
+            format!("-{}", format_spec.display_for(&self.value))
+        };
+
+        serializer.serialize_str(&formatted)
     }
 }
 
 impl Money {
     pub fn parse(value: &str, currency: &Currency) -> CliResult<Money> {
-        match value.parse::<f64>() {
-            Err(err) => Err(CliError::from(err)),
-            Ok(val) => {
-                let currency: steel_cent::currency::Currency = currency.into();
-                let cents = 10f64.powf(currency.decimal_places().into());
+        let parser = FormatSpec::new(
+            '\0',
+            '.',
+            vec![
+                FormatPart::OptionalMinus,
+                FormatPart::Amount,
+                FormatPart::CurrencySymbol,
+            ],
+        )
+        .parser();
 
-                let minor = (val * cents).round() as i64;
-                Ok(steel_cent::Money::of_minor(currency, minor).into())
-            }
+        let mut parseable_value = format!("{}{}", value, currency.code()).to_string();
+
+        if value.starts_with('+') {
+            parseable_value.remove(0);
+        };
+
+        match parser.parse::<steel_cent::Money>(&parseable_value) {
+            Err(err) => Err(CliError::from(err)),
+            Ok(val) => Ok(val.into()),
         }
     }
 

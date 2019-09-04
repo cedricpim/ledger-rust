@@ -1,5 +1,4 @@
-use chrono::naive::NaiveDate;
-use chrono::{Datelike, Utc};
+use chrono::Datelike;
 
 use std::ops::RangeInclusive;
 
@@ -42,14 +41,16 @@ impl Filter {
             let end = self.till.unwrap_or_else(|| chrono::naive::MAX_DATE.into());
             start..=end
         } else if self.year.is_some() || self.month.is_some() {
-            let today = Utc::today().naive_local();
+            let today = chrono::Utc::today().naive_local();
             let year = self.year.unwrap_or_else(|| today.year());
             let month = self.month.unwrap_or_else(|| today.month());
-            let end_of_month = match month {
-                12 => NaiveDate::from_ymd(year + 1, month, 1).pred(),
-                _ => NaiveDate::from_ymd(year, month + 1, 1).pred(),
-            };
-            NaiveDate::from_ymd(year, month, 1).into()..=end_of_month.into()
+            let start = chrono::naive::NaiveDate::from_ymd(year, month, 1).into();
+            let end = match month {
+                12 => chrono::naive::NaiveDate::from_ymd(year + 1, month, 1).pred(),
+                _ => chrono::naive::NaiveDate::from_ymd(year, month + 1, 1).pred(),
+            }
+            .into();
+            start..=end
         } else {
             chrono::naive::MIN_DATE.into()..=chrono::naive::MAX_DATE.into()
         }

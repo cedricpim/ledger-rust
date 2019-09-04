@@ -67,6 +67,10 @@ impl Currency {
         }
     }
 
+    pub fn decimal_places(&self) -> u8 {
+        self.value.decimal_places()
+    }
+
     pub fn code(&self) -> String {
         self.value.code()
     }
@@ -133,13 +137,7 @@ impl Money {
         )
         .parser();
 
-        let mut parseable_value = format!("{}{}", value, currency.code()).to_string();
-
-        if value.starts_with('+') {
-            parseable_value.remove(0);
-        };
-
-        match parser.parse::<steel_cent::Money>(&parseable_value) {
+        match parser.parse::<steel_cent::Money>(&Money::formatted_value(value, &currency)) {
             Err(err) => Err(CliError::from(err)),
             Ok(val) => Ok(val.into()),
         }
@@ -157,6 +155,33 @@ impl Money {
                 Ok(exchanged.into())
             }
             None => Ok(self.to_owned()),
+        }
+    }
+
+    fn formatted_value(value: &str, currency: &Currency) -> String {
+        let (integer, fractional) = match value.rfind('.') {
+            None => (value, "."),
+            Some(index) => value.split_at(index),
+        };
+
+        let width = currency.decimal_places().into();
+
+        if fractional.len() > width {
+            format!(
+                "{}{:.*}{}",
+                integer.replace("+", ""),
+                width + 1,
+                fractional,
+                currency.code()
+            )
+        } else {
+            format!(
+                "{}{:0<width$}{}",
+                integer.replace("+", ""),
+                fractional,
+                currency.code(),
+                width = width + 1
+            )
         }
     }
 }

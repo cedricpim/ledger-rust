@@ -53,7 +53,7 @@ impl Args {
                 .or_insert_with(|| record.currency().code());
 
             record
-                .exchange(&util::currency(&entry)?, &exchange)?
+                .exchange(util::currency(&entry)?, &exchange)?
                 .write(&mut wtr)?;
 
             wtr.flush()?;

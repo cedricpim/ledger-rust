@@ -5,7 +5,7 @@ use crate::error::CliError;
 use crate::exchange::Exchange;
 use crate::CliResult;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Currency {
     value: steel_cent::currency::Currency,
 }
@@ -67,16 +67,16 @@ impl Currency {
         }
     }
 
-    pub fn decimal_places(&self) -> u8 {
+    pub fn decimal_places(self) -> u8 {
         self.value.decimal_places()
     }
 
-    pub fn code(&self) -> String {
+    pub fn code(self) -> String {
         self.value.code()
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Money {
     value: steel_cent::Money,
 }
@@ -125,7 +125,7 @@ impl Serialize for Money {
 }
 
 impl Money {
-    pub fn parse(value: &str, currency: &Currency) -> CliResult<Money> {
+    pub fn parse(value: &str, currency: Currency) -> CliResult<Money> {
         let parser = FormatSpec::new(
             '\0',
             '.',
@@ -137,7 +137,7 @@ impl Money {
         )
         .parser();
 
-        match parser.parse::<steel_cent::Money>(&Money::formatted_value(value, &currency)) {
+        match parser.parse::<steel_cent::Money>(&Money::formatted_value(value, currency)) {
             Err(err) => Err(CliError::from(err)),
             Ok(val) => Ok(val.into()),
         }
@@ -147,10 +147,10 @@ impl Money {
         self.value.currency.into()
     }
 
-    pub fn exchange(&self, to: &Option<Currency>, exchange: &Exchange) -> CliResult<Money> {
+    pub fn exchange(&self, to: Option<Currency>, exchange: &Exchange) -> CliResult<Money> {
         match to {
             Some(currency) => {
-                let rate = exchange.rate(&self.currency(), &currency)?;
+                let rate = exchange.rate(self.currency(), currency)?;
                 let exchanged = self.value.convert_to(currency.into(), rate.into());
                 Ok(exchanged.into())
             }
@@ -158,7 +158,7 @@ impl Money {
         }
     }
 
-    fn formatted_value(value: &str, currency: &Currency) -> String {
+    fn formatted_value(value: &str, currency: Currency) -> String {
         let (integer, fractional) = match value.rfind('.') {
             None => (value, "."),
             Some(index) => value.split_at(index),

@@ -1,4 +1,3 @@
-use chrono::naive::NaiveDate;
 use serde::de::{self, Deserializer, MapAccess, Visitor};
 use serde::{Deserialize, Serialize};
 
@@ -36,7 +35,7 @@ impl Transaction {
             description: values[3].to_string(),
             quantity: values[4].parse::<f32>().map_err(CliError::from)?,
             venue: values[5].to_string(),
-            amount: Money::parse(&values[6], &currency)?,
+            amount: Money::parse(&values[6], currency)?,
             currency,
             trip: values[8].to_string(),
         })
@@ -66,24 +65,24 @@ impl Liner for Transaction {
         self.category.to_owned()
     }
 
-    fn date(&self) -> NaiveDate {
-        self.date.clone().into()
+    fn date(&self) -> Date {
+        self.date
     }
 
     fn currency(&self) -> Currency {
-        self.currency.to_owned()
+        self.currency
     }
 
     fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()> {
         wrt.serialize(self).map_err(CliError::from)
     }
 
-    fn exchange(&self, to: &Option<Currency>, exchange: &Exchange) -> CliResult<Line> {
-        let money = self.amount.exchange(&to, &exchange)?;
+    fn exchange(&self, to: Option<Currency>, exchange: &Exchange) -> CliResult<Line> {
+        let money = self.amount.exchange(to, &exchange)?;
 
         Ok(Transaction {
             account: self.account.clone(),
-            date: self.date.clone(),
+            date: self.date,
             category: self.category.clone(),
             description: self.description.clone(),
             quantity: self.quantity,
@@ -208,7 +207,7 @@ impl<'de> Deserialize<'de> for Transaction {
                         .ok_or_else(|| de::Error::missing_field("description"))?,
                     quantity: quantity.ok_or_else(|| de::Error::missing_field("quantity"))?,
                     venue: venue.ok_or_else(|| de::Error::missing_field("venue"))?,
-                    amount: Money::parse(amount, &currency).map_err(de::Error::custom)?,
+                    amount: Money::parse(amount, currency).map_err(de::Error::custom)?,
                     currency,
                     trip: trip.ok_or_else(|| de::Error::missing_field("trip"))?,
                 })

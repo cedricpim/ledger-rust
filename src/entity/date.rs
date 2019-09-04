@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::CliError;
 use crate::CliResult;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
 pub struct Date {
     value: chrono::naive::NaiveDate,
 }

@@ -1,7 +1,7 @@
-use chrono::naive::NaiveDate;
 use serde::Deserialize;
 
 use crate::config::Config;
+use crate::entity::date::Date;
 use crate::entity::line::Liner;
 use crate::exchange::Exchange;
 use crate::filter::Filter;
@@ -33,8 +33,8 @@ Options:
 struct Args {
     flag_year: Option<i32>,
     flag_month: Option<u32>,
-    flag_from: Option<NaiveDate>,
-    flag_till: Option<NaiveDate>,
+    flag_from: Option<Date>,
+    flag_till: Option<Date>,
     flag_categories: Vec<String>,
     flag_output: String,
     flag_currency: String,
@@ -69,7 +69,7 @@ impl Args {
 
         resource.line(&mut |record| {
             if filter.apply(&record) {
-                record.exchange(&currency, &exchange)?.write(&mut wtr)?;
+                record.exchange(currency, &exchange)?.write(&mut wtr)?;
             };
 
             wtr.flush()?;

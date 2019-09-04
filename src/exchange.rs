@@ -39,7 +39,7 @@ impl Exchange {
         }
     }
 
-    pub fn rate(&self, from: &Currency, to: &Currency) -> CliResult<f32> {
+    pub fn rate(&self, from: Currency, to: Currency) -> CliResult<f32> {
         match self.rates.get(&to.code()) {
             None => Err(CliError::MissingExchangeRate {
                 code: to.code().to_string(),

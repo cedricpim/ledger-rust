@@ -1,7 +1,7 @@
-use chrono::naive::NaiveDate;
 use enum_dispatch::enum_dispatch;
 use std::fs::File;
 
+use crate::entity::date::Date;
 use crate::entity::entry::Entry;
 use crate::entity::money::Currency;
 use crate::entity::transaction::Transaction;
@@ -37,8 +37,8 @@ pub trait Liner {
     fn headers(&self) -> Vec<&'static str>;
     fn account(&self) -> String;
     fn category(&self) -> String;
-    fn date(&self) -> NaiveDate;
+    fn date(&self) -> Date;
     fn currency(&self) -> Currency;
-    fn exchange(&self, to: &Option<Currency>, exchange: &Exchange) -> CliResult<Line>;
+    fn exchange(&self, to: Option<Currency>, exchange: &Exchange) -> CliResult<Line>;
     fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()>;
 }

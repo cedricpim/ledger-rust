@@ -112,15 +112,25 @@ impl Serialize for Money {
     where
         S: serde::Serializer,
     {
-        let format_spec = FormatSpec::new(',', '.', vec![FormatPart::Amount]);
+        let val = FormatSpec::new(',', '.', vec![FormatPart::Amount])
+            .display_for(&self.value)
+            .to_string()
+            .replace(",", "");
 
-        let formatted = if self.value == self.value.abs() {
-            format!("+{}", format_spec.display_for(&self.value))
-        } else {
-            format!("-{}", format_spec.display_for(&self.value))
+        let (integer, fractional) = match val.rfind('.') {
+            None => (&val[..], ".00"),
+            Some(index) => val.split_at(index),
         };
 
-        serializer.serialize_str(&formatted.replace(",", ""))
+        let sign = if self.value == self.value.abs() {
+            "+"
+        } else {
+            "-"
+        };
+
+        let formatted = format!("{}{}{:0<width$}", sign, integer, fractional, width = 3);
+
+        serializer.serialize_str(&formatted)
     }
 }
 

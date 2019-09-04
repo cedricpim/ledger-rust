@@ -1,5 +1,5 @@
 use chrono::naive::NaiveDate;
-use chrono::Utc;
+use chrono::{Datelike, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::error::CliError;
@@ -56,6 +56,26 @@ impl<'de> Deserialize<'de> for Date {
 }
 
 impl Date {
+    pub fn today() -> Date {
+        chrono::Utc::today().naive_local().into()
+    }
+
+    pub fn year(self) -> i32 {
+        self.value.year()
+    }
+
+    pub fn month(self) -> u32 {
+        self.value.month()
+    }
+
+    pub fn end_of_month(self) -> Date {
+        match self.month() {
+            month @ 12 => chrono::naive::NaiveDate::from_ymd(self.year() + 1, month, 1).pred(),
+            month => chrono::naive::NaiveDate::from_ymd(self.year(), month + 1, 1).pred(),
+        }
+        .into()
+    }
+
     pub fn parse(value: &str) -> CliResult<Date> {
         match value {
             "" => Ok(Default::default()),

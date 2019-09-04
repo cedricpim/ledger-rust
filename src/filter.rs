@@ -1,5 +1,3 @@
-use chrono::Datelike;
-
 use std::ops::RangeInclusive;
 
 use crate::entity::date::Date;
@@ -36,23 +34,18 @@ impl Filter {
     }
 
     fn period(&self) -> RangeInclusive<Date> {
-        if self.from.is_some() || self.till.is_some() {
-            let start = self.from.unwrap_or_else(|| chrono::naive::MIN_DATE.into());
-            let end = self.till.unwrap_or_else(|| chrono::naive::MAX_DATE.into());
-            start..=end
-        } else if self.year.is_some() || self.month.is_some() {
-            let today = chrono::Utc::today().naive_local();
+        let (start, end) = if self.year.is_some() || self.month.is_some() {
+            let today = Date::today();
             let year = self.year.unwrap_or_else(|| today.year());
             let month = self.month.unwrap_or_else(|| today.month());
-            let start = chrono::naive::NaiveDate::from_ymd(year, month, 1).into();
-            let end = match month {
-                12 => chrono::naive::NaiveDate::from_ymd(year + 1, month, 1).pred(),
-                _ => chrono::naive::NaiveDate::from_ymd(year, month + 1, 1).pred(),
-            }
-            .into();
-            start..=end
+            let start: Date = chrono::naive::NaiveDate::from_ymd(year, month, 1).into();
+            (start, start.end_of_month())
         } else {
-            chrono::naive::MIN_DATE.into()..=chrono::naive::MAX_DATE.into()
-        }
+            (
+                self.from.unwrap_or_else(|| chrono::naive::MIN_DATE.into()),
+                self.till.unwrap_or_else(|| chrono::naive::MAX_DATE.into()),
+            )
+        };
+        start..=end
     }
 }

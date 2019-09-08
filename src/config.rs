@@ -5,7 +5,9 @@ use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use std::time::{Duration, SystemTime};
 
+use crate::error::CliError;
 use crate::{util, CliResult};
 
 const CONFIGURATION_FILENAME: &str = "rust-config";
@@ -14,7 +16,9 @@ const CONFIGURATION_FILENAME: &str = "rust-config";
 pub struct Config {
     encryption: Option<String>,
     files: Files,
-    pub exchange: Exchange,
+    exchange: Exchange,
+    pub categories: Vec<String>,
+    pub accounts: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -23,11 +27,11 @@ struct Files {
     networth: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Exchange {
-    pub api_key: String,
-    pub cache_file: String,
-    pub ttl: u64,
+    api_key: String,
+    cache_file: String,
+    ttl: u64,
 }
 
 impl Config {
@@ -56,6 +60,8 @@ impl Config {
                 cache_file: "/tmp/exchange-cache-rust.yml".to_string(),
                 ttl: 86400, // 1 day
             },
+            categories: vec!["Investment".to_string()],
+            accounts: vec!["Personal".to_string()],
         };
 
         let mut file = File::create(&config_path)?;
@@ -66,6 +72,10 @@ impl Config {
 
     pub fn path() -> CliResult<String> {
         util::config_filepath(CONFIGURATION_FILENAME)
+    }
+
+    pub fn exchange(&self) -> Exchange {
+        self.exchange.clone()
     }
 
     pub fn filepath(&self, networth: bool) -> String {
@@ -80,5 +90,34 @@ impl Config {
 
     pub fn pass(&self) -> Option<String> {
         self.encryption.to_owned()
+    }
+}
+
+impl Exchange {
+    pub fn cached(&self) -> bool {
+        let path = Path::new(&self.cache_file);
+
+        let mtime = path
+            .metadata()
+            .and_then(|v| v.modified())
+            .unwrap_or(SystemTime::UNIX_EPOCH);
+
+        let default = Duration::new(self.ttl, 0);
+
+        let interval = SystemTime::now().duration_since(mtime).unwrap_or(default).as_secs();
+
+        path.exists() && interval < self.ttl
+    }
+
+    pub fn open(&self) -> CliResult<File> {
+        File::open(&self.cache_file).map_err(CliError::from)
+    }
+
+    pub fn create(&self) -> CliResult<File> {
+        File::create(&self.cache_file).map_err(CliError::from)
+    }
+
+    pub fn key(&self) -> String {
+        self.api_key.to_owned()
     }
 }

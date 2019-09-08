@@ -1,36 +1,61 @@
 use std::ops::RangeInclusive;
 
+use crate::config::Config;
+use crate::cmd::{show, balance};
 use crate::entity::date::Date;
 use crate::entity::line::{Line, Liner};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Filter {
     year: Option<i32>,
     month: Option<u32>,
     from: Option<Date>,
     till: Option<Date>,
     categories: Vec<String>,
+    excluded_categories: Vec<String>,
+    excluded_accounts: Vec<String>,
 }
 
 impl Filter {
-    pub fn new(
-        year: Option<i32>,
-        month: Option<u32>,
-        from: Option<Date>,
-        till: Option<Date>,
-        categories: Vec<String>,
-    ) -> Self {
-        Filter {
-            year,
-            month,
-            from,
-            till,
-            categories,
+    pub fn show(args: &show::Args) -> Self {
+        Self {
+            year: args.flag_year,
+            month: args.flag_month,
+            from: args.flag_from,
+            till: args.flag_till,
+            categories: args.flag_categories.clone(),
+            ..Default::default()
+        }
+    }
+
+    pub fn balance(args: &balance::Args) -> Self {
+        Self {
+            from: args.flag_date,
+            ..Default::default()
         }
     }
 
     pub fn apply(&self, line: &Line) -> bool {
-        !self.categories.contains(&line.category()) && self.period().contains(&line.date())
+        self.with(&line.category(), &self.categories) &&
+            Filter::without(&line.category(), &self.excluded_categories) &&
+            Filter::without(&line.account(), &self.excluded_accounts) &&
+            self.within(&line.date())
+    }
+
+    fn without(value: &str, list: &Vec<String>) -> bool {
+        let values: Vec<String> = list.iter().map(|v| v.to_uppercase()).collect();
+
+        !values.contains(&value.to_uppercase())
+    }
+
+    fn with(&self, value: &str, list: &Vec<String>) -> bool {
+        let values: Vec<String> = list.iter().map(|v| v.to_uppercase()).collect();
+
+        self.categories.is_empty() || values.contains(&value.to_uppercase())
+    }
+
+    fn within(&self, date: &Date) -> bool {
+        self.period().contains(&date)
     }
 
     fn period(&self) -> RangeInclusive<Date> {

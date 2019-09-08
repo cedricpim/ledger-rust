@@ -17,7 +17,7 @@ pub struct Transaction {
     pub date: Date,
     pub category: String,
     pub description: String,
-    pub quantity: f32,
+    pub quantity: String,
     pub venue: String,
     pub amount: Money,
     pub currency: Currency,
@@ -33,7 +33,7 @@ impl Transaction {
             date: Date::parse(&values[1])?,
             category: values[2].to_string(),
             description: values[3].to_string(),
-            quantity: values[4].parse::<f32>().map_err(CliError::from)?,
+            quantity: values[4].to_string(),
             venue: values[5].to_string(),
             amount: Money::parse(&values[6], currency)?,
             currency,
@@ -69,6 +69,10 @@ impl Liner for Transaction {
         self.date
     }
 
+    fn amount(&self) -> Money {
+        self.amount
+    }
+
     fn currency(&self) -> Currency {
         self.currency
     }
@@ -85,7 +89,7 @@ impl Liner for Transaction {
             date: self.date,
             category: self.category.clone(),
             description: self.description.clone(),
-            quantity: self.quantity,
+            quantity: self.quantity.clone(),
             venue: self.venue.clone(),
             currency: money.currency(),
             amount: money,

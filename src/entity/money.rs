@@ -1,9 +1,20 @@
 use serde::{Deserialize, Serialize};
 use steel_cent::formatting::{FormatPart, FormatSpec};
 
+use std::ops::Add;
+use std::collections::HashMap;
+
 use crate::error::CliError;
 use crate::exchange::Exchange;
 use crate::CliResult;
+
+lazy_static!{
+    static ref SYMBOLS: HashMap<&'static str, &'static str> = [
+        ("EUR", "€"),
+        ("PLN", "zł"),
+        ("USD", "$"),
+    ].iter().copied().collect();
+}
 
 #[derive(Debug, Copy, Clone)]
 pub struct Currency {
@@ -81,6 +92,14 @@ pub struct Money {
     value: steel_cent::Money,
 }
 
+impl std::fmt::Display for Money {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let code: &str = &self.currency().code();
+
+        write!(f, "{}{}", self.to_string(), SYMBOLS.get(code).unwrap_or(&code))
+    }
+}
+
 impl From<Money> for steel_cent::Money {
     fn from(source: Money) -> steel_cent::Money {
         source.value
@@ -107,30 +126,20 @@ impl Default for Money {
     }
 }
 
+impl Add for Money {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self { value: self.value + other.value }
+    }
+}
+
 impl Serialize for Money {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        let val = FormatSpec::new(',', '.', vec![FormatPart::Amount])
-            .display_for(&self.value)
-            .to_string()
-            .replace(",", "");
-
-        let (integer, fractional) = match val.rfind('.') {
-            None => (&val[..], ".00"),
-            Some(index) => val.split_at(index),
-        };
-
-        let sign = if self.value == self.value.abs() {
-            "+"
-        } else {
-            "-"
-        };
-
-        let formatted = format!("{}{}{:0<width$}", sign, integer, fractional, width = 3);
-
-        serializer.serialize_str(&formatted)
+        serializer.serialize_str(&format!("{}", &self.to_string().replace(",", "")))
     }
 }
 
@@ -153,6 +162,29 @@ impl Money {
         }
     }
 
+    pub fn to_string(&self) -> String {
+        let val = FormatSpec::new(',', '.', vec![FormatPart::Amount])
+            .display_for(&self.value)
+            .to_string();
+
+        let (integer, fractional) = match val.rfind('.') {
+            None => (&val[..], ".00"),
+            Some(index) => val.split_at(index),
+        };
+
+        let sign = if self.value == self.value.abs() {
+            "+"
+        } else {
+            "-"
+        };
+
+        format!("{}{}{:0<width$}", sign, integer, fractional, width = 3)
+    }
+
+    pub fn new(currency: Currency, value: i64) -> Money {
+        steel_cent::Money::of_minor(currency.into(), value).into()
+    }
+
     pub fn currency(&self) -> Currency {
         self.value.currency.into()
     }
@@ -166,6 +198,18 @@ impl Money {
             }
             None => Ok(self.to_owned()),
         }
+    }
+
+    pub fn zero(&self) -> bool {
+        self.value.minor_amount() == 0
+    }
+
+    pub fn positive(&self) -> bool {
+        self.value.minor_amount() > 0
+    }
+
+    pub fn negative(&self) -> bool {
+        self.value.minor_amount() < 0
     }
 
     fn formatted_value(value: &str, currency: Currency) -> String {

@@ -1,6 +1,9 @@
 use docopt::Docopt;
 use serde::Deserialize;
 
+#[macro_use]
+extern crate lazy_static;
+
 use std::{env, process};
 
 mod cmd;
@@ -32,6 +35,7 @@ macro_rules! command_list {
     () => (
 "
 Implemented:
+    balance     List the current balance of each account
     book        Add a transaction to the ledger
     configure   Copy provided configuration file to the default location
     convert     Convert other currencies to main currency of the account
@@ -41,7 +45,6 @@ Implemented:
 
 To be implemented:
     analysis    List all transactions on the ledger for the specified category
-    balance     List the current balance of each account
     compare     Compare multiple periods
     networth    Calculate current networth
     report      Create a report about the transactions on the ledger according to any params provided
@@ -78,6 +81,7 @@ struct Args {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum Command {
+    Balance,
     Book,
     Configure,
     Convert,
@@ -127,6 +131,7 @@ impl Command {
         }
 
         match self {
+            Command::Balance => cmd::balance::run(argv),
             Command::Book => cmd::book::run(argv),
             Command::Edit => cmd::edit::run(argv),
             Command::Configure => cmd::configure::run(argv),

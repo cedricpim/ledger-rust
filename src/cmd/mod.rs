@@ -1,3 +1,4 @@
+pub mod balance;
 pub mod book;
 pub mod configure;
 pub mod convert;

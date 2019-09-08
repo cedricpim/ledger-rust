@@ -3,10 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_yaml;
 
 use std::collections::BTreeMap;
-use std::fs::File;
 use std::io::Write;
-use std::path::Path;
-use std::time::{Duration, SystemTime};
 
 use crate::config::Config;
 use crate::entity::money::Currency;
@@ -32,7 +29,7 @@ impl From<openexchangerates::ExchangeRate> for Exchange {
 
 impl Exchange {
     pub fn new(config: &Config) -> CliResult<Exchange> {
-        if Exchange::valid_cache(&config) {
+        if config.exchange().cached() {
             Exchange::load(&config)
         } else {
             Exchange::download(&config)
@@ -53,32 +50,13 @@ impl Exchange {
         }
     }
 
-    fn valid_cache(config: &Config) -> bool {
-        let path = Path::new(&config.exchange.cache_file);
-
-        let mtime = path
-            .metadata()
-            .and_then(|v| v.modified())
-            .unwrap_or(SystemTime::UNIX_EPOCH);
-
-        let default = Duration::new(config.exchange.ttl, 0);
-
-        path.exists()
-            && SystemTime::now()
-                .duration_since(mtime)
-                .unwrap_or(default)
-                .as_secs()
-                < config.exchange.ttl
-    }
-
     fn load(config: &Config) -> CliResult<Exchange> {
-        let file = File::open(&config.exchange.cache_file)?;
-        serde_yaml::from_reader(file).map_err(CliError::from)
+        serde_yaml::from_reader(config.exchange().open()?).map_err(CliError::from)
     }
 
     fn download(config: &Config) -> CliResult<Exchange> {
-        match openexchangerates::Client::new(&config.exchange.api_key).latest() {
-            Ok(result) => Exchange::store(result.into(), &config.exchange.cache_file),
+        match openexchangerates::Client::new(&config.exchange().key()).latest() {
+            Ok(result) => Exchange::store(result.into(), &config),
             Err(openexchangerates::error::Error::Hyper(_)) => match Exchange::load(&config) {
                 Ok(val) => Ok(val),
                 Err(_) => Err(CliError::ExchangeInternetRequired),
@@ -87,8 +65,8 @@ impl Exchange {
         }
     }
 
-    fn store(exchange: Exchange, location: &str) -> CliResult<Exchange> {
-        let mut file = File::create(location)?;
+    fn store(exchange: Exchange, config: &Config) -> CliResult<Exchange> {
+        let mut file = config.exchange().create()?;
         let yaml = serde_yaml::to_string(&exchange)?;
         file.write_all(yaml.as_bytes())?;
         Ok(exchange)

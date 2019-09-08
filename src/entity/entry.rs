@@ -51,6 +51,10 @@ impl Liner for Entry {
         self.date
     }
 
+    fn amount(&self) -> Money {
+        self.amount
+    }
+
     fn currency(&self) -> Currency {
         self.currency
     }

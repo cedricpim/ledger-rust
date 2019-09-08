@@ -22,7 +22,7 @@ Options:
     -m, --month=<month>                 Select entries that occurred on the month
     -f, --from=<from>                   Select entries that occurred after the date
     -t, --till=<till>                   Select entries that occurred before the date
-    -c, --categories=<categories>       Select entries that don't match the categories
+    -c, --categories=<categories>       Select entries that match the categories
     -C, --currency=<currency>           Display entries on the currency
     -o, --output=<output>               Print selected entries to the output [default: /dev/stdout]
     -n, --networth                      Select entries from networth CSV instead of ledger CSV
@@ -30,12 +30,12 @@ Options:
 ";
 
 #[derive(Debug, Deserialize)]
-struct Args {
-    flag_year: Option<i32>,
-    flag_month: Option<u32>,
-    flag_from: Option<Date>,
-    flag_till: Option<Date>,
-    flag_categories: Vec<String>,
+pub struct Args {
+    pub flag_year: Option<i32>,
+    pub flag_month: Option<u32>,
+    pub flag_from: Option<Date>,
+    pub flag_till: Option<Date>,
+    pub flag_categories: Vec<String>,
     flag_output: String,
     flag_currency: String,
     flag_networth: bool,
@@ -53,13 +53,7 @@ impl Args {
     fn show(&self, config: &Config) -> CliResult<()> {
         let resource = repository::Resource::new(&config, self.flag_networth)?;
 
-        let filter = Filter::new(
-            self.flag_year,
-            self.flag_month,
-            self.flag_from,
-            self.flag_till,
-            self.flag_categories.clone(),
-        );
+        let filter = Filter::show(&self);
 
         let currency = util::currency(&self.flag_currency)?;
 

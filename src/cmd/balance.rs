@@ -83,11 +83,13 @@ impl Args {
     fn totals(balances: &BTreeMap<String, Money>, exchange: &Exchange, config: &Config) -> CliResult<BTreeMap<String, Money>> {
         let mut totals: BTreeMap<String, Money> = BTreeMap::new();
 
+        let filter = Filter::totals(&config);
+
         for (_, value) in balances {
             let currency = value.currency();
             let result = match totals.get(&currency.code()) {
                 None => {
-                    let exchanged: CliResult<Vec<Money>> = balances.iter().filter(|(k, _)| Filter::without(&k, &config.accounts.clone())).map(|(_, v)| v.exchange(Some(currency), &exchange)).collect();
+                    let exchanged: CliResult<Vec<Money>> = balances.iter().filter(|(k, _)| filter.check(&k)).map(|(_, v)| v.exchange(Some(currency), &exchange)).collect();
                     exchanged?.iter().fold(Money::new(currency, 0), |acc, val| acc + *val)
                 },
                 Some(val) => *val,

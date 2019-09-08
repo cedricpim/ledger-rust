@@ -1,5 +1,6 @@
 use std::ops::RangeInclusive;
 
+use crate::config::Config;
 use crate::cmd::{show, balance};
 use crate::entity::date::Date;
 use crate::entity::line::{Line, Liner};
@@ -34,6 +35,13 @@ impl Filter {
         }
     }
 
+    pub fn totals(config: &Config) -> Self {
+        Self {
+            excluded_accounts: config.accounts.clone(),
+            ..Default::default()
+        }
+    }
+
     pub fn apply(&self, line: &Line) -> bool {
         self.with(&line.category(), &self.categories) &&
             Filter::without(&line.category(), &self.excluded_categories) &&
@@ -41,16 +49,22 @@ impl Filter {
             self.within(&line.date())
     }
 
-    pub fn without(value: &str, list: &Vec<String>) -> bool {
-        let values: Vec<String> = list.iter().map(|v| v.to_uppercase()).collect();
-
-        !values.contains(&value.to_uppercase())
+    pub fn check(&self, value: &str) -> bool {
+        self.with(&value, &self.categories) &&
+            Filter::without(&value, &self.excluded_categories) &&
+            Filter::without(&value, &self.excluded_accounts)
     }
 
     fn with(&self, value: &str, list: &Vec<String>) -> bool {
         let values: Vec<String> = list.iter().map(|v| v.to_uppercase()).collect();
 
         self.categories.is_empty() || values.contains(&value.to_uppercase())
+    }
+
+    fn without(value: &str, list: &Vec<String>) -> bool {
+        let values: Vec<String> = list.iter().map(|v| v.to_uppercase()).collect();
+
+        !values.contains(&value.to_uppercase())
     }
 
     fn within(&self, date: &Date) -> bool {

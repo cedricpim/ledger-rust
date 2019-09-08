@@ -2,10 +2,7 @@ use enum_dispatch::enum_dispatch;
 use std::fs::File;
 
 use crate::entity::date::Date;
-use crate::entity::money::Money;
-use crate::entity::entry::Entry;
-use crate::entity::money::Currency;
-use crate::entity::transaction::Transaction;
+use crate::entity::{entry::Entry, money::Currency, money::Money, transaction::Transaction};
 use crate::exchange::Exchange;
 use crate::CliResult;
 

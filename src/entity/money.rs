@@ -1,14 +1,14 @@
 use serde::{Deserialize, Serialize};
 use steel_cent::formatting::{FormatPart, FormatSpec};
 
-use std::ops::Add;
 use std::collections::HashMap;
+use std::ops::Add;
 
 use crate::error::CliError;
 use crate::exchange::Exchange;
 use crate::CliResult;
 
-lazy_static!{
+lazy_static! {
     static ref SYMBOLS: HashMap<&'static str, &'static str> = [
         ("ARS", "$"),
         ("BRL", "R$"),
@@ -18,7 +18,10 @@ lazy_static!{
         ("PLN", "zł"),
         ("USD", "$"),
         ("VND", "₫"),
-    ].iter().copied().collect();
+    ]
+    .iter()
+    .copied()
+    .collect();
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -101,7 +104,12 @@ impl std::fmt::Display for Money {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let code: &str = &self.currency().code();
 
-        write!(f, "{}{}", self.to_string(), SYMBOLS.get(code).unwrap_or(&code))
+        write!(
+            f,
+            "{}{}",
+            self.to_string(),
+            SYMBOLS.get(code).unwrap_or(&code)
+        )
     }
 }
 
@@ -135,7 +143,9 @@ impl Add for Money {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
-        Self { value: self.value + other.value }
+        Self {
+            value: self.value + other.value,
+        }
     }
 }
 
@@ -144,7 +154,7 @@ impl Serialize for Money {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&format!("{}", &self.to_string().replace(",", "")))
+        serializer.serialize_str(&self.to_string().replace(",", "").to_string())
     }
 }
 

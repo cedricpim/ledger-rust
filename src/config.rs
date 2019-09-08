@@ -104,7 +104,10 @@ impl Exchange {
 
         let default = Duration::new(self.ttl, 0);
 
-        let interval = SystemTime::now().duration_since(mtime).unwrap_or(default).as_secs();
+        let interval = SystemTime::now()
+            .duration_since(mtime)
+            .unwrap_or(default)
+            .as_secs();
 
         path.exists() && interval < self.ttl
     }

@@ -1,12 +1,12 @@
+use prettytable::{format, Cell, Row, Table};
 use serde::Deserialize;
-use prettytable::{format, Row, Cell, Table};
 
 use std::collections::BTreeMap;
 
 use crate::config::Config;
-use crate::filter::Filter;
-use crate::entity::{line::Liner, date::Date, money::Money};
+use crate::entity::{date::Date, line::Liner, money::Money};
 use crate::exchange::Exchange;
+use crate::filter::Filter;
 use crate::repository::Resource;
 use crate::{util, CliResult};
 
@@ -61,7 +61,9 @@ impl Args {
         let filter = Filter::balance(&self);
 
         resource.line(&mut |record| {
-            if !filter.apply(&record) { return Ok(()); }
+            if !filter.apply(&record) {
+                return Ok(());
+            }
 
             let value = match balances.get(&record.account()) {
                 None => record.amount(),
@@ -80,23 +82,33 @@ impl Args {
         Ok(balances)
     }
 
-    fn totals(balances: &BTreeMap<String, Money>, exchange: &Exchange, config: &Config) -> CliResult<BTreeMap<String, Money>> {
+    fn totals(
+        balances: &BTreeMap<String, Money>,
+        exchange: &Exchange,
+        config: &Config,
+    ) -> CliResult<BTreeMap<String, Money>> {
         let mut totals: BTreeMap<String, Money> = BTreeMap::new();
 
         let filter = Filter::totals(&config);
 
-        for (_, value) in balances {
+        for value in balances.values() {
             let currency = value.currency();
             let result = match totals.get(&currency.code()) {
                 None => {
-                    let exchanged: CliResult<Vec<Money>> = balances.iter().filter(|(k, _)| filter.check(&k)).map(|(_, v)| v.exchange(Some(currency), &exchange)).collect();
-                    exchanged?.iter().fold(Money::new(currency, 0), |acc, val| acc + *val)
-                },
+                    let exchanged: CliResult<Vec<Money>> = balances
+                        .iter()
+                        .filter(|(k, _)| filter.check(&k))
+                        .map(|(_, v)| v.exchange(Some(currency), &exchange))
+                        .collect();
+                    exchanged?
+                        .iter()
+                        .fold(Money::new(currency, 0), |acc, val| acc + *val)
+                }
                 Some(val) => *val,
             };
 
             totals.insert(currency.code(), result);
-        };
+        }
 
         Ok(totals)
     }
@@ -104,10 +116,10 @@ impl Args {
     fn table(balances: &BTreeMap<String, Money>) {
         let mut table = Table::new();
 
-        let headers = vec!(
+        let headers = vec![
             Cell::new("Account").style_spec("brFB"),
-            Cell::new("Amount").style_spec("blFB")
-        );
+            Cell::new("Amount").style_spec("blFB"),
+        ];
         table.add_row(Row::new(headers));
 
         for (account, value) in balances.iter() {
@@ -118,20 +130,18 @@ impl Args {
             } else {
                 "blFD"
             };
-            let row = vec!(
+            let row = vec![
                 Cell::new(&account).style_spec("brFW"),
-                Cell::new(&format!("{}", value)[1..]).style_spec(format)
-            );
+                Cell::new(&format!("{}", value)[1..]).style_spec(format),
+            ];
             table.add_row(Row::new(row));
-        };
+        }
 
-        table.set_titles(Row::new(vec![
-            Cell::new("Balance").with_hspan(2).style_spec("bcFC")
-        ]));
+        table.set_titles(Row::new(vec![Cell::new("Balance")
+            .with_hspan(2)
+            .style_spec("bcFC")]));
 
-        table.set_format(
-            format::FormatBuilder::new().padding(10, 0).build()
-        );
+        table.set_format(format::FormatBuilder::new().padding(10, 0).build());
 
         table.printstd();
     }
@@ -139,19 +149,25 @@ impl Args {
     fn table_total(totals: &BTreeMap<String, Money>) {
         let mut table = Table::new();
 
-        let line = totals.iter().map(|(_, v)| Cell::new(&format!("{}", v)).style_spec("brFB")).collect();
+        let line = totals
+            .iter()
+            .map(|(_, v)| Cell::new(&format!("{}", v)).style_spec("brFB"))
+            .collect();
 
         table.add_row(Row::new(line));
 
-        table.set_titles(Row::new(vec![
-            Cell::new("Totals").with_hspan(totals.len()).style_spec("bcFC")
-        ]));
+        table.set_titles(Row::new(vec![Cell::new("Totals")
+            .with_hspan(totals.len())
+            .style_spec("bcFC")]));
 
         table.set_format(
             format::FormatBuilder::new()
-                .separators(&[format::LinePosition::Top], format::LineSeparator::new('─', '┬', '┌', '┐'))
+                .separators(
+                    &[format::LinePosition::Top],
+                    format::LineSeparator::new('─', '┬', '┌', '┐'),
+                )
                 .padding(10, 0)
-                .build()
+                .build(),
         );
 
         table.printstd();

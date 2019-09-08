@@ -1,6 +1,5 @@
 use std::ops::RangeInclusive;
 
-use crate::config::Config;
 use crate::cmd::{show, balance};
 use crate::entity::date::Date;
 use crate::entity::line::{Line, Liner};
@@ -42,7 +41,7 @@ impl Filter {
             self.within(&line.date())
     }
 
-    fn without(value: &str, list: &Vec<String>) -> bool {
+    pub fn without(value: &str, list: &Vec<String>) -> bool {
         let values: Vec<String> = list.iter().map(|v| v.to_uppercase()).collect();
 
         !values.contains(&value.to_uppercase())

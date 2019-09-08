@@ -10,9 +10,14 @@ use crate::CliResult;
 
 lazy_static!{
     static ref SYMBOLS: HashMap<&'static str, &'static str> = [
+        ("ARS", "$"),
+        ("BRL", "R$"),
+        ("CHF", "CHF"),
+        ("CNY", "¥"),
         ("EUR", "€"),
         ("PLN", "zł"),
         ("USD", "$"),
+        ("VND", "₫"),
     ].iter().copied().collect();
 }
 

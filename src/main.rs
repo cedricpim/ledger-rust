@@ -41,13 +41,13 @@ Implemented:
     convert     Convert other currencies to main currency of the account
     create      Create a new ledger/networth file
     edit        Open ledger/networth file in your editor
+    report      Create a report about the transactions on the ledger according to any params provided
     show        Display all transactions
 
 To be implemented:
     analysis    List all transactions on the ledger for the specified category
     compare     Compare multiple periods
     networth    Calculate current networth
-    report      Create a report about the transactions on the ledger according to any params provided
     trip        Create a report about the trips present on the ledger
 "
     )
@@ -88,6 +88,7 @@ enum Command {
     Create,
     Edit,
     Show,
+    Report,
 }
 
 fn main() {
@@ -138,6 +139,7 @@ impl Command {
             Command::Convert => cmd::convert::run(argv),
             Command::Create => cmd::create::run(argv),
             Command::Show => cmd::show::run(argv),
+            Command::Report => cmd::report::run(argv),
         }
     }
 }

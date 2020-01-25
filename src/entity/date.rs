@@ -70,7 +70,7 @@ impl Date {
 
     pub fn end_of_month(self) -> Date {
         match self.month() {
-            month @ 12 => chrono::naive::NaiveDate::from_ymd(self.year() + 1, month, 1).pred(),
+            month @ 12 => chrono::naive::NaiveDate::from_ymd(self.year(), month, 31),
             month => chrono::naive::NaiveDate::from_ymd(self.year(), month + 1, 1).pred(),
         }
         .into()

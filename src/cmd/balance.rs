@@ -141,7 +141,7 @@ impl Args {
             .with_hspan(2)
             .style_spec("bcFC")]));
 
-        table.set_format(format::FormatBuilder::new().padding(10, 0).build());
+        table.set_format(format::FormatBuilder::new().padding(0, 5).build());
 
         table.printstd();
     }
@@ -166,7 +166,7 @@ impl Args {
                     &[format::LinePosition::Top],
                     format::LineSeparator::new('─', '┬', '┌', '┐'),
                 )
-                .padding(10, 0)
+                .padding(0, 5)
                 .build(),
         );
 

@@ -19,6 +19,7 @@ pub struct Config {
     exchange: Exchange,
     pub categories: Vec<String>,
     pub accounts: Vec<String>,
+    pub currency: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -60,6 +61,7 @@ impl Config {
                 cache_file: "/tmp/exchange-cache-rust.yml".to_string(),
                 ttl: 86400, // 1 day
             },
+            currency: "EUR".to_string(),
             categories: vec!["Investment".to_string()],
             accounts: vec!["Personal".to_string()],
         };

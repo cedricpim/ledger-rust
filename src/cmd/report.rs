@@ -175,7 +175,7 @@ impl Report {
     fn display(&self) {
         let mut table = Table::new();
 
-        table.set_format(format::FormatBuilder::new().padding(0, 5).build());
+        table.set_format(format::FormatBuilder::new().padding(2, 3).build());
 
         table.set_titles(Report::title());
 

@@ -2,10 +2,13 @@ use docopt::Docopt;
 use rand::Rng;
 use serde::de::DeserializeOwned;
 use xdg::BaseDirectories;
+use prettytable::{Attr,Cell,color};
+use prettytable::format::Alignment;
 
 use std::iter;
 
-use crate::entity::money::Currency;
+use crate::entity::money::{Currency,Money};
+use crate::config::Config;
 use crate::error::CliError;
 use crate::CliResult;
 
@@ -67,15 +70,47 @@ pub fn config_filepath(filename: &str) -> CliResult<String> {
         })
 }
 
-pub fn currency(value: &str) -> CliResult<Option<Currency>> {
-    if value.is_empty() {
-        return Ok(None);
+pub fn currency(value: &str, config: &Config) -> CliResult<Currency> {
+    let currency_code = if value.is_empty() {
+        config.currency.to_string()
+    } else {
+        value.to_string()
     };
 
-    let code = value.to_uppercase();
+    let code = currency_code.to_uppercase();
 
     match steel_cent::currency::with_code(&code) {
-        Some(val) => Ok(Some(val.into())),
+        Some(val) => Ok(val.into()),
         None => Err(CliError::IncorrectCurrencyCode { code }),
+    }
+}
+
+pub fn money_cell(value: &Money, with_sign: bool, with_brackets: bool, alignment: Alignment) -> Cell {
+    let mut rep = if with_sign {
+        format!("{}", value)[0..].to_string()
+    } else {
+        format!("{}", value)[1..].to_string()
+    };
+
+    if with_brackets {
+        rep = format!("({})", rep);
+    };
+
+    Cell::new_align(&rep, alignment).
+        with_style(Attr::Bold).
+        with_style(color(value.cents() as f64))
+}
+
+pub fn percentage_cell(value: f64, alignment: Alignment) -> Cell {
+    Cell::new_align(&format!("{:+.2}%", value)[1..], alignment).
+        with_style(Attr::Bold).
+        with_style(color(value))
+}
+
+fn color(value: f64) -> Attr {
+    match value {
+        v if v > 0.0 => { Attr::ForegroundColor(color::BRIGHT_GREEN) },
+        v if v < 0.0 => { Attr::ForegroundColor(color::BRIGHT_RED) },
+        _ => Attr::ForegroundColor(color::BRIGHT_BLACK),
     }
 }

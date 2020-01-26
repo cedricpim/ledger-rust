@@ -17,8 +17,8 @@ pub struct Config {
     encryption: Option<String>,
     files: Files,
     exchange: Exchange,
-    pub categories: Vec<String>,
-    pub accounts: Vec<String>,
+    pub ignored_categories: Vec<String>,
+    pub ignored_accounts: Vec<String>,
     pub currency: String,
 }
 
@@ -62,8 +62,8 @@ impl Config {
                 ttl: 86400, // 1 day
             },
             currency: "EUR".to_string(),
-            categories: vec!["Investment".to_string()],
-            accounts: vec!["Personal".to_string()],
+            ignored_categories: vec!["Investment".to_string()],
+            ignored_accounts: vec!["Personal".to_string()],
         };
 
         let mut file = File::create(&config_path)?;

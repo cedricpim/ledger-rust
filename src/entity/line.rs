@@ -38,6 +38,6 @@ pub trait Liner {
     fn amount(&self) -> Money;
     fn date(&self) -> Date;
     fn currency(&self) -> Currency;
-    fn exchange(&self, to: Option<Currency>, exchange: &Exchange) -> CliResult<Line>;
+    fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Line>;
     fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()>;
 }

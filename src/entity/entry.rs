@@ -63,7 +63,7 @@ impl Liner for Entry {
         wrt.serialize(self).map_err(CliError::from)
     }
 
-    fn exchange(&self, to: Option<Currency>, exchange: &Exchange) -> CliResult<Line> {
+    fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Line> {
         let money = self.amount.exchange(to, &exchange)?;
 
         Ok(Entry {

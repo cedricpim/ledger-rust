@@ -55,7 +55,7 @@ impl Args {
 
         let filter = Filter::show(&self);
 
-        let currency = util::currency(&self.flag_currency)?;
+        let currency = util::currency(&self.flag_currency, &config)?;
 
         let exchange = Exchange::new(&config)?;
 

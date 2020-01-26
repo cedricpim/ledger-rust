@@ -67,7 +67,7 @@ impl Args {
 
             let value = match balances.get(&record.account()) {
                 None => record.amount(),
-                Some(val) => *val + record.exchange(Some(val.currency()), &exchange)?.amount(),
+                Some(val) => *val + record.exchange(val.currency(), &exchange)?.amount(),
             };
 
             balances.insert(record.account(), value);
@@ -98,7 +98,7 @@ impl Args {
                     let exchanged: CliResult<Vec<Money>> = balances
                         .iter()
                         .filter(|(k, _)| filter.check(&k))
-                        .map(|(_, v)| v.exchange(Some(currency), &exchange))
+                        .map(|(_, v)| v.exchange(currency, &exchange))
                         .collect();
                     exchanged?
                         .iter()

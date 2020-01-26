@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 use steel_cent::formatting::{FormatPart, FormatSpec};
 
 use std::collections::HashMap;
-use std::ops::Add;
+use std::ops::{Add,Sub};
+use std::cmp::Ordering;
 
 use crate::error::CliError;
 use crate::exchange::Exchange;
@@ -95,9 +96,27 @@ impl Currency {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq)]
 pub struct Money {
     value: steel_cent::Money,
+}
+
+impl PartialOrd for Money {
+    fn partial_cmp(&self, other: &Money) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Money {
+    fn cmp(&self, other: &Money) -> Ordering {
+        self.cents().abs().cmp(&other.cents().abs())
+    }
+}
+
+impl PartialEq for Money {
+    fn eq(&self, other: &Money) -> bool {
+        self.value == other.value
+    }
 }
 
 impl std::fmt::Display for Money {
@@ -145,6 +164,16 @@ impl Add for Money {
     fn add(self, other: Self) -> Self {
         Self {
             value: self.value + other.value,
+        }
+    }
+}
+
+impl Sub for Money {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        Self {
+            value: self.value - other.value,
         }
     }
 }
@@ -204,27 +233,29 @@ impl Money {
         self.value.currency.into()
     }
 
-    pub fn exchange(&self, to: Option<Currency>, exchange: &Exchange) -> CliResult<Money> {
-        match to {
-            Some(currency) => {
-                let rate = exchange.rate(self.currency(), currency)?;
-                let exchanged = self.value.convert_to(currency.into(), rate.into());
-                Ok(exchanged.into())
-            }
-            None => Ok(self.to_owned()),
-        }
+    pub fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Money> {
+        let rate = exchange.rate(self.currency(), to)?;
+        Ok(self.value.convert_to(to.into(), rate.into()).into())
+    }
+
+    pub fn abs(&self) -> Money {
+        self.value.abs().into()
+    }
+
+    pub fn cents(&self) -> i64 {
+        self.value.minor_amount()
     }
 
     pub fn zero(&self) -> bool {
-        self.value.minor_amount() == 0
+        self.cents() == 0
     }
 
     pub fn positive(&self) -> bool {
-        self.value.minor_amount() > 0
+        self.cents() > 0
     }
 
     pub fn negative(&self) -> bool {
-        self.value.minor_amount() < 0
+        self.cents() < 0
     }
 
     fn formatted_value(value: &str, currency: Currency) -> String {

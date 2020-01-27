@@ -1,8 +1,6 @@
-use prettytable::{format, Cell, Row, Table};
-
 use crate::config::Config;
 use crate::entity::money::{Currency, Money};
-use crate::entity::{line::Line, line::Liner};
+use crate::entity::line::{Line, Liner};
 use crate::exchange::Exchange;
 use crate::filter::Filter;
 use crate::{util, CliResult};
@@ -15,10 +13,6 @@ pub struct Total {
 }
 
 impl Total {
-    fn title() -> Row {
-        Row::new(vec![Cell::new("Totals").style_spec("bcFC")])
-    }
-
     pub fn new(currency: &str, config: &Config) -> CliResult<Self> {
         Ok(Self {
             value: 0,
@@ -37,33 +31,7 @@ impl Total {
         Ok(())
     }
 
-    pub fn display(self) {
-        let mut table = Table::new();
-
-        table.set_format(
-            format::FormatBuilder::new()
-                .separators(
-                    &[format::LinePosition::Top],
-                    format::LineSeparator::new('─', '┬', '┌', '┐'),
-                )
-                .padding(10, 10)
-                .build(),
-        );
-
-        table.set_titles(Total::title());
-
-        table.add_row(self.row());
-
-        table.printstd();
-    }
-
-    fn row(&self) -> Row {
-        Row::new(vec![
-            Cell::new(&format!("{}", self.amount())).style_spec("brFB")
-        ])
-    }
-
-    fn amount(&self) -> Money {
+    pub fn amount(&self) -> Money {
         steel_cent::Money::of_minor(self.currency.into(), self.value).into()
     }
 }

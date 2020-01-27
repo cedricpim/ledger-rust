@@ -6,7 +6,9 @@ use std::collections::HashMap;
 use std::ops::AddAssign;
 
 use crate::config::Config;
-use crate::entity::{date::Date, line::Line, line::Liner, money::Currency, money::Money};
+use crate::entity::{date::Date, total::Total};
+use crate::entity::line::{Line, Liner};
+use crate::entity::money::{Currency, Money};
 use crate::exchange::Exchange;
 use crate::filter::Filter;
 use crate::repository::Resource;
@@ -55,13 +57,15 @@ impl Args {
     fn generate(&self, config: &Config) -> CliResult<()> {
         let exchange = Exchange::new(&config)?;
 
-        let report = Report::new(&self, &config, &exchange)?;
+        let mut total = Total::new(&config.currency.to_string(), &config)?;
 
-        let total = Total::new(&report);
+        let report = Report::new(&self, &mut total, &config, &exchange)?;
+
+        let summary = Summary::new(&report, total);
 
         report.display();
 
-        total.display();
+        summary.display();
 
         Ok(())
     }
@@ -91,7 +95,12 @@ impl Report {
         ])
     }
 
-    fn new(args: &Args, config: &Config, exchange: &Exchange) -> CliResult<Report> {
+    fn new(
+        args: &Args,
+        total: &mut Total,
+        config: &Config,
+        exchange: &Exchange,
+    ) -> CliResult<Report> {
         let mut report = Self {
             currency: util::currency(&args.flag_currency, &config)?,
             ..Default::default()
@@ -102,6 +111,8 @@ impl Report {
         let filter = Filter::report(&args, &config);
 
         resource.line(&mut |record| {
+            total.sum(record, &exchange)?;
+
             if !filter.apply(&record) {
                 return Ok(());
             }
@@ -190,85 +201,6 @@ impl Report {
     }
 }
 
-#[derive(Debug)]
-struct Total {
-    currency: Currency,
-    expense: i64,
-    income: i64,
-    excluded: i64,
-    total: i64,
-}
-
-impl Total {
-    fn title() -> Row {
-        Row::new(vec![Cell::new("Totals").with_hspan(9).style_spec("bcFC")])
-    }
-
-    fn new(report: &Report) -> Self {
-        Self {
-            currency: report.currency,
-            expense: report.expense,
-            income: report.income,
-            excluded: report.excluded,
-            total: report.total,
-        }
-    }
-
-    fn income(&self) -> Money {
-        let value = if self.excluded < 0 && self.income > self.excluded.abs() {
-            self.income + self.excluded
-        } else {
-            self.income
-        };
-
-        steel_cent::Money::of_minor(self.currency.into(), value).into()
-    }
-
-    fn expense(&self) -> Money {
-        steel_cent::Money::of_minor(self.currency.into(), self.expense).into()
-    }
-
-    fn difference(&self) -> Money {
-        self.income() - self.expense().abs()
-    }
-
-    fn percentage(&self) -> f64 {
-        let difference = self.difference();
-
-        (difference.cents() as f64) / (self.income().cents() as f64) * 100.0
-    }
-
-    fn row(&self) -> Row {
-        Row::new(vec![
-            util::money_cell(&self.income(), false, false, format::Alignment::RIGHT).with_hspan(3),
-            util::money_cell(&self.expense(), false, false, format::Alignment::LEFT).with_hspan(2),
-            util::money_cell(&self.difference(), false, true, format::Alignment::LEFT)
-                .with_hspan(3),
-            util::percentage_cell(self.percentage(), format::Alignment::LEFT),
-        ])
-    }
-
-    fn display(&self) {
-        let mut table = Table::new();
-
-        table.set_format(
-            format::FormatBuilder::new()
-                .separators(
-                    &[format::LinePosition::Top],
-                    format::LineSeparator::new('─', '┬', '┌', '┐'),
-                )
-                .padding(1, 2)
-                .build(),
-        );
-
-        table.set_titles(Total::title());
-
-        table.add_row(self.row());
-
-        table.printstd();
-    }
-}
-
 #[derive(Debug, Clone)]
 struct Item {
     category: String,
@@ -330,5 +262,95 @@ impl PartialOrd for Item {
 impl PartialEq for Item {
     fn eq(&self, other: &Self) -> bool {
         self.value.abs() == other.value.abs()
+    }
+}
+
+#[derive(Debug)]
+struct Summary {
+    currency: Currency,
+    expense: i64,
+    income: i64,
+    excluded: i64,
+    total: Total,
+}
+
+impl Summary {
+    fn title() -> Row {
+        Row::new(vec![Cell::new("Totals").with_hspan(9).style_spec("bcFC")])
+    }
+
+    fn new(report: &Report, total: Total) -> Self {
+        Self {
+            currency: report.currency,
+            expense: report.expense,
+            income: report.income,
+            excluded: report.excluded,
+            total: total,
+        }
+    }
+
+    fn income(&self) -> Money {
+        let value = if self.excluded < 0 && self.income > self.excluded.abs() {
+            self.income + self.excluded
+        } else {
+            self.income
+        };
+
+        steel_cent::Money::of_minor(self.currency.into(), value).into()
+    }
+
+    fn expense(&self) -> Money {
+        steel_cent::Money::of_minor(self.currency.into(), self.expense).into()
+    }
+
+    fn difference(&self) -> Money {
+        self.income() - self.expense().abs()
+    }
+
+    fn row(&self) -> Row {
+        let percentage =
+            (self.difference().cents() as f64) / (self.income().cents() as f64) * 100.0;
+
+        Row::new(vec![
+            util::money_cell(&self.income(), false, false, format::Alignment::RIGHT).with_hspan(3),
+            util::money_cell(&self.expense(), false, false, format::Alignment::LEFT).with_hspan(2),
+            util::money_cell(&self.difference(), false, true, format::Alignment::LEFT)
+                .with_hspan(3),
+            util::percentage_cell(percentage, format::Alignment::LEFT),
+        ])
+    }
+
+    fn total(&self) -> Row {
+        let percentage =
+            (self.difference().cents() as f64) / (self.total.amount().cents() as f64) * 100.0;
+
+        Row::new(vec![
+            Cell::new(&format!("{}", self.total.amount()))
+                .style_spec("bcFB")
+                .with_hspan(8),
+            util::percentage_cell(percentage, format::Alignment::LEFT),
+        ])
+    }
+
+    fn display(&self) {
+        let mut table = Table::new();
+
+        table.set_format(
+            format::FormatBuilder::new()
+                .separators(
+                    &[format::LinePosition::Top],
+                    format::LineSeparator::new('─', '┬', '┌', '┐'),
+                )
+                .padding(1, 2)
+                .build(),
+        );
+
+        table.set_titles(Summary::title());
+
+        table.add_row(self.row());
+
+        table.add_row(self.total());
+
+        table.printstd();
     }
 }

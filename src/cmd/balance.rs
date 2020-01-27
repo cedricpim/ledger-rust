@@ -47,9 +47,11 @@ impl Args {
 
         let report = Report::new(&self, &mut total, &config, &exchange)?;
 
+        let summary = Summary::new(total);
+
         report.display();
 
-        total.display();
+        summary.display();
 
         Ok(())
     }
@@ -161,5 +163,46 @@ impl AddAssign for Item {
             account: self.account.to_string(),
             value: self.value + other.value,
         }
+    }
+}
+
+#[derive(Debug)]
+struct Summary {
+    total: Total,
+}
+
+impl Summary {
+    fn title() -> Row {
+        Row::new(vec![Cell::new("Totals").style_spec("bcFC")])
+    }
+
+    fn new(total: Total) -> Self {
+        Self { total }
+    }
+
+    fn row(&self) -> Row {
+        Row::new(vec![
+            Cell::new(&format!("{}", self.total.amount())).style_spec("brFB")
+        ])
+    }
+
+    pub fn display(self) {
+        let mut table = Table::new();
+
+        table.set_format(
+            format::FormatBuilder::new()
+                .separators(
+                    &[format::LinePosition::Top],
+                    format::LineSeparator::new('─', '┬', '┌', '┐'),
+                )
+                .padding(15, 10)
+                .build(),
+        );
+
+        table.set_titles(Summary::title());
+
+        table.add_row(self.row());
+
+        table.printstd();
     }
 }

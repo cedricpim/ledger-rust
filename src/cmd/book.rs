@@ -9,7 +9,7 @@ use crate::entity::line::{Line, Liner};
 use crate::repository::Resource;
 use crate::{util, CliResult};
 
-static USAGE: &'static str = "
+static USAGE: &str = "
 Adds a transaction to the ledger.
 
 This command will, if used without any arguments, request all the fields that compose a single

@@ -126,7 +126,7 @@ impl std::fmt::Display for Money {
         write!(
             f,
             "{}{}",
-            self.to_string(),
+            self.to_storage(),
             SYMBOLS.get(code).unwrap_or(&code)
         )
     }
@@ -183,7 +183,7 @@ impl Serialize for Money {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&self.to_string().replace(",", "").to_string())
+        serializer.serialize_str(&self.to_storage().replace(",", ""))
     }
 }
 
@@ -206,7 +206,7 @@ impl Money {
         }
     }
 
-    pub fn to_string(&self) -> String {
+    pub fn to_storage(&self) -> String {
         let val = FormatSpec::new(',', '.', vec![FormatPart::Amount])
             .display_for(&self.value)
             .to_string();

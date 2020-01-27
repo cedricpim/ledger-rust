@@ -6,15 +6,15 @@ use std::collections::HashMap;
 use std::ops::AddAssign;
 
 use crate::config::Config;
-use crate::entity::{date::Date, total::Total};
 use crate::entity::line::{Line, Liner};
 use crate::entity::money::{Currency, Money};
+use crate::entity::{date::Date, total::Total};
 use crate::exchange::Exchange;
 use crate::filter::Filter;
 use crate::repository::Resource;
 use crate::{util, CliResult};
 
-static USAGE: &'static str = "
+static USAGE: &str = "
 Generate a report about transactions made during a given a period.
 
 This command will generate a report, based on a defined time period, about all the transactions
@@ -285,7 +285,7 @@ impl Summary {
             expense: report.expense,
             income: report.income,
             excluded: report.excluded,
-            total: total,
+            total,
         }
     }
 

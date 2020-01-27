@@ -5,7 +5,7 @@ use std::process::Command;
 use crate::config::Config;
 use crate::{repository, util, CliResult};
 
-static USAGE: &'static str = "
+static USAGE: &str = "
 Allows editing of the CSV (ledger or networth).
 
 Sometimes the best way to do any changes to the CSV is by opening the preferred editor (defined on

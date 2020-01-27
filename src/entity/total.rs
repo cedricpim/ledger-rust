@@ -1,6 +1,6 @@
 use crate::config::Config;
-use crate::entity::money::{Currency, Money};
 use crate::entity::line::{Line, Liner};
+use crate::entity::money::{Currency, Money};
 use crate::exchange::Exchange;
 use crate::filter::Filter;
 use crate::{util, CliResult};

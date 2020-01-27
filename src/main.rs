@@ -53,9 +53,9 @@ To be implemented:
     )
 }
 
-static EXECUTABLE: &'static str = "ledger: try 'ledger --help' for more information";
+static EXECUTABLE: &str = "ledger: try 'ledger --help' for more information";
 
-static USAGE: &'static str = concat!(
+static USAGE: &str = concat!(
     "
 Usage:
     ledger <command> [<args>...]
@@ -121,7 +121,7 @@ fn main() {
 
 impl Command {
     fn run(self) -> CliResult<()> {
-        let argv: Vec<_> = env::args().map(|v| v.to_owned()).collect();
+        let argv: Vec<_> = env::args().map(|v| v).collect();
         let argv: Vec<_> = argv.iter().map(|s| &**s).collect();
         let argv = &*argv;
 

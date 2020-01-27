@@ -11,7 +11,7 @@ use crate::filter::Filter;
 use crate::repository::Resource;
 use crate::{util, CliResult};
 
-static USAGE: &'static str = "
+static USAGE: &str = "
 Calculate the current balances for each account.
 
 This command will calculate the current balance of each account and display it.
@@ -127,7 +127,7 @@ impl Report {
 
         table.add_row(Report::headers());
 
-        for (_account, item) in &self.items {
+        for item in self.items.values() {
             table.add_row(item.row());
         }
 

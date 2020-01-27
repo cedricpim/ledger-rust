@@ -7,7 +7,7 @@ use crate::entity::line::Liner;
 use crate::exchange::Exchange;
 use crate::{repository, util, CliResult};
 
-static USAGE: &'static str = "
+static USAGE: &str = "
 Convert other currencies to main currency of each account.
 
 Since it isn't always possible to provide the correct currency of the money spent in each account,

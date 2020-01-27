@@ -6,7 +6,7 @@ use crate::config::Config;
 use crate::error::CliError;
 use crate::{repository, util, CliResult};
 
-static USAGE: &'static str = "
+static USAGE: &str = "
 Creates the ledger or networth file that will be used to store the entries.
 
 This allows the initial set up of the main file that will be used to store either the transactions
@@ -22,7 +22,7 @@ Options:
     -h, --help          Display this message
 ";
 
-static SUCCESS: &'static str = "Generated default file on";
+static SUCCESS: &str = "Generated default file on";
 
 #[derive(Debug, Deserialize)]
 struct Args {

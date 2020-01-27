@@ -6,7 +6,7 @@ use crate::config::Config;
 use crate::error::CliError;
 use crate::{util, CliResult};
 
-static USAGE: &'static str = "
+static USAGE: &str = "
 Copies the default configuration file for the application.
 
 In order to allow some flexibility to the application, there are some options that can be defined
@@ -21,7 +21,7 @@ Options:
     -h, --help   Display this message
 ";
 
-static SUCCESS: &'static str = "Generated default configuration file on";
+static SUCCESS: &str = "Generated default configuration file on";
 
 #[derive(Debug, Deserialize)]
 struct Args {

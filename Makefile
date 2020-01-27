@@ -11,3 +11,9 @@ debug:
 dev:
 	cargo build
 	target/debug/ledger
+
+fmt:
+	cargo fmt
+
+clippy:
+	cargo clippy

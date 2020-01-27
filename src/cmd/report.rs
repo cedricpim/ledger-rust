@@ -1,9 +1,9 @@
 use prettytable::{format, Cell, Row, Table};
 use serde::Deserialize;
 
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::ops::AddAssign;
-use std::cmp::Ordering;
 
 use crate::config::Config;
 use crate::entity::{date::Date, line::Line, line::Liner, money::Currency, money::Money};
@@ -80,9 +80,7 @@ struct Report {
 
 impl Report {
     fn title() -> Row {
-        Row::new(vec![
-            Cell::new("Report").with_hspan(4).style_spec("bcFC")
-        ])
+        Row::new(vec![Cell::new("Report").with_hspan(4).style_spec("bcFC")])
     }
 
     fn headers() -> Row {
@@ -134,7 +132,8 @@ impl Report {
         self.total += item.value.cents();
         self.occurrences += 1;
 
-        self.items.entry(item.category.to_string())
+        self.items
+            .entry(item.category.to_string())
             .and_modify(|i| *i += item.clone())
             .or_insert(item);
     }
@@ -202,9 +201,7 @@ struct Total {
 
 impl Total {
     fn title() -> Row {
-        Row::new(vec![
-            Cell::new("Totals").with_hspan(9).style_spec("bcFC")
-        ])
+        Row::new(vec![Cell::new("Totals").with_hspan(9).style_spec("bcFC")])
     }
 
     fn new(report: &Report) -> Self {
@@ -245,7 +242,8 @@ impl Total {
         Row::new(vec![
             util::money_cell(&self.income(), false, false, format::Alignment::RIGHT).with_hspan(3),
             util::money_cell(&self.expense(), false, false, format::Alignment::LEFT).with_hspan(2),
-            util::money_cell(&self.difference(), false, true, format::Alignment::LEFT).with_hspan(3),
+            util::money_cell(&self.difference(), false, true, format::Alignment::LEFT)
+                .with_hspan(3),
             util::percentage_cell(self.percentage(), format::Alignment::LEFT),
         ])
     }
@@ -255,9 +253,12 @@ impl Total {
 
         table.set_format(
             format::FormatBuilder::new()
-                .separators(&[format::LinePosition::Top], format::LineSeparator::new('─', '┬', '┌', '┐'))
+                .separators(
+                    &[format::LinePosition::Top],
+                    format::LineSeparator::new('─', '┬', '┌', '┐'),
+                )
                 .padding(1, 2)
-                .build()
+                .build(),
         );
 
         table.set_titles(Total::title());

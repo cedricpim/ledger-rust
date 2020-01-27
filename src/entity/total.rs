@@ -1,10 +1,10 @@
 use prettytable::{format, Cell, Row, Table};
 
-use crate::filter::Filter;
-use crate::exchange::Exchange;
 use crate::config::Config;
-use crate::entity::{line::Line, line::Liner};
 use crate::entity::money::{Currency, Money};
+use crate::entity::{line::Line, line::Liner};
+use crate::exchange::Exchange;
+use crate::filter::Filter;
 use crate::{util, CliResult};
 
 #[derive(Debug)]
@@ -16,9 +16,7 @@ pub struct Total {
 
 impl Total {
     fn title() -> Row {
-        Row::new(vec![
-            Cell::new("Totals").style_spec("bcFC")
-        ])
+        Row::new(vec![Cell::new("Totals").style_spec("bcFC")])
     }
 
     pub fn new(currency: &str, config: &Config) -> CliResult<Self> {

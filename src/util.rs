@@ -1,14 +1,14 @@
 use docopt::Docopt;
+use prettytable::format::Alignment;
+use prettytable::{color, Attr, Cell};
 use rand::Rng;
 use serde::de::DeserializeOwned;
 use xdg::BaseDirectories;
-use prettytable::{Attr,Cell,color};
-use prettytable::format::Alignment;
 
 use std::iter;
 
-use crate::entity::money::{Currency,Money};
 use crate::config::Config;
+use crate::entity::money::{Currency, Money};
 use crate::error::CliError;
 use crate::CliResult;
 
@@ -85,7 +85,12 @@ pub fn currency(value: &str, config: &Config) -> CliResult<Currency> {
     }
 }
 
-pub fn money_cell(value: &Money, with_sign: bool, with_brackets: bool, alignment: Alignment) -> Cell {
+pub fn money_cell(
+    value: &Money,
+    with_sign: bool,
+    with_brackets: bool,
+    alignment: Alignment,
+) -> Cell {
     let mut rep = if with_sign {
         format!("{}", value)[0..].to_string()
     } else {
@@ -96,21 +101,21 @@ pub fn money_cell(value: &Money, with_sign: bool, with_brackets: bool, alignment
         rep = format!("({})", rep);
     };
 
-    Cell::new_align(&rep, alignment).
-        with_style(Attr::Bold).
-        with_style(color(value.cents() as f64))
+    Cell::new_align(&rep, alignment)
+        .with_style(Attr::Bold)
+        .with_style(color(value.cents() as f64))
 }
 
 pub fn percentage_cell(value: f64, alignment: Alignment) -> Cell {
-    Cell::new_align(&format!("{:+.2}%", value)[1..], alignment).
-        with_style(Attr::Bold).
-        with_style(color(value))
+    Cell::new_align(&format!("{:+.2}%", value)[1..], alignment)
+        .with_style(Attr::Bold)
+        .with_style(color(value))
 }
 
 fn color(value: f64) -> Attr {
     match value {
-        v if v > 0.0 => { Attr::ForegroundColor(color::BRIGHT_GREEN) },
-        v if v < 0.0 => { Attr::ForegroundColor(color::BRIGHT_RED) },
+        v if v > 0.0 => Attr::ForegroundColor(color::BRIGHT_GREEN),
+        v if v < 0.0 => Attr::ForegroundColor(color::BRIGHT_RED),
         _ => Attr::ForegroundColor(color::BRIGHT_BLACK),
     }
 }

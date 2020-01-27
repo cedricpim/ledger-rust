@@ -90,7 +90,10 @@ impl Filter {
     }
 
     fn period(&self) -> RangeInclusive<Date> {
-        let (start, end) = if (self.year.is_some() || self.month.is_some()) && self.from.is_none() && self.till.is_none() {
+        let (start, end) = if (self.year.is_some() || self.month.is_some())
+            && self.from.is_none()
+            && self.till.is_none()
+        {
             let today = Date::today();
             let year = self.year.unwrap_or_else(|| today.year());
             let month = self.month.unwrap_or_else(|| today.month());

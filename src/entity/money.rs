@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use steel_cent::formatting::{FormatPart, FormatSpec};
 
-use std::collections::HashMap;
-use std::ops::{Add,Sub};
 use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::ops::{Add, Sub};
 
 use crate::error::CliError;
 use crate::exchange::Exchange;

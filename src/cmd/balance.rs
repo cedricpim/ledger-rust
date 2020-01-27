@@ -62,9 +62,7 @@ struct Report {
 
 impl Report {
     fn title() -> Row {
-        Row::new(vec![
-            Cell::new("Balance").with_hspan(2).style_spec("bcFC")
-        ])
+        Row::new(vec![Cell::new("Balance").with_hspan(2).style_spec("bcFC")])
     }
 
     fn headers() -> Row {
@@ -74,8 +72,15 @@ impl Report {
         ])
     }
 
-    fn new(args: &Args, total: &mut Total, config: &Config, exchange: &Exchange) -> CliResult<Report> {
-        let mut report = Self {items: BTreeMap::new()};
+    fn new(
+        args: &Args,
+        total: &mut Total,
+        config: &Config,
+        exchange: &Exchange,
+    ) -> CliResult<Report> {
+        let mut report = Self {
+            items: BTreeMap::new(),
+        };
 
         let resource = Resource::new(&config, false)?;
 
@@ -105,7 +110,8 @@ impl Report {
     }
 
     fn add(&mut self, item: Item) {
-        self.items.entry(item.account.to_string())
+        self.items
+            .entry(item.account.to_string())
             .and_modify(|i| *i += item.clone())
             .or_insert(item);
     }
@@ -137,7 +143,7 @@ impl Item {
     fn new(record: &Line) -> Self {
         Self {
             account: record.account(),
-            value: record.amount()
+            value: record.amount(),
         }
     }
 

@@ -51,7 +51,7 @@ impl Filter {
         }
     }
 
-    pub fn totals(config: &Config) -> Self {
+    pub fn total(config: &Config) -> Self {
         Self {
             ignored_accounts: config.ignored_accounts.clone(),
             ..Default::default()
@@ -69,10 +69,8 @@ impl Filter {
         !Filter::without(&value, &self.excluded_categories)
     }
 
-    pub fn check(&self, value: &str) -> bool {
-        Filter::with(&value, &self.categories)
-            && Filter::without(&value, &self.ignored_categories)
-            && Filter::without(&value, &self.ignored_accounts)
+    pub fn ignore_account(&self, value: &str) -> bool {
+        Filter::without(&value, &self.ignored_accounts)
     }
 
     fn with(value: &str, list: &[String]) -> bool {

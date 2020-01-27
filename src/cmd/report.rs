@@ -305,7 +305,7 @@ impl Item {
 impl AddAssign for Item {
     fn add_assign(&mut self, other: Self) {
         *self = Self {
-            category: self.category.clone(),
+            category: self.category.to_string(),
             value: self.value + other.value,
             occurrences: self.occurrences + 1,
         }

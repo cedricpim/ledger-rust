@@ -49,6 +49,7 @@ To be implemented:
     compare     Compare multiple periods
     networth    Calculate current networth
     trip        Create a report about the trips present on the ledger
+    sync        Sync with Firefly III
 "
     )
 }

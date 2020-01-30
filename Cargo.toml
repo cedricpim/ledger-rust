@@ -34,6 +34,7 @@ serde = { version = "1", features = ["derive"] }
 csv = "1.1"
 xdg = "^2.1"
 serde_yaml = "0.8"
+serde_json = "1.0.45" # Needed for OpenExchangeRates
 shellexpand = "1.0"
 sodiumoxide = "0.2.2"
 custom_error = "1.7.1"
@@ -41,7 +42,7 @@ tempfile = "3"
 rand = "0.7.0"
 chrono = { version = "0.4", features = ["serde"] }
 enum_dispatch = "0.1.3"
-openexchangerates = "0.1.7"
 steel-cent = "0.2.3"
 prettytable-rs = "^0.8"
 lazy_static = "1.3.0"
+reqwest = { version = "0.10", features = ["blocking", "json"] }

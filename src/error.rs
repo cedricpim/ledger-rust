@@ -1,16 +1,16 @@
 use custom_error::custom_error;
 
 custom_error! { pub CliError
-    Flag { source: docopt::Error }                             = @{ source },
-    Csv { source: csv::Error }                                 = @{ source },
-    Io { source: std::io::Error }                              = @{ source },
-    Yaml { source: serde_yaml::Error }                         = @{ source },
-    Xdg { source: xdg::BaseDirectoriesError }                  = @{ source },
-    Value { source: std::num::ParseIntError }                  = @{ source },
-    DateFormat { source: chrono::format::ParseError }          = @{ source },
-    Exchange { source: openexchangerates::error::Error }       = @{ source },
-    NumberFormat { source: std::num::ParseFloatError }         = @{ source },
-    MoneyFormat { source: steel_cent::formatting::ParseError } = @{ source },
+    Flag { source: docopt::Error }                                = @{ source },
+    Csv { source: csv::Error }                                    = @{ source },
+    Io { source: std::io::Error }                                 = @{ source },
+    Yaml { source: serde_yaml::Error }                            = @{ source },
+    Xdg { source: xdg::BaseDirectoriesError }                     = @{ source },
+    Value { source: std::num::ParseIntError }                     = @{ source },
+    DateFormat { source: chrono::format::ParseError }             = @{ source },
+    NumberFormat { source: std::num::ParseFloatError }            = @{ source },
+    MoneyFormat { source: steel_cent::formatting::ParseError }    = @{ source },
+    Exchange { source: crate::service::openexchangerates::Error } = @{ source },
 
     IncorrectPath { filename: String }      = "An error occurred while determining the path to {filename}",
     ExistingConfiguration                   = "Configuration file already exists, use --force to overwrite it",

@@ -1,10 +1,10 @@
-use openexchangerates;
 use serde::{Deserialize, Serialize};
 use serde_yaml;
 
 use std::collections::BTreeMap;
 use std::io::Write;
 
+use crate::service::openexchangerates;
 use crate::config::Config;
 use crate::entity::money::Currency;
 use crate::error::CliError;
@@ -55,9 +55,9 @@ impl Exchange {
     }
 
     fn download(config: &Config) -> CliResult<Exchange> {
-        match openexchangerates::Client::new(&config.exchange().key()).latest() {
+        match openexchangerates::Client::new(config.exchange().key()).latest() {
             Ok(result) => Exchange::store(result.into(), &config),
-            Err(openexchangerates::error::Error::Hyper(_)) => match Exchange::load(&config) {
+            Err(openexchangerates::Error::Reqwest { .. }) => match Exchange::load(&config) {
                 Ok(val) => Ok(val),
                 Err(_) => Err(CliError::ExchangeInternetRequired),
             },

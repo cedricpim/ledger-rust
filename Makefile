@@ -2,7 +2,7 @@ all:
 	@echo Nothing to do...
 
 build:
-	OPENSSL_INCLUDE_DIR=/usr/include/openssl-1.0 OPENSSL_LIB_DIR=/usr/lib/openssl-1.0 cargo build
+	cargo build
 
 debug:
 	cargo build --verbose

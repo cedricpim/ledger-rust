@@ -8,6 +8,7 @@ custom_error! { pub CliError
     Xdg { source: xdg::BaseDirectoriesError }                     = @{ source },
     Value { source: std::num::ParseIntError }                     = @{ source },
     DateFormat { source: chrono::format::ParseError }             = @{ source },
+    JustETF { source: crate::service::justetf::Error }            = @{ source },
     NumberFormat { source: std::num::ParseFloatError }            = @{ source },
     MoneyFormat { source: steel_cent::formatting::ParseError }    = @{ source },
     Exchange { source: crate::service::openexchangerates::Error } = @{ source },

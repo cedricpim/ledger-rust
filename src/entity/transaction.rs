@@ -10,7 +10,7 @@ use crate::error::CliError;
 use crate::exchange::Exchange;
 use crate::CliResult;
 
-#[derive(Debug, Serialize, Default)]
+#[derive(Clone, Debug, Serialize, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct Transaction {
     pub account: String,
@@ -63,6 +63,14 @@ impl Liner for Transaction {
 
     fn category(&self) -> String {
         self.category.to_owned()
+    }
+
+    fn description(&self) -> String {
+        self.description.to_owned()
+    }
+
+    fn quantity(&self) -> String {
+        self.quantity.to_owned()
     }
 
     fn date(&self) -> Date {

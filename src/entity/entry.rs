@@ -10,7 +10,7 @@ use crate::error::CliError;
 use crate::exchange::Exchange;
 use crate::CliResult;
 
-#[derive(Debug, Serialize, Default)]
+#[derive(Clone, Debug, Serialize, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct Entry {
     pub date: Date,
@@ -44,6 +44,14 @@ impl Liner for Entry {
     }
 
     fn category(&self) -> String {
+        "".to_string()
+    }
+
+    fn description(&self) -> String {
+        "".to_string()
+    }
+
+    fn quantity(&self) -> String {
         "".to_string()
     }
 

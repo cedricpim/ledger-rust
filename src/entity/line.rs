@@ -7,6 +7,7 @@ use crate::exchange::Exchange;
 use crate::CliResult;
 
 #[enum_dispatch]
+#[derive(Clone)]
 pub enum Line {
     Transaction,
     Entry,
@@ -35,6 +36,8 @@ pub trait Liner {
     fn headers(&self) -> Vec<&'static str>;
     fn account(&self) -> String;
     fn category(&self) -> String;
+    fn description(&self) -> String;
+    fn quantity(&self) -> String;
     fn amount(&self) -> Money;
     fn date(&self) -> Date;
     fn currency(&self) -> Currency;

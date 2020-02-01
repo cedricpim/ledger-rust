@@ -3,7 +3,7 @@ use steel_cent::formatting::{FormatPart, FormatSpec};
 
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::ops::{Add, Sub};
+use std::ops::{Add, Sub, Mul};
 
 use crate::error::CliError;
 use crate::exchange::Exchange;
@@ -174,6 +174,18 @@ impl Sub for Money {
     fn sub(self, other: Self) -> Self {
         Self {
             value: self.value - other.value,
+        }
+    }
+}
+
+impl Mul<u64> for Money {
+    type Output = Self;
+
+    fn mul(self, other: u64) -> Self {
+        let cents = self.value.minor_amount();
+
+        Self {
+            value: steel_cent::Money::of_minor(self.value.currency, cents * other as i64),
         }
     }
 }

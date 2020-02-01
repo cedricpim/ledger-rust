@@ -10,6 +10,7 @@ mod cmd;
 mod config;
 mod crypto;
 mod entity;
+mod service;
 mod error;
 mod exchange;
 mod filter;
@@ -20,14 +21,19 @@ mod util;
 macro_rules! wout {
     ($($arg:tt)*) => ({
         use std::io::Write;
+
         (writeln!(&mut ::std::io::stdout(), $($arg)*)).unwrap();
     });
 }
 
+#[macro_export]
 macro_rules! werr {
-    ($($arg:tt)*) => ({
+    ($signal:tt, $($arg:tt)*) => ({
         use std::io::Write;
+        use std::process;
+
         (writeln!(&mut ::std::io::stderr(), $($arg)*)).unwrap();
+        process::exit($signal);
     });
 }
 
@@ -41,13 +47,13 @@ Implemented:
     convert     Convert other currencies to main currency of the account
     create      Create a new ledger/networth file
     edit        Open ledger/networth file in your editor
+    networth    Calculate current networth
     report      Create a report about the transactions on the ledger according to any params provided
     show        Display all transactions
 
 To be implemented:
     analysis    List all transactions on the ledger for the specified category
     compare     Compare multiple periods
-    networth    Calculate current networth
     trip        Create a report about the trips present on the ledger
     sync        Sync with Firefly III
 "
@@ -88,6 +94,7 @@ enum Command {
     Convert,
     Create,
     Edit,
+    Networth,
     Show,
     Report,
 }
@@ -106,16 +113,10 @@ fn main() {
     }
 
     match args.arg_command {
-        None => {
-            werr!("{}", EXECUTABLE);
-            process::exit(2);
-        }
+        None => werr!(2, "{}", EXECUTABLE),
         Some(cmd) => match cmd.run() {
             Ok(()) => process::exit(0),
-            Err(err) => {
-                werr!("{}", err);
-                process::exit(1);
-            }
+            Err(err) => werr!(1, "{}", err),
         },
     }
 }
@@ -139,6 +140,7 @@ impl Command {
             Command::Configure => cmd::configure::run(argv),
             Command::Convert => cmd::convert::run(argv),
             Command::Create => cmd::create::run(argv),
+            Command::Networth => cmd::networth::run(argv),
             Command::Show => cmd::show::run(argv),
             Command::Report => cmd::report::run(argv),
         }

@@ -10,7 +10,7 @@ use crate::entity::money::Currency;
 use crate::error::CliError;
 use crate::CliResult;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Exchange {
     timestamp: i64,
     base: String,

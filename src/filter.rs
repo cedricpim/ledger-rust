@@ -58,6 +58,13 @@ impl Filter {
         }
     }
 
+    pub fn networth(config: &Config) -> Self {
+        Self {
+            ignored_accounts: config.ignored_accounts.clone(),
+            ..Default::default()
+        }
+    }
+
     pub fn apply(&self, line: &Line) -> bool {
         Filter::with(&line.category(), &self.categories)
             && Filter::without(&line.category(), &self.ignored_categories)

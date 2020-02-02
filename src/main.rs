@@ -10,11 +10,11 @@ mod cmd;
 mod config;
 mod crypto;
 mod entity;
-mod service;
 mod error;
 mod exchange;
 mod filter;
 mod repository;
+mod service;
 mod util;
 
 #[macro_export]

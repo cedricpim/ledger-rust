@@ -1,3 +1,5 @@
+use chrono::format::strftime::StrftimeItems;
+use chrono::format::DelayedFormat;
 use chrono::naive::NaiveDate;
 use chrono::{Datelike, Utc};
 use serde::{Deserialize, Serialize};
@@ -5,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::CliError;
 use crate::CliResult;
 
-#[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Date {
     value: chrono::naive::NaiveDate,
 }
@@ -66,6 +68,10 @@ impl Date {
 
     pub fn month(self) -> u32 {
         self.value.month()
+    }
+
+    pub fn format<'a>(self, fmt: &'a str) -> DelayedFormat<StrftimeItems<'a>> {
+        self.value.format(fmt)
     }
 
     pub fn end_of_month(self) -> Date {

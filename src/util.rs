@@ -106,7 +106,9 @@ pub fn money_cell(
         .with_style(color(value.cents() as f64))
 }
 
-pub fn percentage_cell(value: f64, alignment: Alignment) -> Cell {
+pub fn percentage_cell(dividend: &Money, divisor: &Money, alignment: Alignment) -> Cell {
+    let value = (dividend.cents() as f64 / divisor.cents() as f64) * 100.0;
+
     Cell::new_align(&format!("{:+.2}%", value)[1..], alignment)
         .with_style(Attr::Bold)
         .with_style(color(value))

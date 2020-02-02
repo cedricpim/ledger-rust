@@ -7,7 +7,7 @@ use crate::exchange::Exchange;
 use crate::filter::Filter;
 use crate::{repository, util, CliResult};
 
-static USAGE: & str = "
+static USAGE: &str = "
 Shows list of entries that match the filters.
 
 This command will print the list of entries that match the filters provided to the output defined

@@ -105,6 +105,8 @@ impl Liner for Transaction {
         }
         .into())
     }
+
+    fn invested(&mut self, _value: Money) {}
 }
 
 impl<'de> Deserialize<'de> for Transaction {

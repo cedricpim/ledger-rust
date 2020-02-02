@@ -1,5 +1,5 @@
-use kuchiki::traits::*;
 use custom_error::custom_error;
+use kuchiki::traits::*;
 
 const URL: &str = "https://www.justetf.com/uk/etf-profile.html";
 const NAME_CSS: &str = ".h1";
@@ -29,7 +29,12 @@ impl Asset {
 
         let (currency, value) = Asset::money(&document)?;
 
-        Ok(Asset { isin: isin.to_string(), name, value, currency })
+        Ok(Asset {
+            isin: isin.to_string(),
+            name,
+            value,
+            currency,
+        })
     }
 
     fn money(document: &kuchiki::NodeRef) -> Result<(String, String), Error> {
@@ -42,20 +47,24 @@ impl Asset {
                 } else {
                     Err(Error::ValueNotFound)
                 }
-            },
-            Err(_) => Err(Error::ValueNotFound)
+            }
+            Err(_) => Err(Error::ValueNotFound),
         }
     }
 
     fn name(document: &kuchiki::NodeRef) -> Result<String, Error> {
         match document.select_first(NAME_CSS) {
             Ok(val) => Ok(val.text_contents()),
-            Err(_) => Err(Error::NameNotFound)
+            Err(_) => Err(Error::NameNotFound),
         }
     }
 
     fn document(isin: &str) -> Result<kuchiki::NodeRef, Error> {
-        let body = reqwest::blocking::Client::new().get(URL).query(&[("isin", isin)]).send()?.text()?;
+        let body = reqwest::blocking::Client::new()
+            .get(URL)
+            .query(&[("isin", isin)])
+            .send()?
+            .text()?;
 
         Ok(kuchiki::parse_html().one(body))
     }

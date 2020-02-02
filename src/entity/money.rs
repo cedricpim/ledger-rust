@@ -3,7 +3,7 @@ use steel_cent::formatting::{FormatPart, FormatSpec};
 
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::ops::{Add, Sub, Mul};
+use std::ops::{Add, AddAssign, Mul, Sub};
 
 use crate::error::CliError;
 use crate::exchange::Exchange;
@@ -163,6 +163,14 @@ impl Add for Money {
 
     fn add(self, other: Self) -> Self {
         Self {
+            value: self.value + other.value,
+        }
+    }
+}
+
+impl AddAssign for Money {
+    fn add_assign(&mut self, other: Self) {
+        *self = Self {
             value: self.value + other.value,
         }
     }

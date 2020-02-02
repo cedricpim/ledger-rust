@@ -1,19 +1,19 @@
-use prettytable::{color, Attr, Cell, Row, Table};
 use prettytable::format::{Alignment, FormatBuilder};
+use prettytable::{color, Attr, Cell, Row, Table};
 use serde::Deserialize;
 
 use std::collections::BTreeMap;
 
 use crate::config::Config;
+use crate::entity::date::Date;
 use crate::entity::line::{Line, Liner};
 use crate::entity::money::{Currency, Money};
-use crate::entity::networth::{Cash, Investment};
+use crate::entity::networth::Networth;
 use crate::exchange::Exchange;
-use crate::filter::Filter;
 use crate::repository::Resource;
 use crate::{util, CliResult};
 
-static USAGE: & str = "
+static USAGE: &str = "
 Calculate the current networth.
 Shows list of entries that match the filters.
 
@@ -41,31 +41,35 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 
     let config = Config::new()?;
 
-    args.generate(&config)
+    args.generate(config)
 }
 
 impl Args {
-    fn generate(&self, config: &Config) -> CliResult<()> {
+    fn generate(&self, config: Config) -> CliResult<()> {
         let exchange = Exchange::new(&config)?;
 
         let currency = util::currency(&self.flag_currency, &config)?;
 
-        let networth = Networth::new(&config, &exchange, currency)?;
+        let report = Report::new(config, exchange, currency)?;
 
-        networth.display();
+        if self.flag_save {
+            report.save()?
+        } else {
+            report.display()
+        };
 
         Ok(())
     }
 }
 
 #[derive(Debug)]
-struct Networth {
-    currency: Currency,
-    cash: Cash,
-    investments: BTreeMap<String, Investment>,
+struct Report {
+    networth: Networth,
+    exchange: Exchange,
+    config: Config,
 }
 
-impl Networth {
+impl Report {
     fn title() -> Row {
         Row::new(vec![Cell::new("Networth").with_hspan(3).style_spec("bcFC")])
     }
@@ -78,59 +82,32 @@ impl Networth {
         ])
     }
 
-    fn new(config: &Config, exchange: &Exchange, currency: Currency) -> CliResult<Networth> {
-        let mut networth = Self {
-            currency,
-            cash: Cash { amount: Money::new(currency, 0) },
-            investments: BTreeMap::new(),
-        };
+    fn new(config: Config, exchange: Exchange, currency: Currency) -> CliResult<Report> {
+        Ok(Self {
+            networth: Networth::new(&config, &exchange, currency)?,
+            exchange,
+            config,
+        })
+    }
 
-        let resource = Resource::new(&config, false)?;
+    fn save(&self) -> CliResult<()> {
+        let resource = Resource::new(&self.config, true)?;
 
-        let filter = Filter::networth(&config);
+        let entries = self.entries(&resource)?;
 
-        resource.line(&mut |record| {
-            if !filter.apply(&record) {
-                return Ok(());
-            };
+        resource.apply(|file| {
+            let mut wtr = csv::WriterBuilder::new().from_path(file.path())?;
 
-            networth.add(&record, &config, &exchange)?;
+            for entry in entries.values() {
+                entry.write(&mut wtr)?;
+            }
+
+            wtr.flush()?;
 
             Ok(())
         })?;
 
-        Ok(networth)
-    }
-
-    fn add(&mut self, record: &Line, config: &Config, exchange: &Exchange) -> CliResult<()> {
-        let exchanged = record.exchange(self.currency, &exchange)?;
-
-        self.cash += Cash { amount: exchanged.amount() };
-
-        if config.investments.contains(&exchanged.category()) {
-            let currency = self.currency;
-
-            self.investments
-                .entry(exchanged.description())
-                .and_modify(|i| *i += exchanged.clone())
-                .or_insert_with(|| Investment::new(&exchanged, &currency, &exchange));
-        }
-
         Ok(())
-    }
-
-    fn total(&self) -> Money {
-        self.investments.values().fold(self.cash.amount, |acc, investment| acc + investment.value())
-    }
-
-    fn row(&self) -> Row {
-        let color = Attr::ForegroundColor(color::BRIGHT_YELLOW);
-
-        Row::new(vec![
-            Cell::new(&"Total").with_style(Attr::Bold).with_style(color),
-            util::money_cell(&self.total(), true, false, Alignment::LEFT).with_style(color),
-            util::percentage_cell(100.0, Alignment::LEFT).with_style(color),
-        ])
     }
 
     fn display(&self) {
@@ -138,18 +115,68 @@ impl Networth {
 
         table.set_format(FormatBuilder::new().padding(0, 3).build());
 
-        table.set_titles(Networth::title());
+        table.set_titles(Report::title());
 
-        table.add_row(Networth::headers());
+        table.add_row(Report::headers());
 
-        for investment in self.investments.values() {
-            table.add_row(investment.row(&self.total()));
+        for investment in self.networth.investments.values() {
+            let color = Attr::ForegroundColor(color::BRIGHT_WHITE);
+
+            table.add_row(Row::new(vec![
+                Cell::new(&investment.name())
+                    .with_style(Attr::Bold)
+                    .with_style(color),
+                util::money_cell(&investment.value(), true, false, Alignment::LEFT)
+                    .with_style(color),
+                util::percentage_cell(&investment.value(), &self.networth.total(), Alignment::LEFT)
+                    .with_style(color),
+            ]));
         }
 
-        table.add_row(self.cash.row(&self.total()));
+        let color = Attr::ForegroundColor(color::BRIGHT_RED);
+
+        table.add_row(Row::new(vec![
+            Cell::new(&"Cash").with_style(Attr::Bold).with_style(color),
+            util::money_cell(&self.networth.cash, true, false, Alignment::LEFT).with_style(color),
+            util::percentage_cell(&self.networth.cash, &self.networth.total(), Alignment::LEFT)
+                .with_style(color),
+        ]));
 
         table.add_row(self.row());
 
         table.printstd();
+    }
+
+    fn entries(&self, resource: &Resource) -> CliResult<BTreeMap<Date, Line>> {
+        let mut result: BTreeMap<Date, Line> = BTreeMap::new();
+
+        resource.line(&mut |record| {
+            let mut exchanged = record.exchange(self.networth.currency, &self.exchange)?;
+
+            exchanged.invested(self.networth.invested_on(exchanged.date()));
+
+            result.entry(exchanged.date()).or_insert(exchanged);
+
+            Ok(())
+        })?;
+
+        let current = self.networth.current();
+
+        result.entry(current.date()).or_insert(current);
+
+        Ok(result)
+    }
+
+    fn row(&self) -> Row {
+        let color = Attr::ForegroundColor(color::BRIGHT_YELLOW);
+
+        let money = Money::new(self.networth.currency, 1);
+
+        Row::new(vec![
+            Cell::new(&"Total").with_style(Attr::Bold).with_style(color),
+            util::money_cell(&self.networth.total(), true, false, Alignment::LEFT)
+                .with_style(color),
+            util::percentage_cell(&money, &money, Alignment::LEFT).with_style(color),
+        ])
     }
 }

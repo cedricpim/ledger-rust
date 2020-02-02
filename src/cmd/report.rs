@@ -308,27 +308,25 @@ impl Summary {
     }
 
     fn row(&self) -> Row {
-        let percentage =
-            (self.difference().cents() as f64) / (self.income().cents() as f64) * 100.0;
-
         Row::new(vec![
             util::money_cell(&self.income(), false, false, format::Alignment::RIGHT).with_hspan(3),
             util::money_cell(&self.expense(), false, false, format::Alignment::LEFT).with_hspan(2),
             util::money_cell(&self.difference(), false, true, format::Alignment::LEFT)
                 .with_hspan(3),
-            util::percentage_cell(percentage, format::Alignment::LEFT),
+            util::percentage_cell(&self.difference(), &self.income(), format::Alignment::LEFT),
         ])
     }
 
     fn total(&self) -> Row {
-        let percentage =
-            (self.difference().cents() as f64) / (self.total.amount().cents() as f64) * 100.0;
-
         Row::new(vec![
             Cell::new(&format!("{}", self.total.amount()))
                 .style_spec("bcFB")
                 .with_hspan(8),
-            util::percentage_cell(percentage, format::Alignment::LEFT),
+            util::percentage_cell(
+                &self.difference(),
+                &self.total.amount(),
+                format::Alignment::LEFT,
+            ),
         ])
     }
 

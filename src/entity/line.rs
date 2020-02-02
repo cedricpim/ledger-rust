@@ -7,7 +7,7 @@ use crate::exchange::Exchange;
 use crate::CliResult;
 
 #[enum_dispatch]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Line {
     Transaction,
     Entry,
@@ -43,4 +43,5 @@ pub trait Liner {
     fn currency(&self) -> Currency;
     fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Line>;
     fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()>;
+    fn invested(&mut self, value: Money);
 }

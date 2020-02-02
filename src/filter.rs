@@ -15,6 +15,7 @@ pub struct Filter {
     excluded_categories: Vec<String>,
     ignored_categories: Vec<String>,
     ignored_accounts: Vec<String>,
+    investments: Vec<String>,
 }
 
 impl Filter {
@@ -61,6 +62,7 @@ impl Filter {
     pub fn networth(config: &Config) -> Self {
         Self {
             ignored_accounts: config.ignored_accounts.clone(),
+            investments: config.investments.clone(),
             ..Default::default()
         }
     }
@@ -78,6 +80,10 @@ impl Filter {
 
     pub fn ignore_account(&self, value: &str) -> bool {
         Filter::without(&value, &self.ignored_accounts)
+    }
+
+    pub fn investment(&self, value: &str) -> bool {
+        !Filter::without(&value, &self.investments)
     }
 
     fn with(value: &str, list: &[String]) -> bool {

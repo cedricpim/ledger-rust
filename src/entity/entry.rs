@@ -72,16 +72,18 @@ impl Liner for Entry {
     }
 
     fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Line> {
-        let money = self.amount.exchange(to, &exchange)?;
-
         Ok(Entry {
             date: self.date,
             invested: self.invested.exchange(to, &exchange)?,
             investment: self.investment.exchange(to, &exchange)?,
-            currency: money.currency(),
-            amount: money,
+            amount: self.amount.exchange(to, &exchange)?,
+            currency: to,
         }
         .into())
+    }
+
+    fn invested(&mut self, value: Money) {
+        self.invested = value;
     }
 }
 

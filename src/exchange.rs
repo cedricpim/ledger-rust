@@ -4,10 +4,10 @@ use serde_yaml;
 use std::collections::BTreeMap;
 use std::io::Write;
 
-use crate::service::openexchangerates;
 use crate::config::Config;
 use crate::entity::money::Currency;
 use crate::error::CliError;
+use crate::service::openexchangerates;
 use crate::CliResult;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -38,13 +38,9 @@ impl Exchange {
 
     pub fn rate(&self, from: Currency, to: Currency) -> CliResult<f32> {
         match self.rates.get(&to.code()) {
-            None => Err(CliError::MissingExchangeRate {
-                code: to.code(),
-            }),
+            None => Err(CliError::MissingExchangeRate { code: to.code() }),
             Some(dividend) => match self.rates.get(&from.code()) {
-                None => Err(CliError::MissingExchangeRate {
-                    code: from.code(),
-                }),
+                None => Err(CliError::MissingExchangeRate { code: from.code() }),
                 Some(divisor) => Ok(dividend / divisor),
             },
         }

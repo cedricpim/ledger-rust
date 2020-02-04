@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use steel_cent::formatting::{FormatPart, FormatSpec};
 
+use std::fs::File;
+use std::io::BufReader;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::ops::{Add, AddAssign, Mul, Sub};
@@ -10,19 +12,62 @@ use crate::exchange::Exchange;
 use crate::CliResult;
 
 lazy_static! {
-    static ref SYMBOLS: HashMap<&'static str, &'static str> = [
-        ("ARS", "$"),
-        ("BRL", "R$"),
-        ("CHF", "CHF"),
-        ("CNY", "¥"),
-        ("EUR", "€"),
-        ("PLN", "zł"),
-        ("USD", "$"),
-        ("VND", "₫"),
-    ]
-    .iter()
-    .copied()
-    .collect();
+    // Commonly used currencies
+    static ref SYMBOLS: HashMap<&'static str, &'static str> = {
+        [
+            ("ars", "$"),
+            ("brl", "R$"),
+            ("chf", "CHF"),
+            ("cny", "¥"),
+            ("eur", "€"),
+            ("jpy", "¥"),
+            ("pln", "zł"),
+            ("usd", "$"),
+            ("vnd", "₫"),
+        ]
+        .iter()
+        .copied()
+        .collect()
+    };
+}
+
+lazy_static! {
+    static ref CURRENCIES: HashMap<String, CurrencyInfo> = {
+        match File::open("data/currencies.json") {
+            Ok(file) => {
+                let reader = BufReader::new(file);
+                serde_json::from_reader(reader).unwrap_or(HashMap::new())
+            },
+            Err(_) => HashMap::new(),
+        }
+    };
+}
+
+#[derive(Deserialize, Debug)]
+pub struct CurrencyInfo {
+    #[serde(skip)]
+    priority: i64,
+    iso_code: String,
+    name: String,
+    symbol: String,
+    #[serde(skip)]
+    alternate_symbols: Vec<String>,
+    #[serde(skip)]
+    subunit: String,
+    #[serde(skip)]
+    subunit_to_unit: i64,
+    #[serde(skip)]
+    symbol_first: bool,
+    #[serde(skip)]
+    html_entity: String,
+    #[serde(skip)]
+    decimal_mark: String,
+    #[serde(skip)]
+    thousands_separator: String,
+    #[serde(skip)]
+    iso_numeric: String,
+    #[serde(skip)]
+    smallest_denomination: i64
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -121,14 +166,7 @@ impl PartialEq for Money {
 
 impl std::fmt::Display for Money {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let code: &str = &self.currency().code();
-
-        write!(
-            f,
-            "{}{}",
-            self.to_storage(),
-            SYMBOLS.get(code).unwrap_or(&code)
-        )
+        write!(f, "{}{}", self.to_storage(), self.symbol())
     }
 }
 
@@ -302,6 +340,15 @@ impl Money {
                 currency.code(),
                 width = width + 1
             )
+        }
+    }
+
+    fn symbol(&self) -> String {
+        let code = self.currency().code().to_lowercase();
+
+        match SYMBOLS.get(code.as_str()) {
+            Some(val) => val.to_string(),
+            None => CURRENCIES.get(code.as_str()).map_or(code, |v| v.symbol.to_string()),
         }
     }
 }

@@ -10,6 +10,7 @@ keywords = ["ledger", "command"]
 license = "GNU General Public License v3.0"
 edition = "2018"
 autotests = false
+include = ["data/currencies.json"]
 
 [[bin]]
 name = "ledger"
@@ -34,7 +35,7 @@ serde = { version = "1", features = ["derive"] }
 csv = "1.1"
 xdg = "^2.1"
 serde_yaml = "0.8"
-serde_json = "1.0.45" # Needed for OpenExchangeRates
+serde_json = "1.0.45"
 shellexpand = "1.0"
 sodiumoxide = "0.2.2"
 custom_error = "1.7.1"

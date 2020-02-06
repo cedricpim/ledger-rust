@@ -135,11 +135,12 @@ impl Report {
 
         let color = Attr::ForegroundColor(color::BRIGHT_RED);
 
+        let cash = self.networth.current_on(Date::today());
+
         table.add_row(Row::new(vec![
             Cell::new(&"Cash").with_style(Attr::Bold).with_style(color),
-            util::money_cell(&self.networth.cash, true, false, Alignment::LEFT).with_style(color),
-            util::percentage_cell(&self.networth.cash, &self.networth.total(), Alignment::LEFT)
-                .with_style(color),
+            util::money_cell(&cash, true, false, Alignment::LEFT).with_style(color),
+            util::percentage_cell(&cash, &self.networth.total(), Alignment::LEFT).with_style(color),
         ]));
 
         table.add_row(self.row());
@@ -153,7 +154,9 @@ impl Report {
         resource.line(&mut |record| {
             let mut exchanged = record.exchange(self.networth.currency, &self.exchange)?;
 
-            exchanged.invested(self.networth.invested_on(exchanged.date()));
+            exchanged.set_invested(self.networth.invested_on(exchanged.date()));
+            exchanged
+                .set_amount(self.networth.current_on(exchanged.date()) + exchanged.investment());
 
             result.entry(exchanged.date()).or_insert(exchanged);
 

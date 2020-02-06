@@ -62,12 +62,20 @@ impl Date {
         chrono::Utc::today().naive_local().into()
     }
 
+    pub fn pred(self) -> Date {
+        self.value.pred().into()
+    }
+
     pub fn year(self) -> i32 {
         self.value.year()
     }
 
     pub fn month(self) -> u32 {
         self.value.month()
+    }
+
+    pub fn since(self, rhs: Date) -> chrono::Duration {
+        self.value.signed_duration_since(rhs.value)
     }
 
     pub fn format<'a>(self, fmt: &'a str) -> DelayedFormat<StrftimeItems<'a>> {

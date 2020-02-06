@@ -82,8 +82,16 @@ impl Liner for Entry {
         .into())
     }
 
-    fn invested(&mut self, value: Money) {
+    fn investment(&self) -> Money {
+        self.investment
+    }
+
+    fn set_invested(&mut self, value: Money) {
         self.invested = value;
+    }
+
+    fn set_amount(&mut self, value: Money) {
+        self.amount = value;
     }
 }
 

@@ -106,7 +106,12 @@ impl Liner for Transaction {
         .into())
     }
 
-    fn invested(&mut self, _value: Money) {}
+    fn investment(&self) -> Money {
+        Money::new(self.currency, 0)
+    }
+
+    fn set_invested(&mut self, _value: Money) {}
+    fn set_amount(&mut self, _value: Money) {}
 }
 
 impl<'de> Deserialize<'de> for Transaction {

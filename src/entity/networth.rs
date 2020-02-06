@@ -16,9 +16,10 @@ use crate::{werr, CliResult};
 #[derive(Debug)]
 pub struct Networth {
     pub currency: Currency,
-    pub cash: Money,
     pub invested: HashMap<Date, Money>,
     pub investments: BTreeMap<String, Investment>,
+    pub current: HashMap<Date, Money>,
+    cash: Money,
 }
 
 impl Networth {
@@ -28,6 +29,7 @@ impl Networth {
             cash: Money::new(currency, 0),
             invested: HashMap::new(),
             investments: BTreeMap::new(),
+            current: HashMap::new(),
         };
 
         let resource = Resource::new(&config, false)?;
@@ -48,7 +50,7 @@ impl Networth {
     }
 
     pub fn total(&self) -> Money {
-        self.cash + self.from_investments()
+        self.current_on(Date::today()) + self.from_investment()
     }
 
     pub fn invested_on(&self, date: Date) -> Money {
@@ -58,15 +60,31 @@ impl Networth {
             .to_owned()
     }
 
+    pub fn current_on(&self, date: Date) -> Money {
+        let mut available_date = date;
+
+        while !self.current.contains_key(&available_date)
+            && date.since(available_date).num_days() < 30
+        {
+            available_date = available_date.pred();
+        }
+
+        self.current
+            .get(&available_date)
+            .unwrap_or(&Money::new(self.currency, 0))
+            .to_owned()
+    }
+
     pub fn current(&self) -> Line {
         let today = Date::today();
+        let investment = self.from_investment();
 
         Entry {
             date: today,
             invested: self.invested_on(today),
-            investment: self.from_investments(),
-            amount: self.total(),
+            amount: self.current_on(today) + self.from_investment(),
             currency: self.currency,
+            investment,
         }
         .into()
     }
@@ -75,6 +93,13 @@ impl Networth {
         let exchanged = record.exchange(self.currency, &exchange)?;
 
         self.cash += exchanged.amount();
+
+        let cash = self.cash;
+
+        self.current
+            .entry(exchanged.date())
+            .and_modify(|i| *i = cash)
+            .or_insert_with(|| cash);
 
         if filter.investment(&exchanged.category()) {
             let currency = self.currency;
@@ -93,18 +118,13 @@ impl Networth {
         Ok(())
     }
 
-    fn from_investments(&self) -> Money {
+    fn from_investment(&self) -> Money {
         self.investments
             .values()
             .fold(Money::new(self.currency, 0), |acc, investment| {
                 acc + investment.value()
             })
     }
-}
-
-#[derive(Debug)]
-pub struct Cash {
-    pub amount: Money,
 }
 
 #[derive(Debug, Clone)]

@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 use steel_cent::formatting::{FormatPart, FormatSpec};
 
-use std::fs::File;
-use std::io::BufReader;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::BufReader;
 use std::ops::{Add, AddAssign, Mul, Sub};
 
 use crate::error::CliError;
@@ -36,8 +36,8 @@ lazy_static! {
         match File::open("data/currencies.json") {
             Ok(file) => {
                 let reader = BufReader::new(file);
-                serde_json::from_reader(reader).unwrap_or(HashMap::new())
-            },
+                serde_json::from_reader(reader).unwrap_or_default()
+            }
             Err(_) => HashMap::new(),
         }
     };
@@ -67,7 +67,7 @@ pub struct CurrencyInfo {
     #[serde(skip)]
     iso_numeric: String,
     #[serde(skip)]
-    smallest_denomination: i64
+    smallest_denomination: i64,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -347,8 +347,10 @@ impl Money {
         let code = self.currency().code().to_lowercase();
 
         match SYMBOLS.get(code.as_str()) {
-            Some(val) => val.to_string(),
-            None => CURRENCIES.get(code.as_str()).map_or(code, |v| v.symbol.to_string()),
+            Some(val) => (*val).to_string(),
+            None => CURRENCIES
+                .get(code.as_str())
+                .map_or(code, |v| v.symbol.to_string()),
         }
     }
 }

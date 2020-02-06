@@ -43,5 +43,7 @@ pub trait Liner {
     fn currency(&self) -> Currency;
     fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Line>;
     fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()>;
-    fn invested(&mut self, value: Money);
+    fn investment(&self) -> Money;
+    fn set_invested(&mut self, value: Money);
+    fn set_amount(&mut self, value: Money);
 }

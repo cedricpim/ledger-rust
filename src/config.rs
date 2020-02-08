@@ -21,6 +21,7 @@ pub struct Config {
     pub ignored_accounts: Vec<String>,
     pub investments: Vec<String>,
     pub currency: String,
+    pub firefly: Option<String>
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -66,6 +67,7 @@ impl Config {
             ignored_categories: vec!["Investment".to_string()],
             ignored_accounts: vec!["Personal".to_string()],
             investments: vec!["Investment".to_string()],
+            firefly: None,
         };
 
         let mut file = File::create(&config_path)?;

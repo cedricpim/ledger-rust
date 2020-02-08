@@ -7,3 +7,4 @@ pub mod edit;
 pub mod networth;
 pub mod report;
 pub mod show;
+pub mod sync;

@@ -50,12 +50,11 @@ Implemented:
     networth    Calculate current networth
     report      Create a report about the transactions on the ledger according to any params provided
     show        Display all transactions
+    sync        Sync with Firefly III
 
 To be implemented:
-    analysis    List all transactions on the ledger for the specified category
     compare     Compare multiple periods
     trip        Create a report about the trips present on the ledger
-    sync        Sync with Firefly III
 "
     )
 }
@@ -95,8 +94,9 @@ enum Command {
     Create,
     Edit,
     Networth,
-    Show,
     Report,
+    Show,
+    Sync,
 }
 
 fn main() {
@@ -141,8 +141,9 @@ impl Command {
             Command::Convert => cmd::convert::run(argv),
             Command::Create => cmd::create::run(argv),
             Command::Networth => cmd::networth::run(argv),
-            Command::Show => cmd::show::run(argv),
             Command::Report => cmd::report::run(argv),
+            Command::Show => cmd::show::run(argv),
+            Command::Sync => cmd::sync::run(argv),
         }
     }
 }

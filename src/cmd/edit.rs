@@ -36,6 +36,8 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 }
 
 impl Args {
+    // After manual changes, validate the entries by loading all the records. This is done after
+    // the file is saved so that errors can be fixed and all the data already input is not lost.
     fn edit(&self, config: &Config) -> CliResult<()> {
         let editor = util::editor()?;
         let resource = repository::Resource::new(&config, self.flag_networth)?;
@@ -44,7 +46,9 @@ impl Args {
             let filepath = self.filepath(file.path().display());
             Command::new(editor).arg(filepath).status()?;
             Ok(())
-        })
+        })?;
+
+        resource.line(&mut |_record| Ok(()))
     }
 
     fn filepath(&self, filepath: std::path::Display) -> String {

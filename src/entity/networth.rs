@@ -11,7 +11,7 @@ use crate::exchange::Exchange;
 use crate::filter::Filter;
 use crate::repository::Resource;
 use crate::service::justetf::Asset;
-use crate::{werr, CliResult};
+use crate::CliResult;
 
 #[derive(Debug)]
 pub struct Networth {
@@ -139,13 +139,13 @@ pub struct Investment {
 
 impl Investment {
     pub fn new(record: &Line, currency: Currency, exchange: &Exchange) -> Self {
-        let asset = Asset::download(&record.description()).unwrap_or_else(|e| werr!(1, "{}", e));
+        let asset = Asset::download(&record.description()).unwrap_or_else(|e| crate::werr!(1, "{}", e));
 
         let quantity = record
             .quantity()
             .parse::<u64>()
             .map_err(CliError::from)
-            .unwrap_or_else(|e| werr!(1, "{}", e));
+            .unwrap_or_else(|e| crate::werr!(1, "{}", e));
 
         Self {
             code: record.description(),
@@ -166,13 +166,13 @@ impl Investment {
     }
 
     fn price(asset: &Asset, exchange: &Exchange, to: Currency) -> Money {
-        let currency = Currency::parse(&asset.currency).unwrap_or_else(|e| werr!(1, "{}", e));
+        let currency = Currency::parse(&asset.currency).unwrap_or_else(|e| crate::werr!(1, "{}", e));
 
-        let money = Money::parse(&asset.value, currency).unwrap_or_else(|e| werr!(1, "{}", e));
+        let money = Money::parse(&asset.value, currency).unwrap_or_else(|e| crate::werr!(1, "{}", e));
 
         money
             .exchange(to, &exchange)
-            .unwrap_or_else(|e| werr!(1, "{}", e))
+            .unwrap_or_else(|e| crate::werr!(1, "{}", e))
     }
 }
 
@@ -182,7 +182,7 @@ impl AddAssign<Line> for Investment {
             .quantity()
             .parse::<u64>()
             .map_err(CliError::from)
-            .unwrap_or_else(|e| werr!(1, "{}", e));
+            .unwrap_or_else(|e| crate::werr!(1, "{}", e));
 
         *self = Self {
             code: self.code.to_string(),

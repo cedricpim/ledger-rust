@@ -85,6 +85,7 @@ impl Networth {
             amount: self.current_on(today) + self.from_investment(),
             currency: self.currency,
             investment,
+            id: "".to_string(),
         }
         .into()
     }
@@ -139,7 +140,8 @@ pub struct Investment {
 
 impl Investment {
     pub fn new(record: &Line, currency: Currency, exchange: &Exchange) -> Self {
-        let asset = Asset::download(&record.description()).unwrap_or_else(|e| crate::werr!(1, "{}", e));
+        let asset =
+            Asset::download(&record.description()).unwrap_or_else(|e| crate::werr!(1, "{}", e));
 
         let quantity = record
             .quantity()
@@ -166,9 +168,11 @@ impl Investment {
     }
 
     fn price(asset: &Asset, exchange: &Exchange, to: Currency) -> Money {
-        let currency = Currency::parse(&asset.currency).unwrap_or_else(|e| crate::werr!(1, "{}", e));
+        let currency =
+            Currency::parse(&asset.currency).unwrap_or_else(|e| crate::werr!(1, "{}", e));
 
-        let money = Money::parse(&asset.value, currency).unwrap_or_else(|e| crate::werr!(1, "{}", e));
+        let money =
+            Money::parse(&asset.value, currency).unwrap_or_else(|e| crate::werr!(1, "{}", e));
 
         money
             .exchange(to, &exchange)

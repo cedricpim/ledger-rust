@@ -18,6 +18,7 @@ pub struct Entry {
     pub investment: Money,
     pub amount: Money,
     pub currency: Currency,
+    pub id: String,
 }
 
 impl Entry {
@@ -30,13 +31,14 @@ impl Entry {
             investment: Money::parse(&values[2], currency)?,
             amount: Money::parse(&values[3], currency)?,
             currency,
+            id: values[5].to_string(),
         })
     }
 }
 
 impl Liner for Entry {
     fn headers(&self) -> Vec<&'static str> {
-        vec!["Date", "Invested", "Investment", "Amount", "Currency"]
+        vec!["Date", "Invested", "Investment", "Amount", "Currency", "Id"]
     }
 
     fn account(&self) -> String {
@@ -67,6 +69,18 @@ impl Liner for Entry {
         self.currency
     }
 
+    fn id(&self) -> String {
+        self.id.to_string()
+    }
+
+    fn venue(&self) -> String {
+        "".to_string()
+    }
+
+    fn trip(&self) -> String {
+        "".to_string()
+    }
+
     fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()> {
         wrt.serialize(self).map_err(CliError::from)
     }
@@ -78,12 +92,17 @@ impl Liner for Entry {
             investment: self.investment.exchange(to, &exchange)?,
             amount: self.amount.exchange(to, &exchange)?,
             currency: to,
+            id: self.id.to_string(),
         }
         .into())
     }
 
     fn investment(&self) -> Money {
         self.investment
+    }
+
+    fn set_id(&mut self, value: String) {
+        self.id = value;
     }
 
     fn set_invested(&mut self, value: Money) {
@@ -108,6 +127,7 @@ impl<'de> Deserialize<'de> for Entry {
             Investment,
             Amount,
             Currency,
+            Id,
         }
 
         struct EntryVisitor;
@@ -128,6 +148,7 @@ impl<'de> Deserialize<'de> for Entry {
                 let mut investment = None;
                 let mut amount = None;
                 let mut currency = None;
+                let mut id = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
@@ -161,6 +182,12 @@ impl<'de> Deserialize<'de> for Entry {
                             }
                             currency = Some(map.next_value()?);
                         }
+                        Field::Id => {
+                            if id.is_some() {
+                                return Err(de::Error::duplicate_field("id"));
+                            }
+                            id = Some(map.next_value()?);
+                        }
                     }
                 }
 
@@ -176,11 +203,12 @@ impl<'de> Deserialize<'de> for Entry {
                     investment: Money::parse(investment, currency).map_err(de::Error::custom)?,
                     amount: Money::parse(amount, currency).map_err(de::Error::custom)?,
                     currency,
+                    id: id.ok_or_else(|| de::Error::missing_field("id"))?,
                 })
             }
         }
 
-        const FIELDS: &[&str] = &["date", "invested", "investment", "amount", "currency"];
+        const FIELDS: &[&str] = &["date", "invested", "investment", "amount", "currency", "id"];
         deserializer.deserialize_struct("Entry", FIELDS, EntryVisitor)
     }
 }

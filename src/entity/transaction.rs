@@ -22,6 +22,7 @@ pub struct Transaction {
     pub amount: Money,
     pub currency: Currency,
     pub trip: String,
+    pub id: String,
 }
 
 impl Transaction {
@@ -38,6 +39,7 @@ impl Transaction {
             amount: Money::parse(&values[6], currency)?,
             currency,
             trip: values[8].to_string(),
+            id: values[9].to_string(),
         })
     }
 }
@@ -54,23 +56,24 @@ impl Liner for Transaction {
             "Amount",
             "Currency",
             "Trip",
+            "Id",
         ]
     }
 
     fn account(&self) -> String {
-        self.account.to_owned()
+        self.account.to_string()
     }
 
     fn category(&self) -> String {
-        self.category.to_owned()
+        self.category.to_string()
     }
 
     fn description(&self) -> String {
-        self.description.to_owned()
+        self.description.to_string()
     }
 
     fn quantity(&self) -> String {
-        self.quantity.to_owned()
+        self.quantity.to_string()
     }
 
     fn date(&self) -> Date {
@@ -85,6 +88,18 @@ impl Liner for Transaction {
         self.currency
     }
 
+    fn id(&self) -> String {
+        self.id.to_string()
+    }
+
+    fn venue(&self) -> String {
+        self.venue.to_string()
+    }
+
+    fn trip(&self) -> String {
+        "".to_string()
+    }
+
     fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()> {
         wrt.serialize(self).map_err(CliError::from)
     }
@@ -93,21 +108,26 @@ impl Liner for Transaction {
         let money = self.amount.exchange(to, &exchange)?;
 
         Ok(Transaction {
-            account: self.account.clone(),
+            account: self.account.to_string(),
             date: self.date,
-            category: self.category.clone(),
-            description: self.description.clone(),
-            quantity: self.quantity.clone(),
+            category: self.category.to_string(),
+            description: self.description.to_string(),
+            quantity: self.quantity.to_string(),
             venue: self.venue.clone(),
             currency: money.currency(),
             amount: money,
-            trip: self.trip.clone(),
+            trip: self.trip.to_string(),
+            id: self.id.to_string(),
         }
         .into())
     }
 
     fn investment(&self) -> Money {
         Money::new(self.currency, 0)
+    }
+
+    fn set_id(&mut self, value: String) {
+        self.id = value;
     }
 
     fn set_invested(&mut self, _value: Money) {}
@@ -131,6 +151,7 @@ impl<'de> Deserialize<'de> for Transaction {
             Amount,
             Currency,
             Trip,
+            Id,
         }
 
         struct TransactionVisitor;
@@ -155,6 +176,7 @@ impl<'de> Deserialize<'de> for Transaction {
                 let mut amount = None;
                 let mut currency = None;
                 let mut trip = None;
+                let mut id = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
@@ -212,6 +234,12 @@ impl<'de> Deserialize<'de> for Transaction {
                             }
                             trip = Some(map.next_value()?);
                         }
+                        Field::Id => {
+                            if id.is_some() {
+                                return Err(de::Error::duplicate_field("id"));
+                            }
+                            id = Some(map.next_value()?);
+                        }
                     }
                 }
 
@@ -229,6 +257,7 @@ impl<'de> Deserialize<'de> for Transaction {
                     amount: Money::parse(amount, currency).map_err(de::Error::custom)?,
                     currency,
                     trip: trip.ok_or_else(|| de::Error::missing_field("trip"))?,
+                    id: id.ok_or_else(|| de::Error::missing_field("id"))?,
                 })
             }
         }
@@ -243,6 +272,7 @@ impl<'de> Deserialize<'de> for Transaction {
             "amount",
             "currency",
             "trip",
+            "id",
         ];
         deserializer.deserialize_struct("Transaction", FIELDS, TransactionVisitor)
     }

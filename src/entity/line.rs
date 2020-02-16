@@ -38,12 +38,16 @@ pub trait Liner {
     fn category(&self) -> String;
     fn description(&self) -> String;
     fn quantity(&self) -> String;
+    fn id(&self) -> String;
     fn amount(&self) -> Money;
     fn date(&self) -> Date;
     fn currency(&self) -> Currency;
+    fn venue(&self) -> String;
+    fn trip(&self) -> String;
     fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Line>;
     fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()>;
     fn investment(&self) -> Money;
+    fn set_id(&mut self, value: String);
     fn set_invested(&mut self, value: Money);
     fn set_amount(&mut self, value: Money);
 }

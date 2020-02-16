@@ -34,7 +34,7 @@ impl Resource {
 
     pub fn line<F>(&self, action: &mut F) -> CliResult<()>
     where
-        F: FnMut(&Line) -> CliResult<()>,
+        F: FnMut(&mut Line) -> CliResult<()>,
     {
         self.apply(|file| {
             let mut rdr = csv::Reader::from_reader(file);
@@ -42,12 +42,12 @@ impl Resource {
             match self.kind {
                 Line::Entry(_) => {
                     for result in rdr.deserialize() {
-                        action(&Line::Entry(result?))?;
+                        action(&mut Line::Entry(result?))?;
                     }
                 }
                 Line::Transaction(_) => {
                     for result in rdr.deserialize() {
-                        action(&Line::Transaction(result?))?;
+                        action(&mut Line::Transaction(result?))?;
                     }
                 }
             };

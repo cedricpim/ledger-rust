@@ -12,6 +12,7 @@ custom_error! { pub CliError
     NumberFormat { source: std::num::ParseFloatError }            = @{ source },
     MoneyFormat { source: steel_cent::formatting::ParseError }    = @{ source },
     Exchange { source: crate::service::openexchangerates::Error } = @{ source },
+    Firefly { source: crate::service::firefly::Error }            = @{ source },
 
     IncorrectPath { filename: String }      = "An error occurred while determining the path to {filename}",
     ExistingConfiguration                   = "Configuration file already exists, use --force to overwrite it",

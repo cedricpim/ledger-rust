@@ -316,6 +316,10 @@ impl Money {
         self.cents() < 0
     }
 
+    pub fn to_number(&self) -> f64 {
+        self.cents() as f64 / (10_i32.pow(self.currency().decimal_places().into())) as f64
+    }
+
     fn formatted_value(value: &str, currency: Currency) -> String {
         let (integer, fractional) = match value.rfind('.') {
             None => (value, "."),

@@ -21,13 +21,20 @@ pub struct Config {
     pub ignored_accounts: Vec<String>,
     pub investments: Vec<String>,
     pub currency: String,
-    pub firefly: Option<String>
+    pub firefly: Option<FireflyOptions>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Files {
     ledger: String,
     networth: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FireflyOptions {
+    pub token: String,
+    pub opening_balance: String,
+    pub currency: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

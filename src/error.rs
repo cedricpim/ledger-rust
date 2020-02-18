@@ -21,6 +21,8 @@ custom_error! { pub CliError
     ExchangeInternetRequired                = "An internet connection is required for operations involving exchange rates",
     IncorrectCurrencyCode {code: String }   = "The currency code '{code}' does not exist",
     MissingExchangeRate {code: String }     = "There is no exchange currency for '{code}'",
+    IncorrectTransfer                       = "Transfer cannot have more than two members",
+    MissingTransferMember                   = "One of the sides of the transfer is missing",
     UndefinedEditor                         = "EDITOR variable is not set",
     CryptoPushFailed                        = "init_push failed",
     CryptoPullFailed                        = "init_pull failed",

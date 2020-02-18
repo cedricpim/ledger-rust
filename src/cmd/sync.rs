@@ -8,6 +8,7 @@ use crate::config::FireflyOptions;
 use crate::entity::line::{Line, Liner};
 use crate::repository::Resource;
 use crate::service::firefly::Firefly;
+use crate::error::CliError;
 use crate::{util, CliResult};
 
 static USAGE: &str = "
@@ -46,6 +47,7 @@ impl Args {
                 options: val,
                 currencies: HashSet::new(),
                 accounts: HashMap::new(),
+                transfer: Transfer { from: None, to: None },
             }
             .perform(config),
             None => Ok(crate::wout!("{}", MISSING_KEY)),
@@ -58,15 +60,62 @@ struct Sync {
     options: FireflyOptions,
     currencies: HashSet<String>,
     accounts: HashMap<(String, String), String>,
+    transfer: Transfer,
 }
 
+struct Transfer {
+    from: Option<Line>,
+    to: Option<Line>,
+}
+
+impl Transfer {
+    fn add(&mut self, record: Line) -> CliResult<()> {
+        if self.from.is_none() {
+            self.from = Some(record);
+        } else if self.to.is_none() {
+            self.to = Some(record);
+        } else {
+            return Err(CliError::IncorrectTransfer);
+        };
+
+        Ok(())
+    }
+
+    fn ready(&self) -> bool {
+        self.from.is_some() && self.to.is_some()
+    }
+
+    fn records(&self) -> CliResult<(Line, Line)> {
+        Ok(
+            (
+                self.from.clone().ok_or(CliError::MissingTransferMember)?,
+                self.to.clone().ok_or(CliError::MissingTransferMember)?,
+            )
+        )
+    }
+
+    fn clear(&mut self) {
+        self.from = None;
+        self.to = None;
+    }
+}
 
 impl Sync {
     fn perform(&mut self, config: Config) -> CliResult<()> {
+        self.load()?;
+
+        self.sync_transactions(&config)?;
+
+        Ok(())
+    }
+
+    // TODO: Move ids of accounts to i32
+    // TODO: clear from/to on Transfer#records
+    // TODO: Move return of strings to firefly
+    // TODO: Work on transfers
+    fn sync_transactions(&mut self, config: &Config) -> CliResult<()> {
         let resource = Resource::new(&config, false)?;
         let temp_resource = Resource::new(&config, false)?;
-
-        self.load()?;
 
         resource.apply(|file| {
             let mut wtr = csv::WriterBuilder::new().from_path(file.path())?;
@@ -75,12 +124,16 @@ impl Sync {
                 self.process_currency(&record)?;
 
                 if record.id().is_empty() {
-                    // TODO: Handle transfers of money
-                    let id = self.process_line(&record)?;
-                    record.set_id(id);
+                    let (id, lines) = self.process_record(&record)?;
+
+                    for mut line in lines {
+                        line.set_id(id.to_string());
+                        line.write(&mut wtr)?;
+                    };
+                } else {
+                    record.write(&mut wtr)?;
                 }
 
-                record.write(&mut wtr)?;
                 wtr.flush()?;
 
                 Ok(())
@@ -92,16 +145,45 @@ impl Sync {
         Ok(())
     }
 
-    fn process_currency(&mut self, record: &Line) -> CliResult<()> {
-        if !self.currencies.contains(&record.currency().code()) {
-            self.firefly.enable_currency(record.currency().code())?;
-            self.currencies.insert(record.currency().code());
+    fn process_record(&mut self, record: &Line) -> CliResult<(String, Vec<Line>)> {
+        let (mut id, mut lines) = (String::new(), vec![]);
+
+        if record.category() == self.options.transfers {
+            self.transfer.add(record.clone())?;
+
+            if self.transfer.ready() {
+                let (from, to) = self.transfer.records()?;
+
+                id = self.process_transfer(&from, &to)?;
+
+                lines.push(from);
+                lines.push(to);
+
+                self.transfer.clear();
+            }
+        } else {
+            id = self.process_transaction(&record)?;
+
+            lines.push(record.clone());
         }
 
-        Ok(())
+        Ok((id, lines))
     }
 
-    fn process_line(&mut self, record: &Line) -> CliResult<String> {
+    fn process_transfer(&mut self, from: &Line, to: &Line) -> CliResult<String> {
+        let from_account_id = self.process_account(&from, from.account(), false)?;
+        let to_account_id = self.process_account(&to, to.account(), false)?;
+
+        let transfer = self.firefly.create_transfer(&from, &to, from_account_id, to_account_id)?;
+
+        if let Some(val) = transfer.data {
+            Ok(val.id)
+        } else {
+            Ok(String::new())
+        }
+    }
+
+    fn process_transaction(&mut self, record: &Line) -> CliResult<String> {
        if record.category() == self.options.opening_balance {
             self.process_account(&record, record.account(), true)
         } else {
@@ -139,6 +221,15 @@ impl Sync {
                 }
             }
         }
+    }
+
+    fn process_currency(&mut self, record: &Line) -> CliResult<()> {
+        if !self.currencies.contains(&record.currency().code()) {
+            self.firefly.enable_currency(record.currency().code())?;
+            self.currencies.insert(record.currency().code());
+        }
+
+        Ok(())
     }
 
     fn load(&mut self) -> CliResult<()> {

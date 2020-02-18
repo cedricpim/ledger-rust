@@ -35,6 +35,7 @@ pub struct FireflyOptions {
     pub token: String,
     pub opening_balance: String,
     pub currency: String,
+    pub transfers: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

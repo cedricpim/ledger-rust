@@ -18,6 +18,7 @@ static BASE_PATH: &str = "https://demo.firefly-iii.org";
 custom_error! { pub Error
     ReqwestError { source: reqwest::Error }       = @{ source },
     ApiError { source: firefly_iii::apis::Error } = @{ source },
+    Value { source: std::num::ParseIntError }     = @{ source },
 }
 
 pub struct Firefly {
@@ -166,13 +167,37 @@ impl Firefly {
 
         if line.amount().positive() {
             split._type = Some(transaction_split::Type::Deposit);
-            split.source_id = Some(profit_loss_id);
-            split.destination_id = Some(balancesheet_id);
+            split.source_id = Some(profit_loss_id.parse::<i32>().map_err(Error::from)?);
+            split.destination_id = Some(balancesheet_id.parse::<i32>().map_err(Error::from)?);
         } else {
             split._type = Some(transaction_split::Type::Withdrawal);
-            split.source_id = Some(balancesheet_id);
-            split.destination_id = Some(profit_loss_id);
+            split.source_id = Some(balancesheet_id.parse::<i32>().map_err(Error::from)?);
+            split.destination_id = Some(profit_loss_id.parse::<i32>().map_err(Error::from)?);
         };
+
+        let transaction = Transaction::new(vec![split]);
+
+        self.client
+            .transactions_api()
+            .store_transaction(transaction)
+            .await
+            .map_err(Error::from)
+    }
+
+    #[tokio::main]
+    pub async fn create_transfer(&self, line: &Line, other_line: &Line, from_account_id: String, to_account_id: String) -> Result<TransactionSingle, Error> {
+        let mut split = transaction_split::TransactionSplit::new(
+            line.date().format("%Y-%m-%d").to_string(),
+            line.amount().abs().to_number().to_string(),
+            line.description(),
+            Some(from_account_id.parse::<i32>().map_err(Error::from)?),
+            Some(to_account_id.parse::<i32>().map_err(Error::from)?),
+        );
+
+        split.currency_code = Some(line.currency().code());
+        split.foreign_currency_code = Some(other_line.currency().code());
+        split.foreign_amount = Some(other_line.amount().abs().to_number().to_string());
+        split._type = Some(transaction_split::Type::Transfer);
 
         let transaction = Transaction::new(vec![split]);
 

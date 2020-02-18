@@ -1,14 +1,14 @@
 use serde::Deserialize;
 
-use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
+use std::collections::{HashMap, HashSet};
 
 use crate::config::Config;
 use crate::config::FireflyOptions;
 use crate::entity::line::{Line, Liner};
+use crate::error::CliError;
 use crate::repository::Resource;
 use crate::service::firefly::Firefly;
-use crate::error::CliError;
 use crate::{util, CliResult};
 
 static USAGE: &str = "
@@ -47,10 +47,13 @@ impl Args {
                 options: val,
                 currencies: HashSet::new(),
                 accounts: HashMap::new(),
-                transfer: Transfer { from: None, to: None },
+                transfer: Transfer {
+                    from: None,
+                    to: None,
+                },
             }
             .perform(config),
-            None => Ok(crate::wout!("{}", MISSING_KEY)),
+            None => crate::werr!(2, "{}", MISSING_KEY),
         }
     }
 }
@@ -59,7 +62,7 @@ struct Sync {
     firefly: Firefly,
     options: FireflyOptions,
     currencies: HashSet<String>,
-    accounts: HashMap<(String, String), String>,
+    accounts: HashMap<(String, String), i32>,
     transfer: Transfer,
 }
 
@@ -85,18 +88,11 @@ impl Transfer {
         self.from.is_some() && self.to.is_some()
     }
 
-    fn records(&self) -> CliResult<(Line, Line)> {
-        Ok(
-            (
-                self.from.clone().ok_or(CliError::MissingTransferMember)?,
-                self.to.clone().ok_or(CliError::MissingTransferMember)?,
-            )
-        )
-    }
-
-    fn clear(&mut self) {
-        self.from = None;
-        self.to = None;
+    fn records(&mut self) -> CliResult<(Line, Line)> {
+        Ok((
+            std::mem::replace(&mut self.from, None).ok_or(CliError::MissingTransferMember)?,
+            std::mem::replace(&mut self.to, None).ok_or(CliError::MissingTransferMember)?,
+        ))
     }
 }
 
@@ -109,10 +105,6 @@ impl Sync {
         Ok(())
     }
 
-    // TODO: Move ids of accounts to i32
-    // TODO: clear from/to on Transfer#records
-    // TODO: Move return of strings to firefly
-    // TODO: Work on transfers
     fn sync_transactions(&mut self, config: &Config) -> CliResult<()> {
         let resource = Resource::new(&config, false)?;
         let temp_resource = Resource::new(&config, false)?;
@@ -129,7 +121,7 @@ impl Sync {
                     for mut line in lines {
                         line.set_id(id.to_string());
                         line.write(&mut wtr)?;
-                    };
+                    }
                 } else {
                     record.write(&mut wtr)?;
                 }
@@ -158,8 +150,6 @@ impl Sync {
 
                 lines.push(from);
                 lines.push(to);
-
-                self.transfer.clear();
             }
         } else {
             id = self.process_transaction(&record)?;
@@ -171,54 +161,52 @@ impl Sync {
     }
 
     fn process_transfer(&mut self, from: &Line, to: &Line) -> CliResult<String> {
-        let from_account_id = self.process_account(&from, from.account(), false)?;
-        let to_account_id = self.process_account(&to, to.account(), false)?;
+        let from_id = self.process_account(&from, from.account(), false)?;
+        let to_id = self.process_account(&to, to.account(), false)?;
 
-        let transfer = self.firefly.create_transfer(&from, &to, from_account_id, to_account_id)?;
-
-        if let Some(val) = transfer.data {
-            Ok(val.id)
-        } else {
-            Ok(String::new())
-        }
+        self.firefly
+            .create_transaction(&from, Some(&to), from_id, to_id, true)
+            .map_err(CliError::from)
     }
 
     fn process_transaction(&mut self, record: &Line) -> CliResult<String> {
-       if record.category() == self.options.opening_balance {
-            self.process_account(&record, record.account(), true)
+        if record.category() == self.options.opening_balance {
+            let id = self.process_account(&record, record.account(), true)?;
+
+            Ok(format!("B{}", id))
         } else {
             let balancesheet_id = self.process_account(&record, record.account(), false)?;
             let profit_loss_id = self.process_account(&record, record.category(), false)?;
-            let transaction = self.firefly.create_transaction(&record, balancesheet_id, profit_loss_id)?;
 
-            if let Some(val) = transaction.data {
-                Ok(val.id)
-            } else {
-                Ok(String::new())
-            }
+            self.firefly
+                .create_transaction(&record, None, balancesheet_id, profit_loss_id, false)
+                .map_err(CliError::from)
         }
     }
 
-    fn process_account(&mut self, record: &Line, account_name: String, with_balance: bool) -> CliResult<String> {
-        let _type = self.firefly.type_for(&record, record.account() == account_name);
+    fn process_account(
+        &mut self,
+        record: &Line,
+        account_name: String,
+        with_balance: bool,
+    ) -> CliResult<i32> {
+        let _type = self
+            .firefly
+            .type_for(&record, record.account() == account_name);
         let key = (account_name.to_string(), _type.to_string());
 
         match self.accounts.entry(key) {
-            Entry::Occupied(v) => Ok(v.get().to_string()),
+            Entry::Occupied(v) => Ok(*v.get()),
             Entry::Vacant(v) => {
-                let account = self.firefly.create_account(&record, account_name, with_balance, _type)?;
+                let id = self
+                    .firefly
+                    .create_account(&record, account_name, with_balance, _type)?;
 
-                if let Some(val) = account.data {
-                    v.insert(val.id.to_string());
+                let parsed_id = id.parse::<i32>().unwrap_or_default();
 
-                    if with_balance {
-                        Ok(format!("B{}", val.id))
-                    } else {
-                        Ok(val.id)
-                    }
-                } else {
-                    Ok(String::new())
-                }
+                v.insert(parsed_id);
+
+                Ok(parsed_id)
             }
         }
     }
@@ -237,9 +225,14 @@ impl Sync {
             .default_currency(self.options.currency.to_string())?;
 
         for account in self.firefly.accounts()? {
-            let info = (account.attributes.name.to_string(), account.attributes._type.to_string());
+            let info = (
+                account.attributes.name.to_string(),
+                account.attributes._type.to_string(),
+            );
 
-            self.accounts.entry(info).or_insert_with(|| account.id);
+            let id = account.id.parse::<i32>().map_err(CliError::from)?;
+
+            self.accounts.entry(info).or_insert_with(|| id);
         }
 
         for currency in self.firefly.currencies()? {

@@ -3,13 +3,12 @@ use firefly_iii::apis::client::APIClient;
 use firefly_iii::apis::configuration::Configuration;
 use firefly_iii::models::account;
 use firefly_iii::models::account_read::AccountRead;
-use firefly_iii::models::account_single::AccountSingle;
 use firefly_iii::models::currency_read::CurrencyRead;
 use firefly_iii::models::currency_single::CurrencySingle;
 use firefly_iii::models::meta_pagination::MetaPagination;
 use firefly_iii::models::transaction::Transaction;
-use firefly_iii::models::transaction_single::TransactionSingle;
 use firefly_iii::models::transaction_split;
+use firefly_iii::models::transaction_split::TransactionSplit;
 
 use crate::entity::line::{Line, Liner};
 
@@ -19,6 +18,8 @@ custom_error! { pub Error
     ReqwestError { source: reqwest::Error }       = @{ source },
     ApiError { source: firefly_iii::apis::Error } = @{ source },
     Value { source: std::num::ParseIntError }     = @{ source },
+
+    DestinationAccountMissing = "The destination account for the transfer is missing",
 }
 
 pub struct Firefly {
@@ -119,7 +120,7 @@ impl Firefly {
         account_name: String,
         with_balance: bool,
         _type: account::Type,
-    ) -> Result<AccountSingle, Error> {
+    ) -> Result<String, Error> {
         let mut account = account::Account::new(account_name, _type);
 
         account.currency_code = Some(line.currency().code());
@@ -133,26 +134,26 @@ impl Firefly {
             account.opening_balance_date = Some(line.date().format("%Y-%m-%d").to_string());
         };
 
-        self.client
+        let response = self
+            .client
             .accounts_api()
             .store_account(account)
             .await
-            .map_err(Error::from)
-    }
+            .map_err(Error::from)?;
 
-    pub fn type_for(&self, line: &Line, balancesheet: bool) -> account::Type {
-        if balancesheet {
-            account::Type::Asset
-        } else if line.amount().positive() {
-            account::Type::Revenue
-        } else {
-            account::Type::Expense
-        }
+        Ok(response.data.map(|v| v.id).unwrap_or_default())
     }
 
     #[tokio::main]
-    pub async fn create_transaction(&self, line: &Line, balancesheet_id: String, profit_loss_id: String) -> Result<TransactionSingle, Error> {
-        let mut split = transaction_split::TransactionSplit::new(
+    pub async fn create_transaction(
+        &self,
+        line: &Line,
+        other_line: Option<&Line>,
+        balancesheet_id: i32,
+        profit_loss_id: i32,
+        transfer: bool,
+    ) -> Result<String, Error> {
+        let mut split = TransactionSplit::new(
             line.date().format("%Y-%m-%d").to_string(),
             line.amount().abs().to_number().to_string(),
             line.description(),
@@ -167,45 +168,42 @@ impl Firefly {
 
         if line.amount().positive() {
             split._type = Some(transaction_split::Type::Deposit);
-            split.source_id = Some(profit_loss_id.parse::<i32>().map_err(Error::from)?);
-            split.destination_id = Some(balancesheet_id.parse::<i32>().map_err(Error::from)?);
+            split.source_id = Some(profit_loss_id);
+            split.destination_id = Some(balancesheet_id);
         } else {
             split._type = Some(transaction_split::Type::Withdrawal);
-            split.source_id = Some(balancesheet_id.parse::<i32>().map_err(Error::from)?);
-            split.destination_id = Some(profit_loss_id.parse::<i32>().map_err(Error::from)?);
+            split.source_id = Some(balancesheet_id);
+            split.destination_id = Some(profit_loss_id);
+        };
+
+        if transfer {
+            let destination_line = other_line.ok_or(Error::DestinationAccountMissing)?;
+
+            split._type = Some(transaction_split::Type::Transfer);
+            split.foreign_currency_code = Some(destination_line.currency().code());
+            split.foreign_amount = Some(destination_line.amount().abs().to_number().to_string());
         };
 
         let transaction = Transaction::new(vec![split]);
 
-        self.client
+        let response = self
+            .client
             .transactions_api()
             .store_transaction(transaction)
             .await
-            .map_err(Error::from)
+            .map_err(Error::from)?;
+
+        Ok(response.data.map(|v| v.id).unwrap_or_default())
     }
 
-    #[tokio::main]
-    pub async fn create_transfer(&self, line: &Line, other_line: &Line, from_account_id: String, to_account_id: String) -> Result<TransactionSingle, Error> {
-        let mut split = transaction_split::TransactionSplit::new(
-            line.date().format("%Y-%m-%d").to_string(),
-            line.amount().abs().to_number().to_string(),
-            line.description(),
-            Some(from_account_id.parse::<i32>().map_err(Error::from)?),
-            Some(to_account_id.parse::<i32>().map_err(Error::from)?),
-        );
-
-        split.currency_code = Some(line.currency().code());
-        split.foreign_currency_code = Some(other_line.currency().code());
-        split.foreign_amount = Some(other_line.amount().abs().to_number().to_string());
-        split._type = Some(transaction_split::Type::Transfer);
-
-        let transaction = Transaction::new(vec![split]);
-
-        self.client
-            .transactions_api()
-            .store_transaction(transaction)
-            .await
-            .map_err(Error::from)
+    pub fn type_for(&self, line: &Line, balancesheet: bool) -> account::Type {
+        if balancesheet {
+            account::Type::Asset
+        } else if line.amount().positive() {
+            account::Type::Revenue
+        } else {
+            account::Type::Expense
+        }
     }
 
     fn next_page(pagination: MetaPagination) -> Option<i32> {

@@ -274,10 +274,12 @@ impl Money {
             Some(index) => val.split_at(index),
         };
 
-        let sign = if self.value == self.value.abs() {
+        let sign = if self.positive() {
             "+"
-        } else {
+        } else if self.negative() {
             "-"
+        } else {
+            ""
         };
 
         format!("{}{}{:0<width$}", sign, integer, fractional, width = 3)

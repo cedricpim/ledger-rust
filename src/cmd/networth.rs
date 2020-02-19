@@ -133,7 +133,7 @@ impl Report {
             ]));
         }
 
-        let color = Attr::ForegroundColor(color::BRIGHT_RED);
+        let color = Attr::ForegroundColor(color::BRIGHT_CYAN);
 
         let cash = self.networth.current_on(Date::today());
 

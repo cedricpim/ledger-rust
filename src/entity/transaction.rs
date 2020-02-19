@@ -132,6 +132,14 @@ impl Liner for Transaction {
 
     fn set_invested(&mut self, _value: Money) {}
     fn set_amount(&mut self, _value: Money) {}
+
+    fn entry(&self) -> bool {
+        false
+    }
+
+    fn transaction(&self) -> bool {
+        true
+    }
 }
 
 impl<'de> Deserialize<'de> for Transaction {

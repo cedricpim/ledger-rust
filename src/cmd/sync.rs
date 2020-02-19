@@ -6,6 +6,8 @@ use std::collections::{HashMap, HashSet};
 use crate::config::Config;
 use crate::config::FireflyOptions;
 use crate::entity::line::{Line, Liner};
+use crate::entity::money::Money;
+use crate::entity::sync::Account;
 use crate::error::CliError;
 use crate::repository::Resource;
 use crate::service::firefly::Firefly;
@@ -47,6 +49,7 @@ impl Args {
                 options: val,
                 currencies: HashSet::new(),
                 accounts: HashMap::new(),
+                investments: None,
                 transfer: Transfer {
                     from: None,
                     to: None,
@@ -56,14 +59,6 @@ impl Args {
             None => crate::werr!(2, "{}", MISSING_KEY),
         }
     }
-}
-
-struct Sync {
-    firefly: Firefly,
-    options: FireflyOptions,
-    currencies: HashSet<String>,
-    accounts: HashMap<(String, String), i32>,
-    transfer: Transfer,
 }
 
 struct Transfer {
@@ -96,11 +91,56 @@ impl Transfer {
     }
 }
 
+struct Sync {
+    firefly: Firefly,
+    options: FireflyOptions,
+    currencies: HashSet<String>,
+    accounts: HashMap<(String, String), i32>,
+    investments: Option<Money>,
+    transfer: Transfer,
+}
+
 impl Sync {
     fn perform(&mut self, config: Config) -> CliResult<()> {
         self.load()?;
 
         self.sync_transactions(&config)?;
+        self.sync_investments(&config)?;
+
+        Ok(())
+    }
+
+    fn sync_investments(&mut self, config: &Config) -> CliResult<()> {
+        let resource = Resource::new(&config, true)?;
+        let temp_resource = Resource::new(&config, true)?;
+
+        resource.apply(|file| {
+            let mut wtr = csv::WriterBuilder::new().from_path(file.path())?;
+
+            temp_resource.line(&mut |record| {
+                self.process_currency(&record)?;
+
+                if !record.investment().zero() {
+                    if record.id().is_empty() {
+                        let id = self.process_transaction(
+                            &record,
+                            record.investment() - self.investments.unwrap_or_default(),
+                        )?;
+
+                        record.set_id(id);
+                    }
+
+                    self.investments = Some(record.investment());
+                }
+
+                record.write(&mut wtr)?;
+                wtr.flush()?;
+
+                Ok(())
+            })?;
+
+            Ok(())
+        })?;
 
         Ok(())
     }
@@ -115,7 +155,7 @@ impl Sync {
             temp_resource.line(&mut |record| {
                 self.process_currency(&record)?;
 
-                if record.id().is_empty() {
+                if record.id().is_empty() && !record.date().future() {
                     let (id, lines) = self.process_record(&record)?;
 
                     for mut line in lines {
@@ -152,7 +192,7 @@ impl Sync {
                 lines.push(to);
             }
         } else {
-            id = self.process_transaction(&record)?;
+            id = self.process_transaction(&record, record.amount())?;
 
             lines.push(record.clone());
         }
@@ -161,46 +201,36 @@ impl Sync {
     }
 
     fn process_transfer(&mut self, from: &Line, to: &Line) -> CliResult<String> {
-        let from_id = self.process_account(&from, from.account(), false)?;
-        let to_id = self.process_account(&to, to.account(), false)?;
+        let from_id = self.process_account(Account::new(&from, from.account(), None))?;
+        let to_id = self.process_account(Account::new(&to, to.account(), None))?;
 
         self.firefly
-            .create_transaction(&from, Some(&to), from_id, to_id, true)
+            .create_transaction(&from, Some(&to), from_id, to_id, from.amount(), true)
             .map_err(CliError::from)
     }
 
-    fn process_transaction(&mut self, record: &Line) -> CliResult<String> {
-        if record.category() == self.options.opening_balance {
-            let id = self.process_account(&record, record.account(), true)?;
+    fn process_transaction(&mut self, record: &Line, value: Money) -> CliResult<String> {
+        if self.new_account_with_balance(&record) {
+            let id = self.process_account(Account::new(&record, record.account(), Some(value)))?;
 
             Ok(format!("B{}", id))
         } else {
-            let balancesheet_id = self.process_account(&record, record.account(), false)?;
-            let profit_loss_id = self.process_account(&record, record.category(), false)?;
+            let (one_side, other_side) = Account::doubleside(&record, Some(value));
+
+            let balancesheet_id = self.process_account(one_side)?;
+            let profit_loss_id = self.process_account(other_side)?;
 
             self.firefly
-                .create_transaction(&record, None, balancesheet_id, profit_loss_id, false)
+                .create_transaction(&record, None, balancesheet_id, profit_loss_id, value, false)
                 .map_err(CliError::from)
         }
     }
 
-    fn process_account(
-        &mut self,
-        record: &Line,
-        account_name: String,
-        with_balance: bool,
-    ) -> CliResult<i32> {
-        let _type = self
-            .firefly
-            .type_for(&record, record.account() == account_name);
-        let key = (account_name.to_string(), _type.to_string());
-
-        match self.accounts.entry(key) {
+    fn process_account(&mut self, account: Account) -> CliResult<i32> {
+        match self.accounts.entry(account.key()) {
             Entry::Occupied(v) => Ok(*v.get()),
             Entry::Vacant(v) => {
-                let id = self
-                    .firefly
-                    .create_account(&record, account_name, with_balance, _type)?;
+                let id = self.firefly.create_account(account)?;
 
                 let parsed_id = id.parse::<i32>().unwrap_or_default();
 
@@ -218,6 +248,11 @@ impl Sync {
         }
 
         Ok(())
+    }
+
+    fn new_account_with_balance(&self, record: &Line) -> bool {
+        (record.transaction() && record.category() == self.options.opening_balance)
+            || (record.entry() && self.investments.is_none())
     }
 
     fn load(&mut self) -> CliResult<()> {

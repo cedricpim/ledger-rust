@@ -42,15 +42,15 @@ impl Liner for Entry {
     }
 
     fn account(&self) -> String {
-        "Networth".to_string()
+        "Investments".to_string()
     }
 
     fn category(&self) -> String {
-        "".to_string()
+        "Investment".to_string()
     }
 
     fn description(&self) -> String {
-        "".to_string()
+        "Daily Update".to_string()
     }
 
     fn quantity(&self) -> String {
@@ -111,6 +111,14 @@ impl Liner for Entry {
 
     fn set_amount(&mut self, value: Money) {
         self.amount = value;
+    }
+
+    fn entry(&self) -> bool {
+        true
+    }
+
+    fn transaction(&self) -> bool {
+        false
     }
 }
 

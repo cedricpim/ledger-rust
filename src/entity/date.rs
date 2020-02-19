@@ -78,6 +78,10 @@ impl Date {
         self.value.signed_duration_since(rhs.value)
     }
 
+    pub fn future(self) -> bool {
+        self.value > chrono::Local::now().naive_local().date()
+    }
+
     pub fn format<'a>(self, fmt: &'a str) -> DelayedFormat<StrftimeItems<'a>> {
         self.value.format(fmt)
     }

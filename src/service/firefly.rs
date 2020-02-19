@@ -11,6 +11,8 @@ use firefly_iii::models::transaction_split;
 use firefly_iii::models::transaction_split::TransactionSplit;
 
 use crate::entity::line::{Line, Liner};
+use crate::entity::money::Money;
+use crate::entity::sync;
 
 static BASE_PATH: &str = "https://demo.firefly-iii.org";
 
@@ -114,25 +116,23 @@ impl Firefly {
     }
 
     #[tokio::main]
-    pub async fn create_account(
-        &self,
-        line: &Line,
-        account_name: String,
-        with_balance: bool,
-        _type: account::Type,
-    ) -> Result<String, Error> {
-        let mut account = account::Account::new(account_name, _type);
+    pub async fn create_account(&self, info: sync::Account) -> Result<String, Error> {
+        let data = info.data();
 
-        account.currency_code = Some(line.currency().code());
+        let mut account = account::Account::new(data.name.to_string(), Firefly::type_for(&info));
+
+        account.currency_code = Some(data.currency.to_string());
 
         if let account::Type::Asset = account._type {
             account.account_role = Some(account::AccountRole::DefaultAsset);
         };
 
-        if with_balance {
-            account.opening_balance = Some(line.amount().to_number());
-            account.opening_balance_date = Some(line.date().format("%Y-%m-%d").to_string());
-        };
+        if let sync::Account::BalanceSheet { data } = info {
+            if let Some(val) = data.value {
+                account.opening_balance = Some(val.to_number());
+                account.opening_balance_date = Some(data.date.format("%Y-%m-%d").to_string());
+            };
+        }
 
         let response = self
             .client
@@ -151,11 +151,12 @@ impl Firefly {
         other_line: Option<&Line>,
         balancesheet_id: i32,
         profit_loss_id: i32,
+        amount: Money,
         transfer: bool,
     ) -> Result<String, Error> {
         let mut split = TransactionSplit::new(
             line.date().format("%Y-%m-%d").to_string(),
-            line.amount().abs().to_number().to_string(),
+            amount.abs().to_number().to_string(),
             line.description(),
             None,
             None,
@@ -166,14 +167,16 @@ impl Firefly {
         split.tags = Some(vec![line.trip()]);
         split.notes = Some(line.quantity());
 
-        if line.amount().positive() {
+        if amount.positive() {
             split._type = Some(transaction_split::Type::Deposit);
             split.source_id = Some(profit_loss_id);
             split.destination_id = Some(balancesheet_id);
-        } else {
+        } else if amount.negative() {
             split._type = Some(transaction_split::Type::Withdrawal);
             split.source_id = Some(balancesheet_id);
             split.destination_id = Some(profit_loss_id);
+        } else {
+            return Ok(String::new());
         };
 
         if transfer {
@@ -196,13 +199,16 @@ impl Firefly {
         Ok(response.data.map(|v| v.id).unwrap_or_default())
     }
 
-    pub fn type_for(&self, line: &Line, balancesheet: bool) -> account::Type {
-        if balancesheet {
-            account::Type::Asset
-        } else if line.amount().positive() {
-            account::Type::Revenue
-        } else {
-            account::Type::Expense
+    pub fn type_for(account: &sync::Account) -> account::Type {
+        match account {
+            sync::Account::BalanceSheet { data } => match data.value {
+                Some(val) if val.negative() => account::Type::Liability,
+                _ => account::Type::Asset,
+            },
+            sync::Account::ProfitAndLoss { data } => match data.value {
+                Some(val) if val.negative() => account::Type::Expense,
+                _ => account::Type::Revenue,
+            },
         }
     }
 

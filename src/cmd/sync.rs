@@ -211,9 +211,8 @@ impl Sync {
 
     fn process_transaction(&mut self, record: &Line, value: Money) -> CliResult<String> {
         if self.new_account_with_balance(&record) {
-            let id = self.process_account(Account::new(&record, record.account(), Some(value)))?;
-
-            Ok(format!("B{}", id))
+            self.process_account(Account::new(&record, record.account(), Some(value)))
+                .map(|v| v.to_string())
         } else {
             let (one_side, other_side) = Account::doubleside(&record, Some(value));
 

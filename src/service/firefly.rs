@@ -9,6 +9,7 @@ use firefly_iii::models::meta_pagination::MetaPagination;
 use firefly_iii::models::transaction::Transaction;
 use firefly_iii::models::transaction_split;
 use firefly_iii::models::transaction_split::TransactionSplit;
+use firefly_iii::models::transaction_type_filter::TransactionTypeFilter;
 
 use crate::entity::line::{Line, Liner};
 use crate::entity::money::Money;
@@ -21,7 +22,9 @@ custom_error! { pub Error
     ApiError { source: firefly_iii::apis::Error } = @{ source },
     Value { source: std::num::ParseIntError }     = @{ source },
 
-    DestinationAccountMissing = "The destination account for the transfer is missing",
+    DestinationAccountMissing     = "The destination account for the transfer is missing",
+    MissingAccountResponse        = "The account data is missing from response",
+    MissingExpectedOpeningBalance = "The account is missing an opening balance transaction",
 }
 
 pub struct Firefly {
@@ -29,6 +32,19 @@ pub struct Firefly {
 }
 
 impl Firefly {
+    pub fn type_for(account: &sync::Account) -> account::Type {
+        match account {
+            sync::Account::BalanceSheet { data } => match data.value {
+                Some(val) if val.negative() => account::Type::Liability,
+                _ => account::Type::Asset,
+            },
+            sync::Account::ProfitAndLoss { data } => match data.value {
+                Some(val) if val.negative() => account::Type::Expense,
+                _ => account::Type::Revenue,
+            },
+        }
+    }
+
     pub fn new(token: String) -> Self {
         Self {
             client: APIClient::new(Configuration {
@@ -141,7 +157,16 @@ impl Firefly {
             .await
             .map_err(Error::from)?;
 
-        Ok(response.data.map(|v| v.id).unwrap_or_default())
+        match response.data {
+            None => Err(Error::MissingAccountResponse),
+            Some(val) => {
+                if val.attributes.opening_balance.is_some() {
+                    self.get_opening_balance_transaction(val.id).await
+                } else {
+                    Ok(val.id)
+                }
+            }
+        }
     }
 
     #[tokio::main]
@@ -199,17 +224,26 @@ impl Firefly {
         Ok(response.data.map(|v| v.id).unwrap_or_default())
     }
 
-    pub fn type_for(account: &sync::Account) -> account::Type {
-        match account {
-            sync::Account::BalanceSheet { data } => match data.value {
-                Some(val) if val.negative() => account::Type::Liability,
-                _ => account::Type::Asset,
-            },
-            sync::Account::ProfitAndLoss { data } => match data.value {
-                Some(val) if val.negative() => account::Type::Expense,
-                _ => account::Type::Revenue,
-            },
-        }
+    async fn get_opening_balance_transaction(&self, id: String) -> Result<String, Error> {
+        let mut response = self
+            .client
+            .accounts_api()
+            .list_transaction_by_account(
+                id.parse::<i32>().map_err(Error::from)?,
+                None,
+                Some(1),
+                None,
+                None,
+                Some(TransactionTypeFilter::OpeningBalance),
+            )
+            .await
+            .map_err(Error::from)?;
+
+        response
+            .data
+            .pop()
+            .map(|v| v.id)
+            .ok_or(Error::MissingExpectedOpeningBalance)
     }
 
     fn next_page(pagination: MetaPagination) -> Option<i32> {

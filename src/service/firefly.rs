@@ -138,6 +138,7 @@ impl Firefly {
         let mut account = account::Account::new(data.name.to_string(), Firefly::type_for(&info));
 
         account.currency_code = Some(data.currency.to_string());
+        account.include_net_worth = Some(data.networth);
 
         if let account::Type::Asset = account._type {
             account.account_role = Some(account::AccountRole::DefaultAsset);

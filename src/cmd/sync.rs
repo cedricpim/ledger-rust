@@ -9,6 +9,7 @@ use crate::entity::line::{Line, Liner};
 use crate::entity::money::Money;
 use crate::entity::sync::Account;
 use crate::error::CliError;
+use crate::filter::Filter;
 use crate::repository::Resource;
 use crate::service::firefly::Firefly;
 use crate::{util, CliResult};
@@ -47,6 +48,7 @@ impl Args {
             Some(val) => Sync {
                 firefly: Firefly::new(val.token.to_string()),
                 options: val,
+                filter: Filter::networth(&config),
                 currencies: HashSet::new(),
                 accounts: HashMap::new(),
                 investments: None,
@@ -94,6 +96,7 @@ impl Transfer {
 struct Sync {
     firefly: Firefly,
     options: FireflyOptions,
+    filter: Filter,
     currencies: HashSet<String>,
     accounts: HashMap<(String, String), i32>,
     investments: Option<Money>,
@@ -198,8 +201,8 @@ impl Sync {
     }
 
     fn process_transfer(&mut self, from: &Line, to: &Line) -> CliResult<String> {
-        let from_id = self.process_account(Account::new(&from, from.account(), None))?;
-        let to_id = self.process_account(Account::new(&to, to.account(), None))?;
+        let from_id = self.process_account(Account::new(&from, from.account(), None, &self.filter))?;
+        let to_id = self.process_account(Account::new(&to, to.account(), None, &self.filter))?;
 
         self.firefly
             .create_transaction(&from, Some(&to), from_id, to_id, from.amount(), true)
@@ -208,10 +211,10 @@ impl Sync {
 
     fn process_transaction(&mut self, record: &Line, value: Money) -> CliResult<String> {
         if self.new_account_with_balance(&record) {
-            self.process_account(Account::new(&record, record.account(), Some(value)))
+            self.process_account(Account::new(&record, record.account(), Some(value), &self.filter))
                 .map(|v| v.to_string())
         } else {
-            let (one_side, other_side) = Account::doubleside(&record, Some(value));
+            let (one_side, other_side) = Account::doubleside(&record, Some(value), &self.filter);
 
             let balancesheet_id = self.process_account(one_side)?;
             let profit_loss_id = self.process_account(other_side)?;

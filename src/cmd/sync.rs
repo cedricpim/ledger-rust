@@ -118,29 +118,31 @@ impl Sync {
             let mut wtr = csv::WriterBuilder::new().from_path(file.path())?;
 
             temp_resource.line(&mut |record| {
-                self.process_currency(&record)?;
-
-                if !record.investment().zero() {
-                    if record.id().is_empty() {
-                        let id = self.process_transaction(
-                            &record,
-                            record.investment() - self.investments.unwrap_or_default(),
-                        )?;
-
-                        record.set_id(id);
-                    }
-
-                    self.investments = Some(record.investment());
-                }
+                self.process_investment(record)?;
 
                 record.write(&mut wtr)?;
                 wtr.flush()?;
 
                 Ok(())
-            })?;
+            })
+        })
+    }
 
-            Ok(())
-        })?;
+    fn process_investment(&mut self, record: &mut Line) -> CliResult<()> {
+        self.process_currency(&record)?;
+
+        if !record.investment().zero() {
+            if record.id().is_empty() {
+                let id = self.process_transaction(
+                    &record,
+                    record.investment() - self.investments.unwrap_or_default(),
+                )?;
+
+                record.set_id(id);
+            }
+
+            self.investments = Some(record.investment());
+        }
 
         Ok(())
     }
@@ -153,47 +155,42 @@ impl Sync {
             let mut wtr = csv::WriterBuilder::new().from_path(file.path())?;
 
             temp_resource.line(&mut |record| {
-                self.process_currency(&record)?;
+                let (id, lines) = self.process_record(record)?;
 
-                if record.id().is_empty() && !record.date().future() {
-                    let (id, lines) = self.process_record(&record)?;
-
-                    for mut line in lines {
-                        line.set_id(id.to_string());
-                        line.write(&mut wtr)?;
-                    }
-                } else {
-                    record.write(&mut wtr)?;
+                for mut line in lines {
+                    line.set_id(id.to_string());
+                    line.write(&mut wtr)?;
+                    wtr.flush()?;
                 }
 
-                wtr.flush()?;
-
                 Ok(())
-            })?;
-
-            Ok(())
-        })?;
-
-        Ok(())
+            })
+        })
     }
 
     fn process_record(&mut self, record: &Line) -> CliResult<(String, Vec<Line>)> {
+        self.process_currency(&record)?;
+
         let (mut id, mut lines) = (String::new(), vec![]);
 
-        if record.category() == self.options.transfers {
-            self.transfer.add(record.clone())?;
+        if record.id().is_empty() && !record.date().future() {
+            if record.category() == self.options.transfers {
+                self.transfer.add(record.clone())?;
 
-            if self.transfer.ready() {
-                let (from, to) = self.transfer.records()?;
+                if self.transfer.ready() {
+                    let (from, to) = self.transfer.records()?;
 
-                id = self.process_transfer(&from, &to)?;
+                    id = self.process_transfer(&from, &to)?;
 
-                lines.push(from);
-                lines.push(to);
+                    lines.push(from);
+                    lines.push(to);
+                }
+            } else {
+                id = self.process_transaction(&record, record.amount())?;
+
+                lines.push(record.clone());
             }
         } else {
-            id = self.process_transaction(&record, record.amount())?;
-
             lines.push(record.clone());
         }
 

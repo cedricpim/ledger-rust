@@ -239,7 +239,7 @@ impl Sync {
             Entry::Vacant(v) => {
                 let id = self.firefly.create_account(account)?;
 
-                let parsed_id = id.parse::<i32>().unwrap_or_default();
+                let parsed_id = id.parse::<i32>()?;
 
                 v.insert(parsed_id);
 

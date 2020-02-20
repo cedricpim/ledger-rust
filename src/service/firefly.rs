@@ -56,6 +56,13 @@ impl Firefly {
     }
 
     #[tokio::main]
+    pub async fn user(&self) -> Result<String, Error> {
+        let response = self.client.about_api().get_current_user().await?;
+
+        response.data.map(|v| v.id).ok_or(Error::MissingResponseData)
+    }
+
+    #[tokio::main]
     pub async fn default_currency(&self, code: String) -> Result<CurrencySingle, Error> {
         self.client
             .currencies_api()
@@ -191,6 +198,7 @@ impl Firefly {
         profit_loss_id: i32,
         amount: Money,
         transfer: bool,
+        user: i32,
     ) -> Result<String, Error> {
         let mut split = TransactionSplit::new(
             line.date().format("%Y-%m-%d").to_string(),
@@ -227,7 +235,9 @@ impl Firefly {
 
         println!("{:?}", split);
 
-        let transaction = Transaction::new(vec![split]);
+        let mut transaction = Transaction::new(vec![split]);
+
+        transaction.user = Some(user);
 
         let response = self
             .client

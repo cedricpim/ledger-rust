@@ -45,19 +45,7 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 impl Args {
     fn sync(&self, config: Config) -> CliResult<()> {
         match config.firefly.clone() {
-            Some(val) => Sync {
-                firefly: Firefly::new(val.token.to_string()),
-                options: val,
-                filter: Filter::networth(&config),
-                currencies: HashSet::new(),
-                accounts: HashMap::new(),
-                investments: None,
-                transfer: Transfer {
-                    from: None,
-                    to: None,
-                },
-            }
-            .perform(config),
+            Some(val) => Sync::new(&config, val)?.perform(config),
             None => crate::werr!(2, "{}", MISSING_KEY),
         }
     }
@@ -94,6 +82,7 @@ impl Transfer {
 }
 
 struct Sync {
+    user: i32,
     firefly: Firefly,
     options: FireflyOptions,
     filter: Filter,
@@ -104,6 +93,24 @@ struct Sync {
 }
 
 impl Sync {
+    fn new(config: &Config, options: FireflyOptions) -> CliResult<Self> {
+        let client = Firefly::new(options.token.to_string());
+
+        Ok(Self {
+            user: client.user()?.parse::<i32>()?,
+            firefly: client,
+            filter: Filter::networth(&config),
+            currencies: HashSet::new(),
+            accounts: HashMap::new(),
+            investments: None,
+            transfer: Transfer {
+                from: None,
+                to: None,
+            },
+            options,
+        })
+    }
+
     fn perform(&mut self, config: Config) -> CliResult<()> {
         self.load()?;
 
@@ -205,7 +212,7 @@ impl Sync {
         let to_id = self.process_account(Account::new(&to, to.account(), None, &self.filter))?;
 
         self.firefly
-            .create_transaction(&from, Some(&to), from_id, to_id, from.amount(), true)
+            .create_transaction(&from, Some(&to), from_id, to_id, from.amount(), true, self.user)
             .map_err(CliError::from)
     }
 
@@ -221,7 +228,7 @@ impl Sync {
             let profit_loss_id = self.process_account(other_side)?;
 
             self.firefly
-                .create_transaction(&record, None, balancesheet_id, profit_loss_id, value, false)
+                .create_transaction(&record, None, balancesheet_id, profit_loss_id, value, false, self.user)
                 .map_err(CliError::from)
         }
     }

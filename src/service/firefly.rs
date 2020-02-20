@@ -15,7 +15,7 @@ use crate::entity::line::{Line, Liner};
 use crate::entity::money::Money;
 use crate::entity::sync;
 
-static BASE_PATH: &str = "https://demo.firefly-iii.org";
+static BASE_PATH: &str = "http://localhost";
 
 custom_error! { pub Error
     ReqwestError { source: reqwest::Error }       = @{ source },

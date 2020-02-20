@@ -35,7 +35,7 @@ impl Account {
         };
 
         if record.account() == data.name {
-            data.networth = !filter.ignore_account(&data.name);
+            data.networth = filter.regular_account(&data.name);
 
             Account::BalanceSheet { data }
         } else {

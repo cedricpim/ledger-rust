@@ -78,7 +78,7 @@ impl Filter {
         !Filter::without(&value, &self.excluded_categories)
     }
 
-    pub fn ignore_account(&self, value: &str) -> bool {
+    pub fn regular_account(&self, value: &str) -> bool {
         Filter::without(&value, &self.ignored_accounts)
     }
 

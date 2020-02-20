@@ -211,8 +211,9 @@ impl Sync {
 
     fn process_transaction(&mut self, record: &Line, value: Money) -> CliResult<String> {
         if self.new_account_with_balance(&record) {
-            self.process_account(Account::new(&record, record.account(), Some(value), &self.filter))
-                .map(|v| v.to_string())
+            let id = self.process_account(Account::new(&record, record.account(), Some(value), &self.filter))?;
+
+            self.firefly.get_opening_balance_transaction(id).map_err(CliError::from)
         } else {
             let (one_side, other_side) = Account::doubleside(&record, Some(value), &self.filter);
 
@@ -264,7 +265,7 @@ impl Sync {
                 account.attributes._type.to_string(),
             );
 
-            let id = account.id.parse::<i32>().map_err(CliError::from)?;
+            let id = account.id.parse::<i32>()?;
 
             self.accounts.entry(info).or_insert_with(|| id);
         }

@@ -20,10 +20,9 @@ static BASE_PATH: &str = "https://demo.firefly-iii.org";
 custom_error! { pub Error
     ReqwestError { source: reqwest::Error }       = @{ source },
     ApiError { source: firefly_iii::apis::Error } = @{ source },
-    Value { source: std::num::ParseIntError }     = @{ source },
 
     DestinationAccountMissing     = "The destination account for the transfer is missing",
-    MissingAccountResponse        = "The account data is missing from response",
+    MissingResponseData           = "The data is missing from response",
     MissingExpectedOpeningBalance = "The account is missing an opening balance transaction",
 }
 
@@ -107,12 +106,13 @@ impl Firefly {
         let mut page = None;
 
         loop {
-            match self
+            let response = self
                 .client
                 .accounts_api()
                 .list_account(page, None, None)
-                .await
-            {
+                .await;
+
+            match response {
                 Err(e) => return Err(Error::from(e)),
                 Ok(val) => {
                     for account in val.data {
@@ -129,6 +129,28 @@ impl Firefly {
         }
 
         Ok(result)
+    }
+
+    #[tokio::main]
+    pub async fn get_opening_balance_transaction(&self, id: i32) -> Result<String, Error> {
+        let mut response = self
+            .client
+            .accounts_api()
+            .list_transaction_by_account(
+                id,
+                None,
+                Some(1),
+                None,
+                None,
+                Some(TransactionTypeFilter::OpeningBalance),
+            )
+            .await?;
+
+        response
+            .data
+            .pop()
+            .map(|v| v.id)
+            .ok_or(Error::MissingExpectedOpeningBalance)
     }
 
     #[tokio::main]
@@ -155,19 +177,9 @@ impl Firefly {
             .client
             .accounts_api()
             .store_account(account)
-            .await
-            .map_err(Error::from)?;
+            .await?;
 
-        match response.data {
-            None => Err(Error::MissingAccountResponse),
-            Some(val) => {
-                if val.attributes.opening_balance.is_some() {
-                    self.get_opening_balance_transaction(val.id).await
-                } else {
-                    Ok(val.id)
-                }
-            }
-        }
+        response.data.map(|v| v.id).ok_or(Error::MissingResponseData)
     }
 
     #[tokio::main]
@@ -213,38 +225,17 @@ impl Firefly {
             split.foreign_amount = Some(destination_line.amount().abs().to_number().to_string());
         };
 
+        println!("{:?}", split);
+
         let transaction = Transaction::new(vec![split]);
 
         let response = self
             .client
             .transactions_api()
             .store_transaction(transaction)
-            .await
-            .map_err(Error::from)?;
+            .await?;
 
         Ok(response.data.map(|v| v.id).unwrap_or_default())
-    }
-
-    async fn get_opening_balance_transaction(&self, id: String) -> Result<String, Error> {
-        let mut response = self
-            .client
-            .accounts_api()
-            .list_transaction_by_account(
-                id.parse::<i32>().map_err(Error::from)?,
-                None,
-                Some(1),
-                None,
-                None,
-                Some(TransactionTypeFilter::OpeningBalance),
-            )
-            .await
-            .map_err(Error::from)?;
-
-        response
-            .data
-            .pop()
-            .map(|v| v.id)
-            .ok_or(Error::MissingExpectedOpeningBalance)
     }
 
     fn next_page(pagination: MetaPagination) -> Option<i32> {

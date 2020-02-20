@@ -233,8 +233,6 @@ impl Firefly {
             split.foreign_amount = Some(destination_line.amount().abs().to_number().to_string());
         };
 
-        println!("{:?}", split);
-
         let mut transaction = Transaction::new(vec![split]);
 
         transaction.user = Some(user);

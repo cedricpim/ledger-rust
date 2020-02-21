@@ -197,10 +197,10 @@ impl Sync {
                 }
             } else {
                 id = self.process_transaction(&record, record.amount())?;
-
                 lines.push(record.clone());
             }
         } else {
+            id = record.id();
             lines.push(record.clone());
         }
 

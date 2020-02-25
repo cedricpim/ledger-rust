@@ -6,9 +6,7 @@ use std::collections::{HashMap, HashSet};
 use crate::config::Config;
 use crate::config::FireflyOptions;
 use crate::entity::line::{Line, Liner};
-use crate::entity::money::Money;
-use crate::entity::sync::Account;
-use crate::error::CliError;
+use crate::entity::sync::{AccountData, Ledger, Networth, Syncable};
 use crate::filter::Filter;
 use crate::repository::Resource;
 use crate::service::firefly::Firefly;
@@ -45,92 +43,39 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 impl Args {
     fn sync(&self, config: Config) -> CliResult<()> {
         match config.firefly.clone() {
-            Some(val) => Sync::new(&config, val)?.perform(config),
+            Some(val) => Sync::new(val)?.perform(config),
             None => crate::werr!(2, "{}", MISSING_KEY),
         }
     }
 }
 
-struct Transfer {
-    from: Option<Line>,
-    to: Option<Line>,
-}
-
-impl Transfer {
-    fn add(&mut self, record: Line) -> CliResult<()> {
-        if self.from.is_none() {
-            self.from = Some(record);
-        } else if self.to.is_none() {
-            self.to = Some(record);
-        } else {
-            return Err(CliError::IncorrectTransfer);
-        };
-
-        Ok(())
-    }
-
-    fn ready(&self) -> bool {
-        self.from.is_some() && self.to.is_some()
-    }
-
-    fn records(&mut self) -> CliResult<(Line, Line)> {
-        Ok((
-            std::mem::replace(&mut self.from, None).ok_or(CliError::MissingTransferMember)?,
-            std::mem::replace(&mut self.to, None).ok_or(CliError::MissingTransferMember)?,
-        ))
-    }
-}
-
-struct Sync {
+pub struct Sync {
     user: i32,
     firefly: Firefly,
     options: FireflyOptions,
-    filter: Filter,
     currencies: HashSet<String>,
     accounts: HashMap<(String, String), i32>,
-    investments: Option<Money>,
-    transfer: Transfer,
 }
 
 impl Sync {
-    fn new(config: &Config, options: FireflyOptions) -> CliResult<Self> {
-        let client = Firefly::new(options.token.to_string());
-
-        Ok(Self {
-            user: client.user()?.parse::<i32>()?,
-            firefly: client,
-            filter: Filter::networth(&config),
-            currencies: HashSet::new(),
-            accounts: HashMap::new(),
-            investments: None,
-            transfer: Transfer {
-                from: None,
-                to: None,
-            },
-            options,
-        })
-    }
-
-    fn perform(&mut self, config: Config) -> CliResult<()> {
-        self.load()?;
-
-        self.sync_transactions(&config)?;
-        self.sync_investments(&config)?;
-
-        Ok(())
-    }
-
-    fn sync_investments(&mut self, config: &Config) -> CliResult<()> {
-        let resource = Resource::new(&config, true)?;
-        let temp_resource = Resource::new(&config, true)?;
+    fn process<F>(config: &Config, networth: bool, action: &mut F) -> CliResult<()>
+    where
+        F: FnMut(&mut Line) -> CliResult<(String, Vec<Line>)>,
+    {
+        let resource = Resource::new(&config, networth)?;
+        let temp_resource = Resource::new(&config, networth)?;
 
         resource.apply(|file| {
             let mut wtr = csv::WriterBuilder::new().from_path(file.path())?;
 
             temp_resource.line(&mut |record| {
-                self.process_investment(record)?;
+                let (id, lines) = action(record)?;
 
-                record.write(&mut wtr)?;
+                for mut line in lines {
+                    line.set_id(id.to_string());
+                    line.write(&mut wtr)?;
+                }
+
                 wtr.flush()?;
 
                 Ok(())
@@ -138,106 +83,23 @@ impl Sync {
         })
     }
 
-    fn process_investment(&mut self, record: &mut Line) -> CliResult<()> {
-        self.process_currency(&record)?;
+    fn new(options: FireflyOptions) -> CliResult<Self> {
+        let client = Firefly::new(&options.token.to_string());
 
-        if !record.investment().zero() {
-            if record.id().is_empty() {
-                let id = self.process_transaction(
-                    &record,
-                    record.investment() - self.investments.unwrap_or_default(),
-                )?;
-
-                record.set_id(id);
-            }
-
-            self.investments = Some(record.investment());
-        }
-
-        Ok(())
-    }
-
-    fn sync_transactions(&mut self, config: &Config) -> CliResult<()> {
-        let resource = Resource::new(&config, false)?;
-        let temp_resource = Resource::new(&config, false)?;
-
-        resource.apply(|file| {
-            let mut wtr = csv::WriterBuilder::new().from_path(file.path())?;
-
-            temp_resource.line(&mut |record| {
-                let (id, lines) = self.process_record(record)?;
-
-                for mut line in lines {
-                    line.set_id(id.to_string());
-                    line.write(&mut wtr)?;
-                    wtr.flush()?;
-                }
-
-                Ok(())
-            })
+        Ok(Self {
+            user: client.user()?.parse::<i32>()?,
+            firefly: client,
+            currencies: HashSet::new(),
+            accounts: HashMap::new(),
+            options,
         })
     }
 
-    fn process_record(&mut self, record: &Line) -> CliResult<(String, Vec<Line>)> {
-        self.process_currency(&record)?;
-
-        let (mut id, mut lines) = (String::new(), vec![]);
-
-        if record.id().is_empty() && !record.date().future() {
-            if record.category() == self.options.transfers {
-                self.transfer.add(record.clone())?;
-
-                if self.transfer.ready() {
-                    let (from, to) = self.transfer.records()?;
-
-                    id = self.process_transfer(&from, &to)?;
-
-                    lines.push(from);
-                    lines.push(to);
-                }
-            } else {
-                id = self.process_transaction(&record, record.amount())?;
-                lines.push(record.clone());
-            }
-        } else {
-            id = record.id();
-            lines.push(record.clone());
-        }
-
-        Ok((id, lines))
-    }
-
-    fn process_transfer(&mut self, from: &Line, to: &Line) -> CliResult<String> {
-        let from_id = self.process_account(Account::new(&from, from.account(), None, &self.filter))?;
-        let to_id = self.process_account(Account::new(&to, to.account(), None, &self.filter))?;
-
-        self.firefly
-            .create_transaction(&from, Some(&to), from_id, to_id, from.amount(), true, self.user)
-            .map_err(CliError::from)
-    }
-
-    fn process_transaction(&mut self, record: &Line, value: Money) -> CliResult<String> {
-        if self.new_account_with_balance(&record) {
-            let id = self.process_account(Account::new(&record, record.account(), Some(value), &self.filter))?;
-
-            self.firefly.get_opening_balance_transaction(id).map_err(CliError::from)
-        } else {
-            let (one_side, other_side) = Account::doubleside(&record, Some(value), &self.filter);
-
-            let balancesheet_id = self.process_account(one_side)?;
-            let profit_loss_id = self.process_account(other_side)?;
-
-            self.firefly
-                .create_transaction(&record, None, balancesheet_id, profit_loss_id, value, false, self.user)
-                .map_err(CliError::from)
-        }
-    }
-
-    fn process_account(&mut self, account: Account) -> CliResult<i32> {
+    pub fn account(&mut self, account: &AccountData) -> CliResult<i32> {
         match self.accounts.entry(account.key()) {
             Entry::Occupied(v) => Ok(*v.get()),
             Entry::Vacant(v) => {
-                let id = self.firefly.create_account(account)?;
+                let id = self.firefly.create_account(&account)?;
 
                 let parsed_id = id.parse::<i32>()?;
 
@@ -248,6 +110,32 @@ impl Sync {
         }
     }
 
+    fn perform(&mut self, config: Config) -> CliResult<()> {
+        self.load()?;
+
+        let filter = Filter::networth(&config);
+        let client = Firefly::new(&self.options.token);
+
+        let mut ledger = Ledger::new(self.user, &filter, &client, self.options.clone());
+        self.sync(&config, false, &mut ledger)?;
+
+        let mut networth = Networth::new(self.user, &filter, &client);
+        self.sync(&config, true, &mut networth)?;
+
+        Ok(())
+    }
+
+    fn sync<'a, T>(&mut self, config: &Config, networth: bool, entity: &'a mut T) -> CliResult<()>
+    where
+        T: Syncable<'a>,
+    {
+        Self::process(&config, networth, &mut |record| {
+            self.process_currency(&record)?;
+
+            entity.process(record, self)
+        })
+    }
+
     fn process_currency(&mut self, record: &Line) -> CliResult<()> {
         if !self.currencies.contains(&record.currency().code()) {
             self.firefly.enable_currency(record.currency().code())?;
@@ -255,11 +143,6 @@ impl Sync {
         }
 
         Ok(())
-    }
-
-    fn new_account_with_balance(&self, record: &Line) -> bool {
-        (record.transaction() && record.category() == self.options.opening_balance)
-            || (record.entry() && self.investments.is_none())
     }
 
     fn load(&mut self) -> CliResult<()> {

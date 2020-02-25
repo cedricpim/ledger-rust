@@ -5,7 +5,7 @@ use crate::config::Config;
 use crate::entity::date::Date;
 use crate::entity::line::{Line, Liner};
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Filter {
     year: Option<i32>,
     month: Option<u32>,

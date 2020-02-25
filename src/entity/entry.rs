@@ -113,12 +113,12 @@ impl Liner for Entry {
         self.amount = value;
     }
 
-    fn entry(&self) -> bool {
-        true
+    fn syncable(&self) -> bool {
+        self.id().is_empty() && !self.date().future()
     }
 
-    fn transaction(&self) -> bool {
-        false
+    fn synced(&self) -> (String, Vec<Line>) {
+        (self.id(), vec![self.clone().into()])
     }
 }
 

@@ -50,6 +50,6 @@ pub trait Liner {
     fn set_id(&mut self, value: String);
     fn set_invested(&mut self, value: Money);
     fn set_amount(&mut self, value: Money);
-    fn entry(&self) -> bool;
-    fn transaction(&self) -> bool;
+    fn syncable(&self) -> bool;
+    fn synced(&self) -> (String, Vec<Line>);
 }

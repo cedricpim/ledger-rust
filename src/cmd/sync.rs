@@ -7,6 +7,7 @@ use crate::config::Config;
 use crate::config::FireflyOptions;
 use crate::entity::line::{Line, Liner};
 use crate::entity::sync::{AccountData, Ledger, Networth, Syncable};
+use crate::error::CliError;
 use crate::filter::Filter;
 use crate::repository::Resource;
 use crate::service::firefly::Firefly;
@@ -60,27 +61,30 @@ pub struct Sync {
 impl Sync {
     fn process<F>(config: &Config, networth: bool, action: &mut F) -> CliResult<()>
     where
-        F: FnMut(&mut Line) -> CliResult<(String, Vec<Line>)>,
+        F: FnMut(&mut Line, &mut Option<CliError>) -> CliResult<(String, Vec<Line>)>,
     {
         let resource = Resource::new(&config, networth)?;
         let temp_resource = Resource::new(&config, networth)?;
+
+        let mut error: Option<CliError> = None;
 
         resource.apply(|file| {
             let mut wtr = csv::WriterBuilder::new().from_path(file.path())?;
 
             temp_resource.line(&mut |record| {
-                let (id, lines) = action(record)?;
+                let (id, lines) = action(record, &mut error)?;
 
                 for mut line in lines {
                     line.set_id(id.to_string());
                     line.write(&mut wtr)?;
+                    wtr.flush()?;
                 }
-
-                wtr.flush()?;
 
                 Ok(())
             })
-        })
+        })?;
+
+        error.map_or(Ok(()), Err)
     }
 
     fn new(options: FireflyOptions) -> CliResult<Self> {
@@ -129,10 +133,23 @@ impl Sync {
     where
         T: Syncable<'a>,
     {
-        Self::process(&config, networth, &mut |record| {
-            self.process_currency(&record)?;
+        Self::process(&config, networth, &mut |record, error| match error {
+            None => {
+                let result = self
+                    .process_currency(&record)
+                    .and(entity.process(record, self));
 
-            entity.process(record, self)
+                let handle_error = |e: CliError| -> CliResult<(String, Vec<Line>)> {
+                    *error = Some(e);
+                    Ok(entity.previous().map_or_else(
+                        || record.synced(),
+                        |v| (record.id(), vec![v.clone(), record.clone()]),
+                    ))
+                };
+
+                result.or_else(handle_error)
+            }
+            Some(_) => Ok(record.synced()),
         })
     }
 

@@ -176,7 +176,7 @@ pub struct Ledger<'a> {
     filter: &'a Filter,
     firefly: &'a Firefly,
     options: FireflyOptions,
-    previous: Option<Line>,
+    pub previous: Option<Line>,
 }
 
 impl<'a> Ledger<'a> {
@@ -202,13 +202,13 @@ impl<'a> Ledger<'a> {
     ) -> CliResult<(String, Vec<Line>)> {
         let (mut id, mut lines) = (String::new(), Vec::<Line>::new());
 
-        match std::mem::replace(&mut self.previous, None) {
+        match &self.previous {
             Some(val) => {
                 let transfer = Transfer::new(&val, &record, &self.filter, sync)?;
 
                 id = self.firefly().create_transfer(transfer, self.user)?;
 
-                lines = vec![val, record.clone()];
+                lines = vec![self.previous.take().unwrap(), record.clone()];
             }
             None => self.previous = Some(record.clone()),
         };
@@ -250,6 +250,8 @@ pub trait Syncable<'a> {
     fn user(&self) -> i32;
 
     fn firefly(&self) -> &'a Firefly;
+
+    fn previous(&self) -> Option<&Line>;
 
     fn process_transaction(
         &mut self,
@@ -308,6 +310,10 @@ impl<'a> Syncable<'a> for Ledger<'a> {
     fn firefly(&self) -> &'a Firefly {
         self.firefly
     }
+
+    fn previous(&self) -> Option<&Line> {
+        self.previous.as_ref()
+    }
 }
 
 impl<'a> Syncable<'a> for Networth<'a> {
@@ -345,5 +351,9 @@ impl<'a> Syncable<'a> for Networth<'a> {
 
     fn firefly(&self) -> &'a Firefly {
         self.firefly
+    }
+
+    fn previous(&self) -> Option<&Line> {
+        None
     }
 }

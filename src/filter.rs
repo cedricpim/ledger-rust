@@ -76,12 +76,6 @@ impl Filter {
         }
     }
 
-    pub fn apply(&self, line: &Line) -> bool {
-        (self.categories.is_empty() || Filter::with(&line.category(), &self.categories))
-            && !Filter::with(&line.account(), &self.ignored_accounts)
-            && self.within(line.date())
-    }
-
     pub fn excluded(&self, value: &str) -> bool {
         Filter::with(&value, &self.excluded_categories)
     }
@@ -100,6 +94,11 @@ impl Filter {
 
     pub fn within(&self, date: Date) -> bool {
         self.period().contains(&date)
+    }
+
+    pub fn display(&self, line: &Line) -> bool {
+        (self.categories.is_empty() || Filter::with(&line.category(), &self.categories))
+            && self.within(line.date())
     }
 
     fn with(value: &str, list: &[String]) -> bool {

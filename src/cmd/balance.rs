@@ -91,7 +91,7 @@ impl Report {
         resource.line(&mut |record| {
             total.sum(record, &exchange)?;
 
-            if !filter.apply(&record) {
+            if !filter.within(record.date()) {
                 return Ok(());
             }
 

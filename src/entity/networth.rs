@@ -37,11 +37,9 @@ impl Networth {
         let filter = Filter::networth(&config);
 
         resource.line(&mut |record| {
-            if !filter.apply(&record) {
-                return Ok(());
+            if filter.accountable(&record.account()) {
+                networth.add(&record, &filter, &exchange)?;
             };
-
-            networth.add(&record, &filter, &exchange)?;
 
             Ok(())
         })?;

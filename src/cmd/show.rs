@@ -62,7 +62,7 @@ impl Args {
         let mut wtr = csv::Writer::from_path(&self.flag_output)?;
 
         resource.line(&mut |record| {
-            if filter.apply(&record) {
+            if filter.display(&record) {
                 record.exchange(currency, &exchange)?.write(&mut wtr)?;
             };
 

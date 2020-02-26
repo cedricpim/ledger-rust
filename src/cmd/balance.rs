@@ -43,7 +43,7 @@ impl Args {
     fn calculate(&self, config: &Config) -> CliResult<()> {
         let exchange = Exchange::new(&config)?;
 
-        let mut total = Total::new(&config.currency.to_string(), &config)?;
+        let mut total = Total::new(&config.currency.to_string(), &config, self.flag_date)?;
 
         let report = Report::new(&self, &mut total, &config, &exchange)?;
 

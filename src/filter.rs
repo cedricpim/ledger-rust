@@ -32,7 +32,7 @@ impl Filter {
 
     pub fn balance(args: &balance::Args) -> Self {
         Self {
-            from: args.flag_date,
+            till: args.flag_date,
             ..Default::default()
         }
     }
@@ -53,9 +53,10 @@ impl Filter {
         }
     }
 
-    pub fn total(config: &Config) -> Self {
+    pub fn total(config: &Config, date: Option<Date>) -> Self {
         Self {
             ignored_accounts: config.ignored_accounts.clone(),
+            till: date,
             ..Default::default()
         }
     }
@@ -97,14 +98,14 @@ impl Filter {
         value == self.investments
     }
 
+    pub fn within(&self, date: Date) -> bool {
+        self.period().contains(&date)
+    }
+
     fn with(value: &str, list: &[String]) -> bool {
         let values: Vec<String> = list.iter().map(|v| v.to_uppercase()).collect();
 
         values.contains(&value.to_uppercase())
-    }
-
-    pub fn within(&self, date: Date) -> bool {
-        self.period().contains(&date)
     }
 
     fn period(&self) -> RangeInclusive<Date> {

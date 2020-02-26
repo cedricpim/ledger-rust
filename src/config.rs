@@ -17,9 +17,9 @@ pub struct Config {
     encryption: Option<String>,
     files: Files,
     exchange: Exchange,
-    pub ignored_categories: Vec<String>,
+    pub transfer: String,
     pub ignored_accounts: Vec<String>,
-    pub investments: Vec<String>,
+    pub investments: String,
     pub currency: String,
     pub firefly: Option<FireflyOptions>,
 }
@@ -34,8 +34,21 @@ struct Files {
 pub struct FireflyOptions {
     pub token: String,
     pub opening_balance: String,
+    #[serde(skip)]
     pub currency: String,
-    pub transfers: String,
+    #[serde(skip)]
+    pub transfer: String,
+}
+
+impl FireflyOptions {
+    pub fn build(firefly_options: &FireflyOptions, config: &Config) -> Self {
+        Self {
+            token: firefly_options.token.to_string(),
+            opening_balance: firefly_options.opening_balance.to_string(),
+            currency: config.currency.to_string(),
+            transfer: config.transfer.to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,9 +85,9 @@ impl Config {
                 ttl: 86400, // 1 day
             },
             currency: "EUR".to_string(),
-            ignored_categories: vec!["Investment".to_string()],
+            transfer: "Transfer".to_string(),
             ignored_accounts: vec!["Personal".to_string()],
-            investments: vec!["Investment".to_string()],
+            investments: "Investment".to_string(),
             firefly: None,
         };
 

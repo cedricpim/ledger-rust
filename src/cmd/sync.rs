@@ -44,8 +44,8 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 
 impl Args {
     fn sync(&self, config: Config) -> CliResult<()> {
-        match config.firefly.clone() {
-            Some(val) => Sync::new(val)?.perform(config),
+        match &config.firefly {
+            Some(val) => Sync::new(&val, &config)?.perform(config),
             None => crate::werr!(2, "{}", MISSING_KEY),
         }
     }
@@ -95,7 +95,7 @@ impl Sync {
         error.map_or(Ok(()), Err)
     }
 
-    fn new(options: FireflyOptions) -> CliResult<Self> {
+    fn new(options: &FireflyOptions, config: &Config) -> CliResult<Self> {
         let client = Firefly::new(&options.token.to_string());
 
         Ok(Self {
@@ -103,7 +103,7 @@ impl Sync {
             firefly: client,
             currencies: HashSet::new(),
             accounts: HashMap::new(),
-            options,
+            options: FireflyOptions::build(&options, &config),
         })
     }
 

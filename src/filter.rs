@@ -13,9 +13,9 @@ pub struct Filter {
     till: Option<Date>,
     categories: Vec<String>,
     excluded_categories: Vec<String>,
-    ignored_categories: Vec<String>,
+    transfer: String,
     ignored_accounts: Vec<String>,
-    investments: Vec<String>,
+    investments: String,
 }
 
 impl Filter {
@@ -46,7 +46,7 @@ impl Filter {
             from: args.flag_from,
             till: args.flag_till,
             excluded_categories: args.flag_exclude.clone(),
-            ignored_categories: config.ignored_categories.clone(),
+            transfer: config.transfer.clone(),
             ignored_accounts: config.ignored_accounts.clone(),
             ..Default::default()
         }
@@ -69,7 +69,7 @@ impl Filter {
 
     pub fn apply(&self, line: &Line) -> bool {
         Filter::with(&line.category(), &self.categories)
-            && Filter::without(&line.category(), &self.ignored_categories)
+            && line.category() != self.transfer
             && Filter::without(&line.account(), &self.ignored_accounts)
             && self.within(line.date())
     }
@@ -83,7 +83,7 @@ impl Filter {
     }
 
     pub fn investment(&self, value: &str) -> bool {
-        !Filter::without(&value, &self.investments)
+        value == self.investments
     }
 
     fn with(value: &str, list: &[String]) -> bool {

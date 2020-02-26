@@ -277,7 +277,7 @@ pub trait Syncable<'a> {
 impl<'a> Syncable<'a> for Ledger<'a> {
     fn process(&mut self, record: &Line, sync: &mut Sync) -> CliResult<(String, Vec<Line>)> {
         if record.syncable() {
-            if record.category() == self.options.transfers {
+            if record.category() == self.options.transfer {
                 self.process_transfer(&record, sync)
             } else {
                 self.process_transaction(&record, sync)

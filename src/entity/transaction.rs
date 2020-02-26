@@ -97,11 +97,30 @@ impl Liner for Transaction {
     }
 
     fn trip(&self) -> String {
-        "".to_string()
+        self.trip.to_string()
     }
 
-    fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()> {
-        wrt.serialize(self).map_err(CliError::from)
+    fn investment(&self) -> Money {
+        Money::new(self.currency, 0)
+    }
+
+    fn set_id(&mut self, value: String) {
+        self.id = value;
+    }
+
+    fn set_invested(&mut self, _value: Money) {}
+    fn set_amount(&mut self, _value: Money) {}
+
+    fn syncable(&self) -> bool {
+        self.id().is_empty() && !self.date().future()
+    }
+
+    fn synced(&self) -> (String, Vec<Line>) {
+        (self.id(), vec![self.clone().into()])
+    }
+
+    fn bytes(&self) -> u64 {
+        bincode::serialize(self).map_or(0, |v| v.len() as u64)
     }
 
     fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Line> {
@@ -122,23 +141,8 @@ impl Liner for Transaction {
         .into())
     }
 
-    fn investment(&self) -> Money {
-        Money::new(self.currency, 0)
-    }
-
-    fn set_id(&mut self, value: String) {
-        self.id = value;
-    }
-
-    fn set_invested(&mut self, _value: Money) {}
-    fn set_amount(&mut self, _value: Money) {}
-
-    fn syncable(&self) -> bool {
-        self.id().is_empty() && !self.date().future()
-    }
-
-    fn synced(&self) -> (String, Vec<Line>) {
-        (self.id(), vec![self.clone().into()])
+    fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()> {
+        wrt.serialize(self).map_err(CliError::from)
     }
 }
 

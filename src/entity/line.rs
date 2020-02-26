@@ -1,4 +1,5 @@
 use enum_dispatch::enum_dispatch;
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 
 use crate::entity::date::Date;
@@ -7,7 +8,7 @@ use crate::exchange::Exchange;
 use crate::CliResult;
 
 #[enum_dispatch]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Line {
     Transaction,
     Entry,
@@ -44,12 +45,13 @@ pub trait Liner {
     fn currency(&self) -> Currency;
     fn venue(&self) -> String;
     fn trip(&self) -> String;
-    fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Line>;
-    fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()>;
     fn investment(&self) -> Money;
     fn set_id(&mut self, value: String);
     fn set_invested(&mut self, value: Money);
     fn set_amount(&mut self, value: Money);
     fn syncable(&self) -> bool;
     fn synced(&self) -> (String, Vec<Line>);
+    fn bytes(&self) -> u64;
+    fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Line>;
+    fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()>;
 }

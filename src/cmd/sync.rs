@@ -1,3 +1,4 @@
+use indicatif::ProgressBar;
 use serde::Deserialize;
 
 use std::collections::hash_map::Entry;
@@ -59,7 +60,12 @@ pub struct Sync {
 }
 
 impl Sync {
-    fn process<F>(config: &Config, networth: bool, action: &mut F) -> CliResult<()>
+    fn process<F>(
+        config: &Config,
+        networth: bool,
+        pb: &ProgressBar,
+        action: &mut F,
+    ) -> CliResult<()>
     where
         F: FnMut(&mut Line, &mut Option<CliError>) -> CliResult<(String, Vec<Line>)>,
     {
@@ -72,6 +78,8 @@ impl Sync {
             let mut wtr = csv::WriterBuilder::new().from_path(file.path())?;
 
             temp_resource.line(&mut |record| {
+                pb.inc(record.bytes());
+
                 let (id, lines) = action(record, &mut error)?;
 
                 for mut line in lines {
@@ -115,25 +123,33 @@ impl Sync {
     }
 
     fn perform(&mut self, config: Config) -> CliResult<()> {
+        let pb = ProgressBar::new(config.bytes());
+
         self.load()?;
 
         let filter = Filter::networth(&config);
         let client = Firefly::new(&self.options.token);
 
         let mut ledger = Ledger::new(self.user, &filter, &client, self.options.clone());
-        self.sync(&config, false, &mut ledger)?;
+        self.sync(&config, false, &mut ledger, &pb)?;
 
         let mut networth = Networth::new(self.user, &filter, &client);
-        self.sync(&config, true, &mut networth)?;
+        self.sync(&config, true, &mut networth, &pb)?;
 
         Ok(())
     }
 
-    fn sync<'a, T>(&mut self, config: &Config, networth: bool, entity: &'a mut T) -> CliResult<()>
+    fn sync<'a, T>(
+        &mut self,
+        config: &Config,
+        networth: bool,
+        entity: &'a mut T,
+        pb: &ProgressBar,
+    ) -> CliResult<()>
     where
         T: Syncable<'a>,
     {
-        Self::process(&config, networth, &mut |record, error| match error {
+        Self::process(&config, networth, &pb, &mut |record, error| match error {
             None => {
                 let result = self
                     .process_currency(&record)

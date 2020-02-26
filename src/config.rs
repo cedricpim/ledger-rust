@@ -105,6 +105,11 @@ impl Config {
     pub fn pass(&self) -> Option<String> {
         self.encryption.to_owned()
     }
+
+    pub fn bytes(&self) -> u64 {
+        std::fs::metadata(self.files.ledger.to_string()).map_or(0, |v| v.len())
+            + std::fs::metadata(self.files.networth.to_string()).map_or(0, |v| v.len())
+    }
 }
 
 impl Exchange {

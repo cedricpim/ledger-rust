@@ -81,22 +81,6 @@ impl Liner for Entry {
         "".to_string()
     }
 
-    fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()> {
-        wrt.serialize(self).map_err(CliError::from)
-    }
-
-    fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Line> {
-        Ok(Entry {
-            date: self.date,
-            invested: self.invested.exchange(to, &exchange)?,
-            investment: self.investment.exchange(to, &exchange)?,
-            amount: self.amount.exchange(to, &exchange)?,
-            currency: to,
-            id: self.id.to_string(),
-        }
-        .into())
-    }
-
     fn investment(&self) -> Money {
         self.investment
     }
@@ -119,6 +103,26 @@ impl Liner for Entry {
 
     fn synced(&self) -> (String, Vec<Line>) {
         (self.id(), vec![self.clone().into()])
+    }
+
+    fn bytes(&self) -> u64 {
+        bincode::serialize(self).map_or(0, |v| v.len() as u64)
+    }
+
+    fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Line> {
+        Ok(Entry {
+            date: self.date,
+            invested: self.invested.exchange(to, &exchange)?,
+            investment: self.investment.exchange(to, &exchange)?,
+            amount: self.amount.exchange(to, &exchange)?,
+            currency: to,
+            id: self.id.to_string(),
+        }
+        .into())
+    }
+
+    fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()> {
+        wrt.serialize(self).map_err(CliError::from)
     }
 }
 

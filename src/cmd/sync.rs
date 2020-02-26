@@ -122,8 +122,10 @@ impl Sync {
         }
     }
 
+    // Increase the total number of bytes by 50% since we measure the number of bytes of the Struct
+    // and not the number of bytes read from the file.
     fn perform(&mut self, config: Config) -> CliResult<()> {
-        let pb = ProgressBar::new(config.bytes());
+        let pb = ProgressBar::new((config.bytes() as f64 * 1.5) as u64);
 
         self.load()?;
 

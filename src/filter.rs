@@ -76,18 +76,21 @@ impl Filter {
     }
 
     pub fn apply(&self, line: &Line) -> bool {
-        Filter::with(&line.category(), &self.categories)
-            && line.category() != self.transfer
-            && Filter::without(&line.account(), &self.ignored_accounts)
+        (self.categories.is_empty() || Filter::with(&line.category(), &self.categories))
+            && !Filter::with(&line.account(), &self.ignored_accounts)
             && self.within(line.date())
     }
 
     pub fn excluded(&self, value: &str) -> bool {
-        !Filter::without(&value, &self.excluded_categories)
+        Filter::with(&value, &self.excluded_categories)
     }
 
     pub fn accountable(&self, value: &str) -> bool {
-        !Filter::without(&value, &self.ignored_accounts)
+        !Filter::with(&value, &self.ignored_accounts)
+    }
+
+    pub fn transfer(&self, value: &str) -> bool {
+        value == self.transfer
     }
 
     pub fn investment(&self, value: &str) -> bool {
@@ -97,16 +100,10 @@ impl Filter {
     fn with(value: &str, list: &[String]) -> bool {
         let values: Vec<String> = list.iter().map(|v| v.to_uppercase()).collect();
 
-        values.is_empty() || values.contains(&value.to_uppercase())
+        values.contains(&value.to_uppercase())
     }
 
-    fn without(value: &str, list: &[String]) -> bool {
-        let values: Vec<String> = list.iter().map(|v| v.to_uppercase()).collect();
-
-        !values.contains(&value.to_uppercase())
-    }
-
-    fn within(&self, date: Date) -> bool {
+    pub fn within(&self, date: Date) -> bool {
         self.period().contains(&date)
     }
 

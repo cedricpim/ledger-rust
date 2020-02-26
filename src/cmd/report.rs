@@ -80,6 +80,7 @@ struct Report {
     items: HashMap<String, Item>,
     occurrences: u32,
     total: i64,
+    previous: Option<Line>,
 }
 
 impl Report {
@@ -113,24 +114,48 @@ impl Report {
         resource.line(&mut |record| {
             total.sum(record, &exchange)?;
 
-            if !filter.apply(&record) {
+            if !filter.within(record.date()) {
                 return Ok(());
             }
 
-            let exchanged = record.exchange(report.currency, &exchange)?;
-
-            if filter.excluded(&record.category()) {
-                report.excluded += exchanged.amount().cents();
-
-                return Ok(());
+            if filter.transfer(&record.category()) {
+                match report.previous.take() {
+                    None => report.previous = Some(record.clone()),
+                    Some(val) => {
+                        if filter.accountable(&record.account())
+                            ^ filter.accountable(&val.account())
+                        {
+                            report.process(&record, &filter, &exchange)?;
+                            report.process(&val, &filter, &exchange)?;
+                        }
+                    }
+                }
+            } else {
+                report.process(&record, &filter, &exchange)?;
             };
-
-            report.add(Item::new(&exchanged));
 
             Ok(())
         })?;
 
         Ok(report)
+    }
+
+    fn process(&mut self, record: &Line, filter: &Filter, exchange: &Exchange) -> CliResult<()> {
+        if !filter.accountable(&record.account()) {
+            return Ok(());
+        };
+
+        let exchanged = record.exchange(self.currency, &exchange)?;
+
+        if filter.excluded(&record.category()) {
+            self.excluded += exchanged.amount().cents();
+
+            return Ok(());
+        };
+
+        self.add(Item::new(&exchanged));
+
+        Ok(())
     }
 
     fn add(&mut self, item: Item) {

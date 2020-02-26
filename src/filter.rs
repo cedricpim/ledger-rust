@@ -59,6 +59,13 @@ impl Filter {
         }
     }
 
+    pub fn sync(config: &Config) -> Self {
+        Self {
+            ignored_accounts: config.ignored_accounts.clone(),
+            ..Default::default()
+        }
+    }
+
     pub fn networth(config: &Config) -> Self {
         Self {
             ignored_accounts: config.ignored_accounts.clone(),

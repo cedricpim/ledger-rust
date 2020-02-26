@@ -129,7 +129,7 @@ impl Sync {
 
         self.load()?;
 
-        let filter = Filter::networth(&config);
+        let filter = Filter::sync(&config);
         let client = Firefly::new(&self.options.token);
 
         let mut ledger = Ledger::new(self.user, &filter, &client, self.options.clone());

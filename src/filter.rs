@@ -48,6 +48,7 @@ impl Filter {
             excluded_categories: args.flag_exclude.clone(),
             transfer: config.transfer.clone(),
             ignored_accounts: config.ignored_accounts.clone(),
+            investments: config.investments.clone(),
             ..Default::default()
         }
     }
@@ -85,8 +86,8 @@ impl Filter {
         !Filter::without(&value, &self.excluded_categories)
     }
 
-    pub fn regular_account(&self, value: &str) -> bool {
-        Filter::without(&value, &self.ignored_accounts)
+    pub fn accountable(&self, value: &str) -> bool {
+        !Filter::without(&value, &self.ignored_accounts)
     }
 
     pub fn investment(&self, value: &str) -> bool {

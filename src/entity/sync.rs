@@ -37,7 +37,7 @@ impl AccountData {
         let mut data = Self::new(line.account());
 
         data.currency = Some(line.currency().code());
-        data.networth = filter.regular_account(&line.account());
+        data.networth = filter.accountable(&line.account());
         data._type = Type::Asset;
 
         data

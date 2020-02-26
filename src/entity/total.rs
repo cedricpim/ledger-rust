@@ -24,7 +24,7 @@ impl Total {
     pub fn sum(&mut self, record: &Line, exchange: &Exchange) -> CliResult<()> {
         let exchanged = record.exchange(self.currency, &exchange)?;
 
-        if self.filter.regular_account(&record.account()) {
+        if self.filter.accountable(&record.account()) {
             self.value += exchanged.amount().cents();
         };
 

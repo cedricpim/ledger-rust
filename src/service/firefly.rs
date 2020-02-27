@@ -15,8 +15,6 @@ use crate::entity::line::{Line, Liner};
 use crate::entity::money::Money;
 use crate::entity::sync;
 
-static BASE_PATH: &str = "http://localhost";
-
 custom_error! { pub Error
     ReqwestError { source: reqwest::Error }       = @{ source },
     ApiError { source: firefly_iii::apis::Error } = @{ source },
@@ -30,10 +28,10 @@ pub struct Firefly {
 }
 
 impl Firefly {
-    pub fn new(token: &str) -> Self {
+    pub fn new(base_path: &str, token: &str) -> Self {
         Self {
             client: APIClient::new(Configuration {
-                base_path: BASE_PATH.to_string(),
+                base_path: base_path.to_string(),
                 user_agent: None,
                 oauth_access_token: Some(token.to_string()),
                 ..Default::default()

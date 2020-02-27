@@ -32,6 +32,7 @@ struct Files {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FireflyOptions {
+    pub base_path: String,
     pub token: String,
     pub opening_balance: String,
     #[serde(skip)]
@@ -43,6 +44,7 @@ pub struct FireflyOptions {
 impl FireflyOptions {
     pub fn build(firefly_options: &FireflyOptions, config: &Config) -> Self {
         Self {
+            base_path: firefly_options.base_path.to_string(),
             token: firefly_options.token.to_string(),
             opening_balance: firefly_options.opening_balance.to_string(),
             currency: config.currency.to_string(),

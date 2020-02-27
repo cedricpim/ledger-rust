@@ -98,7 +98,7 @@ impl Sync {
     }
 
     fn new(options: &FireflyOptions, config: &Config) -> CliResult<Self> {
-        let client = Firefly::new(&options.token.to_string());
+        let client = Firefly::new(&options.base_path, &options.token);
 
         Ok(Self {
             user: client.user()?.parse::<i32>()?,
@@ -135,7 +135,7 @@ impl Sync {
         self.load()?;
 
         let filter = Filter::sync(&config);
-        let client = Firefly::new(&self.options.token);
+        let client = Firefly::new(&self.options.base_path, &self.options.token);
 
         let mut ledger = Ledger::new(self.user, &filter, &client, self.options.clone());
         self.sync(&config, false, &mut ledger, &pb)?;

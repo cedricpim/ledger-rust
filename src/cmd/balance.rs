@@ -43,9 +43,11 @@ impl Args {
     fn calculate(&self, config: &Config) -> CliResult<()> {
         let exchange = Exchange::new(&config)?;
 
-        let mut total = Total::new(&config.currency.to_string(), &config, self.flag_date)?;
+        let filter = Filter::balance(&self);
 
-        let report = Report::new(&self, &mut total, &config, &exchange)?;
+        let mut total = Total::new(&config.currency.to_string(), &config, filter.end)?;
+
+        let report = Report::new(&self, &mut total, &config, &exchange, &filter)?;
 
         let summary = Summary::new(total);
 
@@ -79,14 +81,13 @@ impl Report {
         total: &mut Total,
         config: &Config,
         exchange: &Exchange,
+        filter: &Filter,
     ) -> CliResult<Report> {
         let mut report = Self {
             items: BTreeMap::new(),
         };
 
         let resource = Resource::new(&config, false)?;
-
-        let filter = Filter::balance(&args);
 
         resource.line(&mut |record| {
             total.sum(record, &exchange)?;

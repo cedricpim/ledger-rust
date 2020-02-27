@@ -7,10 +7,8 @@ use crate::entity::line::{Line, Liner};
 
 #[derive(Clone, Debug, Default)]
 pub struct Filter {
-    year: Option<i32>,
-    month: Option<u32>,
-    from: Option<Date>,
-    till: Option<Date>,
+    pub start: Option<Date>,
+    pub end: Option<Date>,
     categories: Vec<String>,
     excluded_categories: Vec<String>,
     transfer: String,
@@ -20,19 +18,27 @@ pub struct Filter {
 
 impl Filter {
     pub fn show(args: &show::Args) -> Self {
+        let (start, end) = Self::bounds(
+            args.flag_year,
+            args.flag_month,
+            args.flag_from,
+            args.flag_till,
+        );
+
         Self {
-            year: args.flag_year,
-            month: args.flag_month,
-            from: args.flag_from,
-            till: args.flag_till,
+            start,
+            end,
             categories: args.flag_categories.clone(),
             ..Default::default()
         }
     }
 
     pub fn balance(args: &balance::Args) -> Self {
+        let (start, end) = Self::bounds(None, None, None, args.flag_date);
+
         Self {
-            till: args.flag_date,
+            start,
+            end,
             ..Default::default()
         }
     }
@@ -40,11 +46,16 @@ impl Filter {
     pub fn report(args: &report::Args, config: &Config) -> Self {
         let today = Date::today();
 
+        let (start, end) = Self::bounds(
+            Some(args.flag_year.unwrap_or_else(|| today.year())),
+            Some(args.flag_month.unwrap_or_else(|| today.month())),
+            args.flag_from,
+            args.flag_till,
+        );
+
         Self {
-            year: Some(args.flag_year.unwrap_or_else(|| today.year())),
-            month: Some(args.flag_month.unwrap_or_else(|| today.month())),
-            from: args.flag_from,
-            till: args.flag_till,
+            start,
+            end,
             excluded_categories: args.flag_exclude.clone(),
             transfer: config.transfer.clone(),
             ignored_accounts: config.ignored_accounts.clone(),
@@ -53,10 +64,10 @@ impl Filter {
         }
     }
 
-    pub fn total(config: &Config, date: Option<Date>) -> Self {
+    pub fn total(config: &Config, end: Option<Date>) -> Self {
         Self {
+            end,
             ignored_accounts: config.ignored_accounts.clone(),
-            till: date,
             ..Default::default()
         }
     }
@@ -101,28 +112,33 @@ impl Filter {
             && self.within(line.date())
     }
 
+    fn period(&self) -> RangeInclusive<Date> {
+        let lower = self.start.unwrap_or_else(|| chrono::naive::MIN_DATE.into());
+        let upper = self.end.unwrap_or_else(|| chrono::naive::MAX_DATE.into());
+
+        lower..=upper
+    }
+
     fn with(value: &str, list: &[String]) -> bool {
         let values: Vec<String> = list.iter().map(|v| v.to_uppercase()).collect();
 
         values.contains(&value.to_uppercase())
     }
 
-    fn period(&self) -> RangeInclusive<Date> {
-        let (start, end) = if (self.year.is_some() || self.month.is_some())
-            && self.from.is_none()
-            && self.till.is_none()
-        {
+    fn bounds(
+        year: Option<i32>,
+        month: Option<u32>,
+        from: Option<Date>,
+        till: Option<Date>,
+    ) -> (Option<Date>, Option<Date>) {
+        if (year.is_some() || month.is_some()) && from.is_none() && till.is_none() {
             let today = Date::today();
-            let year = self.year.unwrap_or_else(|| today.year());
-            let month = self.month.unwrap_or_else(|| today.month());
-            let start: Date = chrono::naive::NaiveDate::from_ymd(year, month, 1).into();
-            (start, start.end_of_month())
+            let selected_year = year.unwrap_or_else(|| today.year());
+            let selected_month = month.unwrap_or_else(|| today.month());
+            let start = Date::from_ymd(selected_year, selected_month, 1);
+            (Some(start), Some(start.end_of_month()))
         } else {
-            (
-                self.from.unwrap_or_else(|| chrono::naive::MIN_DATE.into()),
-                self.till.unwrap_or_else(|| chrono::naive::MAX_DATE.into()),
-            )
-        };
-        start..=end
+            (from, till)
+        }
     }
 }

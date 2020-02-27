@@ -57,9 +57,11 @@ impl Args {
     fn generate(&self, config: &Config) -> CliResult<()> {
         let exchange = Exchange::new(&config)?;
 
-        let mut total = Total::new(&config.currency.to_string(), &config, None)?;
+        let filter = Filter::report(&self, &config);
 
-        let report = Report::new(&self, &mut total, &config, &exchange)?;
+        let mut total = Total::new(&config.currency.to_string(), &config, filter.end)?;
+
+        let report = Report::new(&self, &mut total, &config, &exchange, &filter)?;
 
         let summary = Summary::new(&report, total);
 
@@ -101,6 +103,7 @@ impl Report {
         total: &mut Total,
         config: &Config,
         exchange: &Exchange,
+        filter: &Filter,
     ) -> CliResult<Report> {
         let mut report = Self {
             currency: util::currency(&args.flag_currency, &config)?,
@@ -108,8 +111,6 @@ impl Report {
         };
 
         let resource = Resource::new(&config, false)?;
-
-        let filter = Filter::report(&args, &config);
 
         resource.line(&mut |record| {
             total.sum(record, &exchange)?;

@@ -58,6 +58,10 @@ impl<'de> Deserialize<'de> for Date {
 }
 
 impl Date {
+    pub fn from_ymd(year: i32, month: u32, day: u32) -> Date {
+        chrono::naive::NaiveDate::from_ymd(year, month, day).into()
+    }
+
     pub fn today() -> Date {
         chrono::Utc::today().naive_local().into()
     }

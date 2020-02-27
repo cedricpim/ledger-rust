@@ -30,6 +30,8 @@ Options:
 ";
 
 static MISSING_KEY: &str = "There is no synchronization set up";
+static PROGRESS_BAR_FORMAT: &str = "{spinner:.green}▕{wide_bar:.cyan}▏{percent}% ({eta})";
+static PROGRESS_BAR_CHARS: &str = "█▉▊▋▌▍▎▏  ";
 
 #[derive(Debug, Deserialize)]
 struct Args {}
@@ -78,7 +80,7 @@ impl Sync {
             let mut wtr = csv::WriterBuilder::new().from_path(file.path())?;
 
             temp_resource.line(&mut |record| {
-                pb.inc(record.bytes());
+                pb.inc(1);
 
                 let (id, lines) = action(record, &mut error)?;
 
@@ -122,13 +124,13 @@ impl Sync {
         }
     }
 
-    // Increase the total number of bytes by 50% since we measure the number of bytes of the Struct
-    // and not the number of bytes read from the file.
     fn perform(&mut self, config: Config) -> CliResult<()> {
-        let pb = ProgressBar::new((config.bytes() as f64 * 1.5) as u64);
-        pb.set_style(ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")
-            .progress_chars("#>-"));
+        let pb = ProgressBar::new(config.total_lines()? as u64);
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template(PROGRESS_BAR_FORMAT)
+                .progress_chars(PROGRESS_BAR_CHARS),
+        );
 
         self.load()?;
 

@@ -54,4 +54,4 @@ kuchiki = "0.8.0"
 firefly-iii = { git = "https://github.com/cedricpim/firefly-iii-rs", branch = "debug" }
 # ProgressBar
 indicatif = "0.14.0"
-bincode = "1.2.1"
+linecount = "0.1.0"

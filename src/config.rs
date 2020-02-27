@@ -1,6 +1,5 @@
-use serde_yaml;
-
 use serde::{Deserialize, Serialize};
+use serde_yaml;
 
 use std::fs::File;
 use std::io::Write;
@@ -8,6 +7,7 @@ use std::path::Path;
 use std::time::{Duration, SystemTime};
 
 use crate::error::CliError;
+use crate::repository::Resource;
 use crate::{util, CliResult};
 
 const CONFIGURATION_FILENAME: &str = "rust-config";
@@ -119,9 +119,16 @@ impl Config {
         self.encryption.to_owned()
     }
 
-    pub fn bytes(&self) -> u64 {
-        std::fs::metadata(self.files.ledger.to_string()).map_or(0, |v| v.len())
-            + std::fs::metadata(self.files.networth.to_string()).map_or(0, |v| v.len())
+    pub fn total_lines(&self) -> CliResult<usize> {
+        let mut networth_lines = Ok(0);
+        let mut ledger_lines = Ok(0);
+
+        Resource::new(&self, true)?
+            .apply(|file| Ok(networth_lines = linecount::count_lines(file)))?;
+        Resource::new(&self, false)?
+            .apply(|file| Ok(ledger_lines = linecount::count_lines(file)))?;
+
+        Ok(networth_lines? + ledger_lines?)
     }
 }
 

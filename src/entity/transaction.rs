@@ -119,10 +119,6 @@ impl Liner for Transaction {
         (self.id(), vec![self.clone().into()])
     }
 
-    fn bytes(&self) -> u64 {
-        bincode::serialize(self).map_or(0, |v| v.len() as u64)
-    }
-
     fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Line> {
         let money = self.amount.exchange(to, &exchange)?;
 

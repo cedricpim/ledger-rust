@@ -51,7 +51,6 @@ pub trait Liner {
     fn set_amount(&mut self, value: Money);
     fn syncable(&self) -> bool;
     fn synced(&self) -> (String, Vec<Line>);
-    fn bytes(&self) -> u64;
     fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Line>;
     fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()>;
 }

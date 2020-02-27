@@ -1,4 +1,4 @@
-use indicatif::ProgressBar;
+use indicatif::{ProgressBar, ProgressStyle};
 use serde::Deserialize;
 
 use std::collections::hash_map::Entry;
@@ -126,6 +126,9 @@ impl Sync {
     // and not the number of bytes read from the file.
     fn perform(&mut self, config: Config) -> CliResult<()> {
         let pb = ProgressBar::new((config.bytes() as f64 * 1.5) as u64);
+        pb.set_style(ProgressStyle::default_bar()
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+            .progress_chars("#>-"));
 
         self.load()?;
 

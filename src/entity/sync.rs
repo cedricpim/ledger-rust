@@ -65,21 +65,21 @@ impl Account {
     }
 
     fn transaction(line: &Line, value: Money, filter: &Filter, sync: &mut Sync) -> CliResult<Self> {
-        let mut one = AccountData::asset(&line, &filter);
-        one.id = Some(sync.account(&one)?);
+        let mut asset = AccountData::asset(&line, &filter);
+        asset.id = Some(sync.account(&asset)?);
 
-        let mut other = AccountData::new(line.category());
+        if value.negative() {
+            let mut expense = AccountData::new(line.category());
+            expense._type = Type::Expense;
+            expense.id = Some(sync.account(&expense)?);
 
-        if value.positive() {
-            other._type = Type::Revenue;
-            other.id = Some(sync.account(&other)?);
-
-            Ok(Self::DoubleEntry(one, other))
+            Ok(Self::DoubleEntry(asset, expense))
         } else {
-            other._type = Type::Expense;
-            other.id = Some(sync.account(&other)?);
+            let mut revenue = AccountData::new(line.category());
+            revenue._type = Type::Revenue;
+            revenue.id = Some(sync.account(&revenue)?);
 
-            Ok(Self::DoubleEntry(other, one))
+            Ok(Self::DoubleEntry(revenue, asset))
         }
     }
 
@@ -95,7 +95,7 @@ impl Account {
         let mut other = AccountData::asset(&other_line, &filter);
         other.id = Some(sync.account(&other)?);
 
-        if line.amount().positive() {
+        if line.amount().negative() {
             Ok(Self::DoubleEntry(one, other))
         } else {
             Ok(Self::DoubleEntry(other, one))

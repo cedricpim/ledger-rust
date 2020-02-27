@@ -122,17 +122,19 @@ impl Report {
             if filter.transfer(&record.category()) {
                 match report.previous.take() {
                     None => report.previous = Some(record.clone()),
-                    Some(val) => {
+                    Some(mut val) => {
                         if filter.accountable(&record.account())
                             ^ filter.accountable(&val.account())
                         {
-                            report.process(&record, &filter, &exchange)?;
-                            report.process(&val, &filter, &exchange)?;
+                            // Set the category as the destination/source account to not show all
+                            // transfers with the default category for transfers.
+                            report.process(record, val.account(), &filter, &exchange)?;
+                            report.process(&mut val, record.account(), &filter, &exchange)?;
                         }
                     }
                 }
             } else {
-                report.process(&record, &filter, &exchange)?;
+                report.process(record, record.category(), &filter, &exchange)?;
             };
 
             Ok(())
@@ -141,20 +143,26 @@ impl Report {
         Ok(report)
     }
 
-    fn process(&mut self, record: &Line, filter: &Filter, exchange: &Exchange) -> CliResult<()> {
+    fn process(
+        &mut self,
+        record: &mut Line,
+        category: String,
+        filter: &Filter,
+        exchange: &Exchange,
+    ) -> CliResult<()> {
         if !filter.accountable(&record.account()) {
             return Ok(());
         };
 
         let exchanged = record.exchange(self.currency, &exchange)?;
 
-        if filter.excluded(&record.category()) {
+        if filter.excluded(&category) {
             self.excluded += exchanged.amount().cents();
 
             return Ok(());
         };
 
-        self.add(Item::new(&exchanged));
+        self.add(Item::new(exchanged.amount(), category));
 
         Ok(())
     }
@@ -235,10 +243,10 @@ struct Item {
 }
 
 impl Item {
-    fn new(record: &Line) -> Self {
+    fn new(value: Money, category: String) -> Self {
         Self {
-            category: record.category(),
-            value: record.amount(),
+            category,
+            value,
             occurrences: 1,
         }
     }

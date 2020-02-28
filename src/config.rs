@@ -122,15 +122,19 @@ impl Config {
     }
 
     pub fn total_lines(&self) -> CliResult<usize> {
-        let mut networth_lines = Ok(0);
-        let mut ledger_lines = Ok(0);
+        let mut ledger_lines = 0;
+        Resource::new(&self, false)?.apply(|file| {
+            ledger_lines = linecount::count_lines(file)?;
+            Ok(())
+        })?;
 
-        Resource::new(&self, true)?
-            .apply(|file| Ok(networth_lines = linecount::count_lines(file)))?;
-        Resource::new(&self, false)?
-            .apply(|file| Ok(ledger_lines = linecount::count_lines(file)))?;
+        let mut networth_lines = 0;
+        Resource::new(&self, true)?.apply(|file| {
+            networth_lines = linecount::count_lines(file)?;
+            Ok(())
+        })?;
 
-        Ok(networth_lines? + ledger_lines?)
+        Ok(networth_lines + ledger_lines)
     }
 }
 

@@ -51,7 +51,7 @@ reqwest = { version = "0.10", features = ["blocking", "json"] }
 tokio = { version = "0.2", features = ["full"] }
 kuchiki = "0.8.0"
 # Firefly
-firefly-iii = { git = "https://github.com/cedricpim/firefly-iii-rs", branch = "debug" }
+firefly-iii = { git = "https://github.com/cedricpim/firefly-iii-rs" }
 # ProgressBar
 indicatif = "0.14.0"
 linecount = "0.1.0"

@@ -10,7 +10,7 @@ use crate::error::CliError;
 use crate::repository::Resource;
 use crate::{util, CliResult};
 
-const CONFIGURATION_FILENAME: &str = "rust-config";
+const CONFIGURATION_FILENAME: &str = "config";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {

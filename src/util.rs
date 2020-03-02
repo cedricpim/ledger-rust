@@ -88,7 +88,9 @@ pub fn money_cell(
     with_brackets: bool,
     alignment: Alignment,
 ) -> Cell {
-    let mut rep = if with_sign {
+    let mut rep = if value.zero() {
+        format!("{}", value).to_string()
+    } else if with_sign {
         format!("{}", value)[0..].to_string()
     } else {
         format!("{}", value)[1..].to_string()
@@ -104,7 +106,11 @@ pub fn money_cell(
 }
 
 pub fn percentage_cell(dividend: &Money, divisor: &Money, alignment: Alignment) -> Cell {
-    let value = (dividend.cents() as f64 / divisor.cents() as f64) * 100.0;
+    let value = if divisor.zero() {
+        -100.0
+    } else {
+        (dividend.cents() as f64 / divisor.cents() as f64) * 100.0
+    };
 
     Cell::new_align(&format!("{:+.2}%", value)[1..], alignment)
         .with_style(Attr::Bold)

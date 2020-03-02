@@ -38,10 +38,7 @@ where
 }
 
 pub fn editor() -> CliResult<String> {
-    match option_env!("EDITOR") {
-        None => Err(CliError::UndefinedEditor),
-        Some(val) => Ok(val.to_string()),
-    }
+    std::env::var("EDITOR").map_err(|_| CliError::UndefinedEditor)
 }
 
 pub fn main_directory() -> CliResult<BaseDirectories> {

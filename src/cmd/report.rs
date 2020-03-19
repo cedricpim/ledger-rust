@@ -23,14 +23,14 @@ not in this currency, are exchanged to it with the current rates) and there is n
 regarding different accounts - transactions are only aggregate per category.
 
 Usage:
-    ledger report [options] [--categories=<categories>...]
+    ledger report [options] [--exclude=<excluded>...]
 
 Options:
     -y, --year=<year>                   Select entries that occurred on the year
     -m, --month=<month>                 Select entries that occurred on the month
     -f, --from=<from>                   Select entries that occurred after the date
     -t, --till=<till>                   Select entries that occurred before the date
-    -e, --exclude=<categories>          Exclude entries that match the categories
+    -e, --exclude=<excluded>            Exclude entries that match the categories
     -C, --currency=<currency>           Display entries on the currency
     -h, --help                          Display this message
 ";

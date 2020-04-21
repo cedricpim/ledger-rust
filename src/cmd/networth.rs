@@ -120,6 +120,10 @@ impl Report {
         table.add_row(Report::headers());
 
         for investment in self.networth.investments.values() {
+            if investment.value().zero() {
+                continue;
+            };
+
             let color = Attr::ForegroundColor(color::BRIGHT_WHITE);
 
             table.add_row(Row::new(vec![

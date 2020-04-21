@@ -224,14 +224,14 @@ impl Sub for Money {
     }
 }
 
-impl Mul<u64> for Money {
+impl Mul<i64> for Money {
     type Output = Self;
 
-    fn mul(self, other: u64) -> Self {
+    fn mul(self, other: i64) -> Self {
         let cents = self.value.minor_amount();
 
         Self {
-            value: steel_cent::Money::of_minor(self.value.currency, cents * other as i64),
+            value: steel_cent::Money::of_minor(self.value.currency, cents * other),
         }
     }
 }

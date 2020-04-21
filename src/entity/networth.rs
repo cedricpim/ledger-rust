@@ -110,8 +110,8 @@ impl Networth {
 
             self.invested
                 .entry(exchanged.date())
-                .and_modify(|i| *i += exchanged.amount().abs())
-                .or_insert_with(|| exchanged.amount().abs());
+                .and_modify(|i| *i += exchanged.amount() * -1)
+                .or_insert_with(|| exchanged.amount() * -1);
         }
 
         Ok(())
@@ -130,7 +130,7 @@ impl Networth {
 pub struct Investment {
     pub code: String,
     pub spent: Money,
-    pub quantity: u64,
+    pub quantity: i64,
     pub currency: Currency,
     pub asset: Asset,
     pub price: Money,
@@ -143,7 +143,7 @@ impl Investment {
 
         let quantity = record
             .quantity()
-            .parse::<u64>()
+            .parse::<i64>()
             .map_err(CliError::from)
             .unwrap_or_else(|e| crate::werr!(1, "{}", e));
 
@@ -182,7 +182,7 @@ impl AddAssign<Line> for Investment {
     fn add_assign(&mut self, other: Line) {
         let quantity = other
             .quantity()
-            .parse::<u64>()
+            .parse::<i64>()
             .map_err(CliError::from)
             .unwrap_or_else(|e| crate::werr!(1, "{}", e));
 

@@ -111,11 +111,11 @@ impl Liner for Transaction {
     fn set_invested(&mut self, _value: Money) {}
     fn set_amount(&mut self, _value: Money) {}
 
-    fn syncable(&self) -> bool {
+    fn pushable(&self) -> bool {
         self.id().is_empty() && !self.date().future()
     }
 
-    fn synced(&self) -> (String, Vec<Line>) {
+    fn pushed(&self) -> (String, Vec<Line>) {
         (self.id(), vec![self.clone().into()])
     }
 

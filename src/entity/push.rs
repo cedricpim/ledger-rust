@@ -1,6 +1,6 @@
 use firefly_iii::models::account::Type;
 
-use crate::cmd::sync::Sync;
+use crate::cmd::push::Push;
 use crate::config::FireflyOptions;
 use crate::entity::date::Date;
 use crate::entity::line::{Line, Liner};
@@ -54,30 +54,30 @@ pub enum Account {
 }
 
 impl Account {
-    fn balance(line: &Line, value: Money, filter: &Filter, sync: &mut Sync) -> CliResult<Self> {
+    fn balance(line: &Line, value: Money, filter: &Filter, push: &mut Push) -> CliResult<Self> {
         let mut account = AccountData::asset(&line, &filter);
 
         account.date = Some(line.date());
         account.value = Some(value);
-        account.id = Some(sync.account(&account)?);
+        account.id = Some(push.account(&account)?);
 
         Ok(Self::Balance(account))
     }
 
-    fn transaction(line: &Line, value: Money, filter: &Filter, sync: &mut Sync) -> CliResult<Self> {
+    fn transaction(line: &Line, value: Money, filter: &Filter, push: &mut Push) -> CliResult<Self> {
         let mut asset = AccountData::asset(&line, &filter);
-        asset.id = Some(sync.account(&asset)?);
+        asset.id = Some(push.account(&asset)?);
 
         if value.negative() {
             let mut expense = AccountData::new(line.category());
             expense._type = Type::Expense;
-            expense.id = Some(sync.account(&expense)?);
+            expense.id = Some(push.account(&expense)?);
 
             Ok(Self::DoubleEntry(asset, expense))
         } else {
             let mut revenue = AccountData::new(line.category());
             revenue._type = Type::Revenue;
-            revenue.id = Some(sync.account(&revenue)?);
+            revenue.id = Some(push.account(&revenue)?);
 
             Ok(Self::DoubleEntry(revenue, asset))
         }
@@ -87,13 +87,13 @@ impl Account {
         line: &Line,
         other_line: &Line,
         filter: &Filter,
-        sync: &mut Sync,
+        push: &mut Push,
     ) -> CliResult<Self> {
         let mut one = AccountData::asset(&line, &filter);
-        one.id = Some(sync.account(&one)?);
+        one.id = Some(push.account(&one)?);
 
         let mut other = AccountData::asset(&other_line, &filter);
-        other.id = Some(sync.account(&other)?);
+        other.id = Some(push.account(&other)?);
 
         if line.amount().negative() {
             Ok(Self::DoubleEntry(one, other))
@@ -128,8 +128,8 @@ pub struct Transaction<'a> {
 }
 
 impl<'a> Transaction<'a> {
-    pub fn new(line: &'a Line, value: Money, filter: &Filter, sync: &mut Sync) -> CliResult<Self> {
-        let accounts = Account::transaction(&line, value, &filter, sync)?;
+    pub fn new(line: &'a Line, value: Money, filter: &Filter, push: &mut Push) -> CliResult<Self> {
+        let accounts = Account::transaction(&line, value, &filter, push)?;
 
         Ok(Self {
             ids: accounts.ids()?,
@@ -155,9 +155,9 @@ impl<'a> Transfer<'a> {
         line: &'a Line,
         other_line: &'a Line,
         filter: &Filter,
-        sync: &mut Sync,
+        push: &mut Push,
     ) -> CliResult<Self> {
-        let accounts = Account::transfer(&line, &other_line, &filter, sync)?;
+        let accounts = Account::transfer(&line, &other_line, &filter, push)?;
 
         Ok(Self {
             ids: accounts.ids()?,
@@ -198,13 +198,13 @@ impl<'a> Ledger<'a> {
     fn process_transfer(
         &mut self,
         record: &Line,
-        sync: &mut Sync,
+        push: &mut Push,
     ) -> CliResult<(String, Vec<Line>)> {
         let (mut id, mut lines) = (String::new(), Vec::<Line>::new());
 
         match &self.previous {
             Some(val) => {
-                let transfer = Transfer::new(&val, &record, &self.filter, sync)?;
+                let transfer = Transfer::new(&val, &record, &self.filter, push)?;
 
                 id = self.firefly().create_transfer(transfer, self.user)?;
 
@@ -236,8 +236,8 @@ impl<'a> Networth<'a> {
     }
 }
 
-pub trait Syncable<'a> {
-    fn process(&mut self, record: &Line, sync: &mut Sync) -> CliResult<(String, Vec<Line>)>;
+pub trait Pushable<'a> {
+    fn process(&mut self, record: &Line, push: &mut Push) -> CliResult<(String, Vec<Line>)>;
 
     fn opening_balance(&self, record: &Line) -> bool;
 
@@ -256,15 +256,15 @@ pub trait Syncable<'a> {
     fn process_transaction(
         &mut self,
         record: &Line,
-        sync: &mut Sync,
+        push: &mut Push,
     ) -> CliResult<(String, Vec<Line>)> {
         let id = if self.opening_balance(&record) {
-            let account = Account::balance(&record, self.balance(&record), self.filter(), sync)?;
+            let account = Account::balance(&record, self.balance(&record), self.filter(), push)?;
 
             self.firefly()
                 .get_opening_balance_transaction(account.id()?)?
         } else {
-            let transaction = Transaction::new(&record, self.value(&record), self.filter(), sync)?;
+            let transaction = Transaction::new(&record, self.value(&record), self.filter(), push)?;
 
             self.firefly()
                 .create_transaction(transaction, self.user())?
@@ -274,16 +274,16 @@ pub trait Syncable<'a> {
     }
 }
 
-impl<'a> Syncable<'a> for Ledger<'a> {
-    fn process(&mut self, record: &Line, sync: &mut Sync) -> CliResult<(String, Vec<Line>)> {
-        if record.syncable() {
+impl<'a> Pushable<'a> for Ledger<'a> {
+    fn process(&mut self, record: &Line, push: &mut Push) -> CliResult<(String, Vec<Line>)> {
+        if record.pushable() {
             if record.category() == self.options.transfer {
-                self.process_transfer(&record, sync)
+                self.process_transfer(&record, push)
             } else {
-                self.process_transaction(&record, sync)
+                self.process_transaction(&record, push)
             }
         } else {
-            Ok(record.synced())
+            Ok(record.pushed())
         }
     }
 
@@ -316,12 +316,12 @@ impl<'a> Syncable<'a> for Ledger<'a> {
     }
 }
 
-impl<'a> Syncable<'a> for Networth<'a> {
-    fn process(&mut self, record: &Line, sync: &mut Sync) -> CliResult<(String, Vec<Line>)> {
-        let result = if record.syncable() {
-            self.process_transaction(&record, sync)?
+impl<'a> Pushable<'a> for Networth<'a> {
+    fn process(&mut self, record: &Line, push: &mut Push) -> CliResult<(String, Vec<Line>)> {
+        let result = if record.pushable() {
+            self.process_transaction(&record, push)?
         } else {
-            record.synced()
+            record.pushed()
         };
 
         self.previous_amount = Some(record.investment());

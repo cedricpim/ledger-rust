@@ -72,7 +72,7 @@ impl Filter {
         }
     }
 
-    pub fn sync(config: &Config) -> Self {
+    pub fn push(config: &Config) -> Self {
         Self {
             ignored_accounts: config.ignored_accounts.clone(),
             ..Default::default()

@@ -13,7 +13,7 @@ use firefly_iii::models::transaction_type_filter::TransactionTypeFilter;
 
 use crate::entity::line::{Line, Liner};
 use crate::entity::money::Money;
-use crate::entity::sync;
+use crate::entity::push;
 
 custom_error! { pub Error
     ReqwestError { source: reqwest::Error }       = @{ source },
@@ -148,7 +148,7 @@ impl Firefly {
     }
 
     #[tokio::main]
-    pub async fn create_account(&self, data: &sync::AccountData) -> Result<String, Error> {
+    pub async fn create_account(&self, data: &push::AccountData) -> Result<String, Error> {
         let mut account = account::Account::new(data.name.to_string(), data._type);
 
         account.currency_code = data.currency.clone();
@@ -171,7 +171,7 @@ impl Firefly {
     #[tokio::main]
     pub async fn create_transfer(
         &self,
-        transfer: sync::Transfer,
+        transfer: push::Transfer,
         user: i32,
     ) -> Result<String, Error> {
         if transfer.value().zero() {
@@ -190,7 +190,7 @@ impl Firefly {
     #[tokio::main]
     pub async fn create_transaction(
         &self,
-        transaction: sync::Transaction,
+        transaction: push::Transaction,
         user: i32,
     ) -> Result<String, Error> {
         if transaction.value().zero() {

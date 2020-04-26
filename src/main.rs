@@ -48,13 +48,9 @@ Implemented:
     create      Create a new ledger/networth file
     edit        Open ledger/networth file in your editor
     networth    Calculate current networth
+    push        Push local changes to Firefly III
     report      Create a report about the transactions on the ledger according to any params provided
     show        Display all transactions
-    sync        Sync with Firefly III
-
-To be implemented:
-    compare     Compare multiple periods
-    trip        Create a report about the trips present on the ledger
 "
     )
 }
@@ -94,9 +90,9 @@ enum Command {
     Create,
     Edit,
     Networth,
+    Push,
     Report,
     Show,
-    Sync,
 }
 
 fn main() {
@@ -141,9 +137,9 @@ impl Command {
             Command::Convert => cmd::convert::run(argv),
             Command::Create => cmd::create::run(argv),
             Command::Networth => cmd::networth::run(argv),
+            Command::Push => cmd::push::run(argv),
             Command::Report => cmd::report::run(argv),
             Command::Show => cmd::show::run(argv),
-            Command::Sync => cmd::sync::run(argv),
         }
     }
 }

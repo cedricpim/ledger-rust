@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 use crate::config::Config;
 use crate::config::FireflyOptions;
 use crate::entity::line::{Line, Liner};
-use crate::entity::sync::{AccountData, Ledger, Networth, Syncable};
+use crate::entity::push::{AccountData, Ledger, Networth, Pushable};
 use crate::error::CliError;
 use crate::filter::Filter;
 use crate::repository::Resource;
@@ -15,21 +15,21 @@ use crate::service::firefly::Firefly;
 use crate::{util, CliResult};
 
 static USAGE: &str = "
-Sync entries and transactions with Firefly III.
+Push entries and transactions to Firefly III.
 
-This command will sync any new entries and transactions into Firefly III (if the configuration file
-is set for Firefly). In order to keep track of the already synced transactions/entries, they will
+This command will push any new entries and transactions into Firefly III (if the configuration file
+is set for Firefly). In order to keep track of the already pushed transactions/entries, they will
 be marked with the returned id and stored back in the CSV. For setting up the configuration with
 Firefly, ensure that the key \"firefly\" has a valid access token in the configuration file.
 
 Usage:
-    ledger sync [options]
+    ledger push [options]
 
 Options:
     -h, --help          Display this message
 ";
 
-static MISSING_KEY: &str = "There is no synchronization set up";
+static MISSING_KEY: &str = "There is no key set up";
 static PROGRESS_BAR_FORMAT: &str = "{spinner:.green}▕{wide_bar:.cyan}▏{percent}% ({eta})";
 static PROGRESS_BAR_CHARS: &str = "█▉▊▋▌▍▎▏  ";
 
@@ -41,19 +41,19 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 
     let config = Config::new()?;
 
-    args.sync(config)
+    args.push(config)
 }
 
 impl Args {
-    fn sync(&self, config: Config) -> CliResult<()> {
+    fn push(&self, config: Config) -> CliResult<()> {
         match &config.firefly {
-            Some(val) => Sync::new(&val, &config)?.perform(config),
+            Some(val) => Push::new(&val, &config)?.perform(config),
             None => crate::werr!(2, "{}", MISSING_KEY),
         }
     }
 }
 
-pub struct Sync {
+pub struct Push {
     user: i32,
     firefly: Firefly,
     options: FireflyOptions,
@@ -61,7 +61,7 @@ pub struct Sync {
     accounts: HashMap<(String, String), i32>,
 }
 
-impl Sync {
+impl Push {
     fn process<F>(
         config: &Config,
         networth: bool,
@@ -134,19 +134,19 @@ impl Sync {
 
         self.load()?;
 
-        let filter = Filter::sync(&config);
+        let filter = Filter::push(&config);
         let client = Firefly::new(&self.options.base_path, &self.options.token);
 
         let mut ledger = Ledger::new(self.user, &filter, &client, self.options.clone());
-        self.sync(&config, false, &mut ledger, &pb)?;
+        self.push(&config, false, &mut ledger, &pb)?;
 
         let mut networth = Networth::new(self.user, &filter, &client);
-        self.sync(&config, true, &mut networth, &pb)?;
+        self.push(&config, true, &mut networth, &pb)?;
 
         Ok(())
     }
 
-    fn sync<'a, T>(
+    fn push<'a, T>(
         &mut self,
         config: &Config,
         networth: bool,
@@ -154,7 +154,7 @@ impl Sync {
         pb: &ProgressBar,
     ) -> CliResult<()>
     where
-        T: Syncable<'a>,
+        T: Pushable<'a>,
     {
         Self::process(&config, networth, &pb, &mut |record, error| match error {
             None => {
@@ -165,14 +165,14 @@ impl Sync {
                 let handle_error = |e: CliError| -> CliResult<(String, Vec<Line>)> {
                     *error = Some(e);
                     Ok(entity.previous().map_or_else(
-                        || record.synced(),
+                        || record.pushed(),
                         |v| (record.id(), vec![v.clone(), record.clone()]),
                     ))
                 };
 
                 result.or_else(handle_error)
             }
-            Some(_) => Ok(record.synced()),
+            Some(_) => Ok(record.pushed()),
         })
     }
 

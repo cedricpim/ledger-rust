@@ -5,6 +5,6 @@ pub mod convert;
 pub mod create;
 pub mod edit;
 pub mod networth;
+pub mod push;
 pub mod report;
 pub mod show;
-pub mod sync;

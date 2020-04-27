@@ -6,6 +6,7 @@ use std::io::Write;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
+use crate::entity::line::Liner;
 use crate::error::CliError;
 use crate::repository::Resource;
 use crate::{util, CliResult};
@@ -121,16 +122,20 @@ impl Config {
         self.encryption.to_owned()
     }
 
-    pub fn total_lines(&self) -> CliResult<usize> {
+    pub fn total_pushable_lines(&self) -> CliResult<usize> {
         let mut ledger_lines = 0;
-        Resource::new(&self, false)?.apply(|file| {
-            ledger_lines = linecount::count_lines(file)?;
+        Resource::new(&self, false)?.line(&mut |record| {
+            if record.pushable() {
+                ledger_lines += 1
+            };
             Ok(())
         })?;
 
         let mut networth_lines = 0;
-        Resource::new(&self, true)?.apply(|file| {
-            networth_lines = linecount::count_lines(file)?;
+        Resource::new(&self, true)?.line(&mut |record| {
+            if record.pushable() {
+                networth_lines += 1
+            };
             Ok(())
         })?;
 

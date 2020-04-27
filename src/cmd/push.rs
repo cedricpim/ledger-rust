@@ -80,7 +80,9 @@ impl Push {
             let mut wtr = csv::WriterBuilder::new().from_path(file.path())?;
 
             temp_resource.line(&mut |record| {
-                pb.inc(1);
+                if record.pushable() {
+                    pb.inc(1);
+                };
 
                 let (id, lines) = action(record, &mut error)?;
 
@@ -125,7 +127,7 @@ impl Push {
     }
 
     fn perform(&mut self, config: Config) -> CliResult<()> {
-        let pb = ProgressBar::new(config.total_lines()? as u64);
+        let pb = ProgressBar::new(config.total_pushable_lines()? as u64);
         pb.set_style(
             ProgressStyle::default_bar()
                 .template(PROGRESS_BAR_FORMAT)

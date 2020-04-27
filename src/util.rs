@@ -89,7 +89,7 @@ pub fn money_cell(
     alignment: Alignment,
 ) -> Cell {
     let mut rep = if value.zero() {
-        format!("{}", value).to_string()
+        format!("{}", value)
     } else if with_sign {
         format!("{}", value)[0..].to_string()
     } else {

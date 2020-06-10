@@ -15,7 +15,7 @@ impl Resource {
         Ok(Resource {
             pass: config.pass(),
             filepath: config.filepath(networth),
-            tempfile: tempfile::NamedTempFile::new()?,
+            tempfile: tempfile::Builder::new().suffix(".csv").tempfile()?,
             kind: Line::default(networth),
         })
     }

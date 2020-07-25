@@ -1,7 +1,7 @@
 use chrono::format::strftime::StrftimeItems;
 use chrono::format::DelayedFormat;
 use chrono::naive::NaiveDate;
-use chrono::{Datelike, Utc};
+use chrono::{DateTime, Datelike, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::error::CliError;
@@ -103,7 +103,10 @@ impl Date {
             "" => Ok(Default::default()),
             val => match NaiveDate::parse_from_str(val, "%Y-%m-%d") {
                 Ok(value) => Ok(value.into()),
-                Err(err) => Err(CliError::from(err)),
+                Err(_) => match DateTime::parse_from_rfc3339(val) {
+                    Ok(datetime) => Ok(datetime.naive_local().date().into()),
+                    Err(err) => Err(CliError::from(err)),
+                },
             },
         }
     }

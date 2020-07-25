@@ -1,6 +1,5 @@
 use serde::Deserialize;
 
-use std::fs::OpenOptions;
 use std::io;
 use std::io::prelude::*;
 
@@ -55,21 +54,7 @@ impl Args {
 
         let line = Line::build(values, self.flag_networth)?;
 
-        self.save(line, resource)
-    }
-
-    fn save(&self, line: Line, resource: Resource) -> CliResult<()> {
-        resource.apply(|file| {
-            let afile = OpenOptions::new().append(true).open(file.path())?;
-            let mut wtr = csv::WriterBuilder::new()
-                .has_headers(false)
-                .from_writer(afile);
-
-            line.write(&mut wtr)?;
-
-            wtr.flush()?;
-            Ok(())
-        })
+        resource.book(&vec![line])
     }
 
     fn collect_attributes(&self, values: &mut Vec<String>, resource: &Resource) -> CliResult<()> {

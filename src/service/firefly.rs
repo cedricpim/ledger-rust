@@ -7,9 +7,11 @@ use firefly_iii::models::currency_read::CurrencyRead;
 use firefly_iii::models::currency_single::CurrencySingle;
 use firefly_iii::models::meta_pagination::MetaPagination;
 use firefly_iii::models::transaction::Transaction;
+use firefly_iii::models::transaction_read::TransactionRead;
 use firefly_iii::models::transaction_split;
 use firefly_iii::models::transaction_split::TransactionSplit;
 use firefly_iii::models::transaction_type_filter::TransactionTypeFilter;
+use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::entity::line::{Line, Liner};
 use crate::entity::money::Money;
@@ -18,10 +20,14 @@ use crate::entity::push;
 custom_error! { pub Error
     ReqwestError { source: reqwest::Error }       = @{ source },
     ApiError { source: firefly_iii::apis::Error } = @{ source },
+    Value { source: std::num::ParseIntError }     = @{ source },
 
     MissingResponseData           = "The data is missing from response",
     MissingExpectedOpeningBalance = "The account is missing an opening balance transaction",
 }
+
+static PROGRESS_BAR_FORMAT: &str = "{spinner:.green}▕{wide_bar:.cyan}▏{percent}% ({eta})";
+static PROGRESS_BAR_CHARS: &str = "█▉▊▋▌▍▎▏  ";
 
 pub struct Firefly {
     client: APIClient,
@@ -71,10 +77,12 @@ impl Firefly {
     pub async fn currencies(&self) -> Result<Vec<CurrencyRead>, Error> {
         let mut result: Vec<CurrencyRead> = Vec::new();
 
-        let mut page = None;
+        let mut page = 0;
 
         loop {
-            match self.client.currencies_api().list_currency(page).await {
+            let response = self.client.currencies_api().list_currency(Some(page)).await;
+
+            match response {
                 Err(e) => return Err(Error::from(e)),
                 Ok(val) => {
                     for currency in val.data {
@@ -82,7 +90,57 @@ impl Firefly {
                     }
 
                     if let Some(val) = val.meta.pagination.and_then(Self::next_page) {
-                        page = Some(val)
+                        page = val
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+
+        Ok(result)
+    }
+
+    #[tokio::main]
+    pub async fn transactions(&self, from: i32) -> Result<Vec<TransactionRead>, Error> {
+        let mut result: Vec<TransactionRead> = Vec::new();
+
+        let (missing_entries, per_page) = self.missing_entries_per_page(from).await?;
+
+        if missing_entries == 0 {
+            return Ok(result);
+        };
+
+        let pb = ProgressBar::new(missing_entries as u64);
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template(PROGRESS_BAR_FORMAT)
+                .progress_chars(PROGRESS_BAR_CHARS),
+        );
+
+        let mut page = Some((missing_entries as f32 / per_page as f32).ceil() as i32);
+
+        loop {
+            let response = self
+                .client
+                .transactions_api()
+                .list_transaction(page, None, None, Some(TransactionTypeFilter::All))
+                .await;
+
+            match response {
+                Err(e) => return Err(Error::from(e)),
+                Ok(val) => {
+                    for transaction in val.data {
+                        let id = transaction.id.parse::<i32>().unwrap_or_default();
+
+                        if id > from {
+                            pb.set_position((id - from) as u64);
+                            result.push(transaction)
+                        }
+                    }
+
+                    if let Some(val) = val.meta.pagination.and_then(Self::previous_page) {
+                        page = Some(val);
                     } else {
                         break;
                     }
@@ -97,13 +155,13 @@ impl Firefly {
     pub async fn accounts(&self) -> Result<Vec<AccountRead>, Error> {
         let mut result: Vec<AccountRead> = Vec::new();
 
-        let mut page = None;
+        let mut page = 0;
 
         loop {
             let response = self
                 .client
                 .accounts_api()
-                .list_account(page, None, None)
+                .list_account(Some(page), None, None)
                 .await;
 
             match response {
@@ -114,7 +172,7 @@ impl Firefly {
                     }
 
                     if let Some(val) = val.meta.pagination.and_then(Self::next_page) {
-                        page = Some(val)
+                        page = val
                     } else {
                         break;
                     }
@@ -243,11 +301,46 @@ impl Firefly {
         split
     }
 
+    async fn missing_entries_per_page(&self, from: i32) -> Result<(i32, i32), Error> {
+        match self
+            .client
+            .transactions_api()
+            .list_transaction(None, None, None, Some(TransactionTypeFilter::All))
+            .await
+        {
+            Err(e) => Err(Error::from(e)),
+            Ok(val) => {
+                let per_page = val
+                    .meta
+                    .pagination
+                    .map_or(0, |v| v.per_page.unwrap_or_default());
+
+                match val.data.first() {
+                    None => Ok((0, per_page)),
+                    Some(transaction) => match transaction.id.parse::<i32>() {
+                        Err(e) => Err(Error::from(e)),
+                        Ok(id) => Ok((id - from, per_page)),
+                    },
+                }
+            }
+        }
+    }
+
     fn next_page(pagination: MetaPagination) -> Option<i32> {
         let current_page = pagination.current_page.unwrap_or(1);
 
         if pagination.total_pages.unwrap_or(1) > current_page {
             Some(current_page + 1)
+        } else {
+            None
+        }
+    }
+
+    fn previous_page(pagination: MetaPagination) -> Option<i32> {
+        let current_page = pagination.current_page.unwrap_or(1);
+
+        if current_page != 1 {
+            Some(current_page - 1)
         } else {
             None
         }

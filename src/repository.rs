@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::fs::OpenOptions;
 
 use crate::entity::line::{Line, Liner};
 use crate::{config, crypto, CliResult};
@@ -69,6 +70,22 @@ impl Resource {
         self.close()?;
 
         Ok(())
+    }
+
+    pub fn book(&self, lines: &[Line]) -> CliResult<()> {
+        self.apply(|file| {
+            let afile = OpenOptions::new().append(true).open(file.path())?;
+            let mut wtr = csv::WriterBuilder::new()
+                .has_headers(false)
+                .from_writer(afile);
+
+            for line in lines {
+                line.write(&mut wtr)?;
+                wtr.flush()?;
+            }
+
+            Ok(())
+        })
     }
 
     fn open(&self) -> CliResult<()> {

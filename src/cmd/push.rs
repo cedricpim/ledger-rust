@@ -105,9 +105,9 @@ impl Push {
         Ok(Self {
             user: client.user()?.parse::<i32>()?,
             firefly: client,
+            options: FireflyOptions::build(&options, &config),
             currencies: HashSet::new(),
             accounts: HashMap::new(),
-            options: FireflyOptions::build(&options, &config),
         })
     }
 

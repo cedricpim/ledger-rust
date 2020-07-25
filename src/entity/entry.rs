@@ -10,6 +10,8 @@ use crate::error::CliError;
 use crate::exchange::Exchange;
 use crate::CliResult;
 
+pub static DEFAULT_ACCOUNT: &str = "Investments";
+
 #[derive(Clone, Debug, Serialize, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct Entry {
@@ -42,7 +44,7 @@ impl Liner for Entry {
     }
 
     fn account(&self) -> String {
-        "Investments".to_string()
+        DEFAULT_ACCOUNT.to_string()
     }
 
     fn category(&self) -> String {

@@ -49,7 +49,7 @@ Implemented:
     edit        Open ledger/networth file in your editor
     networth    Calculate current networth
     pull        Pull new changes from Firefly III
-    push        Push local changes to Firefly III
+    sync        Sync new changes from Firefly II and push local changes to Firefly III
     report      Create a report about the transactions on the ledger according to any params provided
     show        Display all transactions
 "
@@ -92,7 +92,7 @@ enum Command {
     Edit,
     Networth,
     Pull,
-    Push,
+    Sync,
     Report,
     Show,
 }
@@ -140,7 +140,7 @@ impl Command {
             Command::Create => cmd::create::run(argv),
             Command::Networth => cmd::networth::run(argv),
             Command::Pull => cmd::pull::run(argv),
-            Command::Push => cmd::push::run(argv),
+            Command::Sync => cmd::sync::run(argv),
             Command::Report => cmd::report::run(argv),
             Command::Show => cmd::show::run(argv),
         }

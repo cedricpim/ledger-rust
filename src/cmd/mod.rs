@@ -9,3 +9,4 @@ pub mod pull;
 pub mod push;
 pub mod report;
 pub mod show;
+pub mod sync;

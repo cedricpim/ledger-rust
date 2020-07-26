@@ -1,6 +1,6 @@
 [package]
 name = "ledger"
-version = "3.0.0"
+version = "3.0.1"
 authors = ["Cedric Pimenta <cedricpim@users.noreply.github.com>"]
 description = "A command line ledger."
 homepage = "https://github.com/cedricpim/ledger-rust"

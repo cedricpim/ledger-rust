@@ -194,7 +194,7 @@ impl Push {
         for account in self.firefly.accounts()? {
             let info = (
                 account.attributes.name.to_string(),
-                account.attributes._type.to_string(),
+                format!("{:?}", account.attributes._type),
             );
 
             let id = account.id.parse::<i32>()?;

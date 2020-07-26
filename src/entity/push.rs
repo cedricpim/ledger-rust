@@ -44,7 +44,7 @@ impl AccountData {
     }
 
     pub fn key(&self) -> (String, String) {
-        (self.name.to_string(), self._type.to_string())
+        (self.name.to_string(), format!("{:?}", self._type))
     }
 }
 

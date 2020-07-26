@@ -22,7 +22,6 @@ custom_error! { pub Error
     ApiError { source: firefly_iii::apis::Error } = @{ source },
     Value { source: std::num::ParseIntError }     = @{ source },
 
-    MissingResponseData           = "The data is missing from response",
     MissingExpectedOpeningBalance = "The account is missing an opening balance transaction",
 }
 
@@ -49,10 +48,7 @@ impl Firefly {
     pub async fn user(&self) -> Result<String, Error> {
         let response = self.client.about_api().get_current_user().await?;
 
-        response
-            .data
-            .map(|v| v.id)
-            .ok_or(Error::MissingResponseData)
+        Ok(response.data.id)
     }
 
     #[tokio::main]
@@ -207,7 +203,7 @@ impl Firefly {
 
     #[tokio::main]
     pub async fn create_account(&self, data: &push::AccountData) -> Result<String, Error> {
-        let mut account = account::Account::new(data.name.to_string(), data._type);
+        let mut account = account::Account::new(data.name.to_string(), data._type.clone());
 
         account.currency_code = data.currency.clone();
         account.include_net_worth = Some(data.networth);
@@ -220,10 +216,7 @@ impl Firefly {
 
         let response = self.client.accounts_api().store_account(account).await?;
 
-        response
-            .data
-            .map(|v| v.id)
-            .ok_or(Error::MissingResponseData)
+        Ok(response.data.id)
     }
 
     #[tokio::main]
@@ -278,10 +271,7 @@ impl Firefly {
             .store_transaction(transaction)
             .await?;
 
-        response
-            .data
-            .map(|v| v.id)
-            .ok_or(Error::MissingResponseData)
+        Ok(response.data.id)
     }
 
     fn build_split(line: &Line, amount: Money, ids: (i32, i32)) -> TransactionSplit {

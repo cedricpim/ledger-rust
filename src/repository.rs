@@ -1,7 +1,10 @@
+use lockfile::Lockfile;
+
 use std::fs::File;
 use std::fs::OpenOptions;
 
 use crate::entity::line::{Line, Liner};
+use crate::error::CliError;
 use crate::{config, crypto, CliResult};
 
 pub struct Resource {
@@ -63,11 +66,15 @@ impl Resource {
     where
         F: FnOnce(&tempfile::NamedTempFile) -> CliResult<()>,
     {
+        let lock = self.lock()?;
+
         self.open()?;
 
         action(&self.tempfile)?;
 
         self.close()?;
+
+        lock.release()?;
 
         Ok(())
     }
@@ -116,5 +123,11 @@ impl Resource {
         };
 
         Ok(())
+    }
+
+    fn lock(&self) -> CliResult<Lockfile> {
+        Lockfile::create(format!("{}.lock", self.filepath)).map_err(|_| CliError::LockNotAcquired {
+            filepath: self.filepath.to_string(),
+        })
     }
 }

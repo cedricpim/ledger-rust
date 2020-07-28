@@ -30,5 +30,6 @@ custom_error! { pub CliError
     NotEncrypted                            = "File not big enough to have been encrypted",
     CryptoIncorrectPassword                 = "Incorrect password",
     CryptoDerivingKeyFailed                 = "Deriving key failed",
+    LockNotAcquired { filepath: String }    = "Another instance already loaded '{filepath}'",
     Other { msg: &'static str }             = @{ msg }
 }

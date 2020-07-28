@@ -4,7 +4,7 @@ use crate::config::Config;
 use crate::config::FireflyOptions;
 use crate::entity::line::{Line, Liner};
 use crate::entity::pull::Transaction;
-use crate::repository::Resource;
+use crate::resource::Resource;
 use crate::service::firefly::Firefly;
 use crate::{util, CliResult};
 

@@ -5,7 +5,8 @@ use crate::entity::date::Date;
 use crate::entity::line::Liner;
 use crate::exchange::Exchange;
 use crate::filter::Filter;
-use crate::{repository, util, CliResult};
+use crate::resource::Resource;
+use crate::{util, CliResult};
 
 static USAGE: &str = "
 Shows list of entries that match the filters.
@@ -51,7 +52,7 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 
 impl Args {
     fn show(&self, config: &Config) -> CliResult<()> {
-        let resource = repository::Resource::new(&config, self.flag_networth)?;
+        let resource = Resource::new(&config, self.flag_networth)?;
 
         let filter = Filter::show(&self);
 

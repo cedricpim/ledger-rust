@@ -8,7 +8,7 @@ use crate::config::Config;
 use crate::entity::{date::Date, line::Line, line::Liner, money::Money, total::Total};
 use crate::exchange::Exchange;
 use crate::filter::Filter;
-use crate::repository::Resource;
+use crate::resource::Resource;
 use crate::{util, CliResult};
 
 static USAGE: &str = "

@@ -13,7 +13,7 @@ mod entity;
 mod error;
 mod exchange;
 mod filter;
-mod repository;
+mod resource;
 mod service;
 mod util;
 

@@ -10,7 +10,7 @@ use crate::entity::line::{Line, Liner};
 use crate::entity::money::{Currency, Money};
 use crate::entity::networth::Networth;
 use crate::exchange::Exchange;
-use crate::repository::Resource;
+use crate::resource::Resource;
 use crate::{util, CliResult};
 
 static USAGE: &str = "

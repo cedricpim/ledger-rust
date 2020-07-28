@@ -7,7 +7,7 @@ use std::time::{Duration, SystemTime};
 
 use crate::entity::line::Liner;
 use crate::error::CliError;
-use crate::repository::Resource;
+use crate::resource::Resource;
 use crate::{util, CliResult};
 
 const CONFIGURATION_FILENAME: &str = "config";

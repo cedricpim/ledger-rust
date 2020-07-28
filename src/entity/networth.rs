@@ -9,7 +9,7 @@ use crate::entity::money::{Currency, Money};
 use crate::error::CliError;
 use crate::exchange::Exchange;
 use crate::filter::Filter;
-use crate::repository::Resource;
+use crate::resource::Resource;
 use crate::service::justetf::Asset;
 use crate::CliResult;
 

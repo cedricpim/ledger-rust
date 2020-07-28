@@ -10,7 +10,7 @@ use crate::entity::line::{Line, Liner};
 use crate::entity::push::{AccountData, Ledger, Networth, Pushable};
 use crate::error::CliError;
 use crate::filter::Filter;
-use crate::repository::Resource;
+use crate::resource::Resource;
 use crate::service::firefly::Firefly;
 use crate::{util, CliResult};
 

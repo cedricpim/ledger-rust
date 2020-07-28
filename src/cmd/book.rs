@@ -5,7 +5,7 @@ use std::io::prelude::*;
 
 use crate::config::Config;
 use crate::entity::line::{Line, Liner};
-use crate::repository::Resource;
+use crate::resource::Resource;
 use crate::{util, CliResult};
 
 static USAGE: &str = "

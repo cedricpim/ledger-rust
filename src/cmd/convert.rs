@@ -5,7 +5,8 @@ use std::collections::HashMap;
 use crate::config::Config;
 use crate::entity::line::Liner;
 use crate::exchange::Exchange;
-use crate::{repository, util, CliResult};
+use crate::resource::Resource;
+use crate::{util, CliResult};
 
 static USAGE: &str = "
 Convert other currencies to main currency of each account.
@@ -39,7 +40,7 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 
 impl Args {
     fn convert(&self, config: &Config) -> CliResult<()> {
-        let resource = repository::Resource::new(&config, self.flag_networth)?;
+        let resource = Resource::new(&config, self.flag_networth)?;
 
         let exchange = Exchange::new(&config)?;
 

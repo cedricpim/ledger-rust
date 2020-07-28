@@ -4,7 +4,9 @@ use std::path::Path;
 
 use crate::config::Config;
 use crate::error::CliError;
-use crate::{repository, util, CliResult};
+
+use crate::resource::Resource;
+use crate::{util, CliResult};
 
 static USAGE: &str = "
 Creates the ledger or networth file that will be used to store the entries.
@@ -40,7 +42,7 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 
 impl Args {
     fn create(&self, config: &Config) -> CliResult<()> {
-        let resource = repository::Resource::new(&config, self.flag_networth)?;
+        let resource = Resource::new(&config, self.flag_networth)?;
 
         if Path::new(&resource.filepath).exists() && !self.flag_force {
             Err(CliError::ExistingFile {

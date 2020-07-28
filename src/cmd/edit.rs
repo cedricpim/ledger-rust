@@ -3,7 +3,8 @@ use serde::Deserialize;
 use std::process::Command;
 
 use crate::config::Config;
-use crate::{repository, util, CliResult};
+use crate::resource::Resource;
+use crate::{util, CliResult};
 
 static USAGE: &str = "
 Allows editing of the CSV (ledger or networth).
@@ -40,7 +41,7 @@ impl Args {
     // the file is saved so that errors can be fixed and all the data already input is not lost.
     fn edit(&self, config: &Config) -> CliResult<()> {
         let editor = util::editor()?;
-        let resource = repository::Resource::new(&config, self.flag_networth)?;
+        let resource = Resource::new(&config, self.flag_networth)?;
 
         resource.apply(|file| {
             let filepath = self.filepath(file.path().display());

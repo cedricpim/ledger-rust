@@ -40,7 +40,6 @@ macro_rules! werr {
 macro_rules! command_list {
     () => (
 "
-Implemented:
     balance     List the current balance of each account
     book        Add a transaction to the ledger
     configure   Copy provided configuration file to the default location

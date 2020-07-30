@@ -72,28 +72,21 @@ impl Push {
         F: FnMut(&mut Line, &mut Option<CliError>) -> CliResult<(String, Vec<Line>)>,
     {
         let resource = Resource::new(&config, networth)?;
-        let temp_resource = Resource::new(&config, networth)?;
 
         let mut error: Option<CliError> = None;
 
-        resource.apply(|file| {
-            let mut wtr = csv::WriterBuilder::new().from_path(file.path())?;
+        resource.rewrite(&mut |record| {
+            if record.pushable() {
+                pb.inc(1);
+            };
 
-            temp_resource.line(&mut |record| {
-                if record.pushable() {
-                    pb.inc(1);
-                };
+            let (id, mut lines) = action(record, &mut error)?;
 
-                let (id, lines) = action(record, &mut error)?;
+            lines
+                .iter_mut()
+                .for_each(|line| line.set_id(id.to_string()));
 
-                for mut line in lines {
-                    line.set_id(id.to_string());
-                    line.write(&mut wtr)?;
-                    wtr.flush()?;
-                }
-
-                Ok(())
-            })
+            Ok(lines)
         })?;
 
         error.map_or(Ok(()), Err)

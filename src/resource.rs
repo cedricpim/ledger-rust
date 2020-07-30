@@ -1,4 +1,5 @@
 use lockfile::Lockfile;
+use tempfile::NamedTempFile;
 
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -10,17 +11,22 @@ use crate::{config, crypto, CliResult};
 pub struct Resource {
     pub kind: Line,
     pub filepath: String,
-    pub tempfile: tempfile::NamedTempFile,
+    pub tempfile: NamedTempFile,
     pass: Option<String>,
+    _lock: Lockfile,
 }
 
 impl Resource {
     pub fn new(config: &config::Config, networth: bool) -> CliResult<Resource> {
+        let filepath = config.filepath(networth);
+
         Ok(Resource {
             pass: config.pass(),
-            filepath: config.filepath(networth),
+            filepath: filepath.to_string(),
             tempfile: tempfile::Builder::new().suffix(".csv").tempfile()?,
             kind: Line::default(networth),
+            _lock: Lockfile::create(format!("{}.lock", filepath))
+                .map_err(|_| CliError::LockNotAcquired { filepath })?,
         })
     }
 
@@ -31,7 +37,58 @@ impl Resource {
 
         wtr.flush()?;
 
-        self.close()?;
+        self.close(&self.tempfile)?;
+
+        Ok(())
+    }
+
+    pub fn book(&self, lines: &[Line]) -> CliResult<()> {
+        self.apply(|file| {
+            let afile = OpenOptions::new().append(true).open(file.path())?;
+            let mut wtr = csv::WriterBuilder::new()
+                .has_headers(false)
+                .from_writer(afile);
+
+            for line in lines {
+                line.write(&mut wtr)?;
+                wtr.flush()?;
+            }
+
+            Ok(())
+        })
+    }
+
+    pub fn apply<F>(&self, action: F) -> CliResult<()>
+    where
+        F: FnOnce(&NamedTempFile) -> CliResult<()>,
+    {
+        self.open(&self.tempfile)?;
+
+        action(&self.tempfile)?;
+
+        self.close(&self.tempfile)?;
+
+        Ok(())
+    }
+
+    pub fn rewrite<F>(&self, action: &mut F) -> CliResult<()>
+    where
+        F: FnMut(&mut Line) -> CliResult<Vec<Line>>,
+    {
+        let accumulator = tempfile::Builder::new().suffix(".csv").tempfile()?;
+
+        let mut wtr = csv::WriterBuilder::new().from_path(accumulator.path())?;
+
+        self.line(&mut |record| {
+            for line in action(record)? {
+                line.write(&mut wtr)?;
+                wtr.flush()?;
+            }
+
+            Ok(())
+        })?;
+
+        self.close(&accumulator)?;
 
         Ok(())
     }
@@ -62,72 +119,33 @@ impl Resource {
         Ok(())
     }
 
-    pub fn apply<F>(&self, action: F) -> CliResult<()>
-    where
-        F: FnOnce(&tempfile::NamedTempFile) -> CliResult<()>,
-    {
-        let lock = self.lock()?;
-
-        self.open()?;
-
-        action(&self.tempfile)?;
-
-        self.close()?;
-
-        lock.release()?;
-
-        Ok(())
-    }
-
-    pub fn book(&self, lines: &[Line]) -> CliResult<()> {
-        self.apply(|file| {
-            let afile = OpenOptions::new().append(true).open(file.path())?;
-            let mut wtr = csv::WriterBuilder::new()
-                .has_headers(false)
-                .from_writer(afile);
-
-            for line in lines {
-                line.write(&mut wtr)?;
-                wtr.flush()?;
-            }
-
-            Ok(())
-        })
-    }
-
-    fn open(&self) -> CliResult<()> {
+    fn open(&self, tempfile: &NamedTempFile) -> CliResult<()> {
         match &self.pass {
             Some(pass) => {
-                let mut out_file = self.tempfile.reopen()?;
                 let mut in_file = File::open(&self.filepath)?;
+                let mut out_file = tempfile.reopen()?;
                 crypto::decrypt(&mut in_file, &mut out_file, &pass)?;
             }
             None => {
-                std::fs::copy(&self.filepath, self.tempfile.path())?;
+                std::fs::copy(&self.filepath, tempfile.path())?;
             }
         };
 
         Ok(())
     }
 
-    fn close(&self) -> CliResult<()> {
+    fn close(&self, tempfile: &NamedTempFile) -> CliResult<()> {
         match &self.pass {
             Some(pass) => {
-                let mut in_file = self.tempfile.reopen()?;
+                let mut in_file = tempfile.reopen()?;
                 let mut out_file = File::create(&self.filepath)?;
                 crypto::encrypt(&mut in_file, &mut out_file, &pass)?;
             }
             None => {
-                std::fs::copy(self.tempfile.path(), &self.filepath)?;
+                std::fs::copy(tempfile.path(), &self.filepath)?;
             }
         };
 
         Ok(())
-    }
-
-    fn lock(&self) -> CliResult<Lockfile> {
-        Lockfile::create(format!("{}.lock", self.filepath)).map_err(|_| CliError::LockNotAcquired {
-            filepath: self.filepath.to_string(),
-        })
     }
 }

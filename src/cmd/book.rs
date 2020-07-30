@@ -54,7 +54,7 @@ impl Args {
 
         let line = Line::build(values, self.flag_networth)?;
 
-        resource.book(&vec![line])
+        resource.book(&[line])
     }
 
     fn collect_attributes(&self, values: &mut Vec<String>, resource: &Resource) -> CliResult<()> {

@@ -33,11 +33,11 @@ impl Transaction {
 
     pub fn process<F>(&mut self, action: &mut F) -> CliResult<()>
     where
-        F: FnMut(Line),
+        F: FnMut(Line) -> CliResult<()>,
     {
         for split in &self.splits {
             for line in split.lines(&self.transfer)? {
-                action(line);
+                action(line)?;
             }
         }
 

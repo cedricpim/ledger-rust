@@ -4,6 +4,7 @@ use crate::config::Config;
 use crate::config::FireflyOptions;
 use crate::entity::line::{Line, Liner};
 use crate::entity::pull::Transaction;
+use crate::error::CliError;
 use crate::resource::Resource;
 use crate::service::firefly::Firefly;
 use crate::{util, CliResult};
@@ -49,7 +50,6 @@ pub struct Pull {
     from: i32,
     firefly: Firefly,
     transactions: Vec<Line>,
-    entries: Vec<Line>,
 }
 
 impl Pull {
@@ -58,7 +58,6 @@ impl Pull {
             from: 0,
             firefly: Firefly::new(&options.base_path, &options.token),
             transactions: Vec::new(),
-            entries: Vec::new(),
         }
     }
 
@@ -67,7 +66,9 @@ impl Pull {
 
         self.pull(&config)?;
 
-        self.store(&config)
+        self.store(&config)?;
+
+        Ok(())
     }
 
     fn load(&mut self, config: &Config) -> CliResult<()> {
@@ -81,8 +82,14 @@ impl Pull {
     fn pull(&mut self, config: &Config) -> CliResult<()> {
         for transaction in self.firefly.transactions(self.from)? {
             Transaction::new(transaction, &config).process(&mut |record: Line| match record {
-                Line::Transaction { .. } => self.transactions.push(record),
-                Line::Entry { .. } => self.entries.push(record),
+                Line::Transaction { .. } => {
+                    self.transactions.push(record);
+
+                    Ok(())
+                },
+                Line::Entry { .. } => Err(CliError::NotPullableLine {
+                    line: format!("{:?}", record),
+                }),
             })?;
         }
 
@@ -93,10 +100,7 @@ impl Pull {
         let sorter = |a: &Line, b: &Line| a.date().cmp(&b.date()).then(a.id().cmp(&b.id()));
 
         self.transactions.sort_by(sorter);
-        self.entries.sort_by(sorter);
-
         Resource::new(&config, false)?.book(&self.transactions)?;
-        Resource::new(&config, true)?.book(&self.entries)?;
 
         Ok(())
     }

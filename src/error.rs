@@ -31,5 +31,6 @@ custom_error! { pub CliError
     CryptoIncorrectPassword                 = "Incorrect password",
     CryptoDerivingKeyFailed                 = "Deriving key failed",
     LockNotAcquired { filepath: String }    = "Another instance already loaded '{filepath}'",
+    NotPullableLine { line: String }        = "The line {line} could not be pulled",
     Other { msg: &'static str }             = @{ msg }
 }

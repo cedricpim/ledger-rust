@@ -9,8 +9,8 @@ use crate::{util, CliResult};
 #[derive(Clap, Debug)]
 pub struct Args {
     /// Line in which to open the file
-    #[clap(short, long, default_value = "1")]
-    line: u32,
+    #[clap(short, long)]
+    line: Option<u32>,
     #[clap(
         arg_enum,
         default_value = "ledger",
@@ -37,11 +37,18 @@ impl Args {
         let resource = Resource::new(&config, self.mode)?;
 
         resource.apply(|file| {
-            let filepath = format!("{}:{}", file.path().display(), self.line);
+            let filepath = self.filepath(file.path().display());
             Command::new(editor).arg(filepath).status()?;
             Ok(())
         })?;
 
         resource.line(&mut |_record| Ok(()))
+    }
+
+    fn filepath(&self, filepath: std::path::Display) -> String {
+        match self.line {
+            Some(val) => format!("{}:{}", filepath, val),
+            None => format!("{}", filepath)
+        }
     }
 }

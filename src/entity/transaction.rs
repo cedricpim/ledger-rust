@@ -10,6 +10,19 @@ use crate::error::CliError;
 use crate::exchange::Exchange;
 use crate::CliResult;
 
+pub static FIELDS: [&'static str; 10] = [
+    "Account",
+    "Date",
+    "Category",
+    "Description",
+    "Quantity",
+    "Venue",
+    "Amount",
+    "Currency",
+    "Trip",
+    "Id",
+];
+
 #[derive(Clone, Debug, Serialize, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct Transaction {
@@ -45,21 +58,6 @@ impl Transaction {
 }
 
 impl Liner for Transaction {
-    fn headers(&self) -> Vec<&'static str> {
-        vec![
-            "Account",
-            "Date",
-            "Category",
-            "Description",
-            "Quantity",
-            "Venue",
-            "Amount",
-            "Currency",
-            "Trip",
-            "Id",
-        ]
-    }
-
     fn account(&self) -> String {
         self.account.to_string()
     }

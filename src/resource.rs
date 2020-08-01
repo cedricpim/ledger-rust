@@ -5,35 +5,43 @@ use std::fs::File;
 use std::fs::OpenOptions;
 
 use crate::entity::line::{Line, Liner};
+use crate::entity::{entry, transaction};
 use crate::error::CliError;
-use crate::{config, crypto, CliResult};
+use crate::{config, crypto, CliResult, Mode};
 
 pub struct Resource {
-    pub kind: Line,
     pub filepath: String,
     pub tempfile: NamedTempFile,
     pass: Option<String>,
+    mode: Mode,
     _lock: Lockfile,
 }
 
 impl Resource {
-    pub fn new(config: &config::Config, networth: bool) -> CliResult<Resource> {
-        let filepath = config.filepath(networth);
+    pub fn new(config: &config::Config, mode: Mode) -> CliResult<Resource> {
+        let filepath = config.filepath(mode);
 
         Ok(Resource {
             pass: config.pass(),
             filepath: filepath.to_string(),
             tempfile: tempfile::Builder::new().suffix(".csv").tempfile()?,
-            kind: Line::default(networth),
+            mode,
             _lock: Lockfile::create(format!("{}.lock", filepath))
                 .map_err(|_| CliError::LockNotAcquired { filepath })?,
         })
     }
 
+    pub fn headers(&self) -> Vec<&str> {
+        match self.mode {
+            Mode::Ledger => transaction::FIELDS.to_vec(),
+            Mode::Networth => entry::FIELDS.to_vec(),
+        }
+    }
+
     pub fn create(&self) -> CliResult<()> {
         let mut wtr = csv::WriterBuilder::new().from_writer(&self.tempfile);
 
-        wtr.write_record(self.kind.headers())?;
+        wtr.write_record(self.headers())?;
 
         wtr.flush()?;
 
@@ -100,15 +108,15 @@ impl Resource {
         self.apply(|file| {
             let mut rdr = csv::Reader::from_reader(file);
 
-            match self.kind {
-                Line::Entry(_) => {
-                    for result in rdr.deserialize() {
-                        action(&mut Line::Entry(result?))?;
-                    }
-                }
-                Line::Transaction(_) => {
+            match self.mode {
+                Mode::Ledger => {
                     for result in rdr.deserialize() {
                         action(&mut Line::Transaction(result?))?;
+                    }
+                }
+                Mode::Networth => {
+                    for result in rdr.deserialize() {
+                        action(&mut Line::Entry(result?))?;
                     }
                 }
             };

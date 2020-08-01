@@ -5,7 +5,7 @@ use std::fs::File;
 use crate::entity::date::Date;
 use crate::entity::{entry::Entry, money::Currency, money::Money, transaction::Transaction};
 use crate::exchange::Exchange;
-use crate::CliResult;
+use crate::{CliResult, Mode};
 
 #[enum_dispatch]
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -15,26 +15,16 @@ pub enum Line {
 }
 
 impl Line {
-    pub fn default(networth: bool) -> Line {
-        if networth {
-            Entry::default().into()
-        } else {
-            Transaction::default().into()
-        }
-    }
-
-    pub fn build(values: Vec<String>, networth: bool) -> CliResult<Line> {
-        if networth {
-            Ok(Entry::build(values)?.into())
-        } else {
-            Ok(Transaction::build(values)?.into())
+    pub fn build(values: Vec<String>, mode: Mode) -> CliResult<Line> {
+        match mode {
+            Mode::Ledger => Ok(Transaction::build(values)?.into()),
+            Mode::Networth => Ok(Entry::build(values)?.into()),
         }
     }
 }
 
 #[enum_dispatch(Line)]
 pub trait Liner {
-    fn headers(&self) -> Vec<&'static str>;
     fn account(&self) -> String;
     fn category(&self) -> String;
     fn description(&self) -> String;

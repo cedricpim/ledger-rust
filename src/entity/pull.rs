@@ -6,7 +6,7 @@ use crate::config::Config;
 use crate::entity::entry;
 use crate::entity::line::Line;
 use crate::entity::money::Money;
-use crate::CliResult;
+use crate::{CliResult, Mode};
 
 pub struct Transaction {
     splits: Vec<TransactionSplit>,
@@ -83,19 +83,14 @@ impl Pullable for TransactionSplit {
         destination: Option<String>,
         amount: String,
     ) -> CliResult<Line> {
-        let networth = source.clone().unwrap_or_default() == entry::DEFAULT_ACCOUNT;
-
-        let attributes = if networth {
-            vec![
-                self.date.to_string(),
-                Money::default().to_storage(),
-                amount,
-                Money::default().to_storage(),
-                self.currency_code.clone().unwrap_or_default(),
-                self.transaction_journal_id.unwrap_or_default().to_string(),
-            ]
+        let mode = if source.clone().unwrap_or_default() == entry::DEFAULT_ACCOUNT {
+            Mode::Networth
         } else {
-            vec![
+            Mode::Ledger
+        };
+
+        let attributes = match mode {
+            Mode::Ledger => vec![
                 source.unwrap_or_default(),
                 self.date.to_string(),
                 destination.unwrap_or_default(),
@@ -106,9 +101,17 @@ impl Pullable for TransactionSplit {
                 self.currency_code.clone().unwrap_or_default(),
                 self.tags.clone().unwrap_or_else(|| vec![]).join(","),
                 self.transaction_journal_id.unwrap_or_default().to_string(),
-            ]
+            ],
+            Mode::Networth => vec![
+                self.date.to_string(),
+                Money::default().to_storage(),
+                amount,
+                Money::default().to_storage(),
+                self.currency_code.clone().unwrap_or_default(),
+                self.transaction_journal_id.unwrap_or_default().to_string(),
+            ],
         };
 
-        Line::build(attributes, networth)
+        Line::build(attributes, mode)
     }
 }

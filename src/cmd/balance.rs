@@ -1,5 +1,5 @@
+use clap::Clap;
 use prettytable::{format, Cell, Row, Table};
-use serde::Deserialize;
 
 use std::collections::BTreeMap;
 use std::ops::AddAssign;
@@ -9,31 +9,19 @@ use crate::entity::{date::Date, line::Line, line::Liner, money::Money, total::To
 use crate::exchange::Exchange;
 use crate::filter::Filter;
 use crate::resource::Resource;
-use crate::{util, CliResult};
+use crate::{util, CliResult, Mode};
 
-static USAGE: &str = "
-Calculate the current balances for each account.
-
-This command will calculate the current balance of each account and display it.
-
-Usage:
-    ledger balance [options]
-
-Options:
-    -a, --all          Display all accounts
-    -d, --date=<date>  Calculate the current balance at a given date
-    -h, --help         Display this message
-";
-
-#[derive(Debug, Deserialize)]
+#[derive(Clap, Debug)]
 pub struct Args {
-    flag_all: bool,
-    pub flag_date: Option<Date>,
+    /// Display all accounts
+    #[clap(short, long)]
+    all: bool,
+    /// Calculate the current balance at a given date
+    #[clap(short, long)]
+    pub date: Option<Date>,
 }
 
-pub fn run(argv: &[&str]) -> CliResult<()> {
-    let args: Args = util::get_args(USAGE, argv)?;
-
+pub fn run(args: Args) -> CliResult<()> {
     let config = Config::new()?;
 
     args.calculate(&config)
@@ -45,7 +33,7 @@ impl Args {
 
         let filter = Filter::balance(&self);
 
-        let mut total = Total::new(&config.currency.to_string(), &config, filter.end)?;
+        let mut total = Total::new(Some(&config.currency), &config, filter.end)?;
 
         let report = Report::new(&self, &mut total, &config, &exchange, &filter)?;
 
@@ -87,7 +75,7 @@ impl Report {
             items: BTreeMap::new(),
         };
 
-        let resource = Resource::new(&config, false)?;
+        let resource = Resource::new(&config, Mode::Ledger)?;
 
         resource.line(&mut |record| {
             total.sum(record, &exchange)?;
@@ -101,7 +89,7 @@ impl Report {
             Ok(())
         })?;
 
-        if !args.flag_all {
+        if !args.all {
             for (account, item) in &report.items.clone() {
                 if item.value.zero() {
                     report.items.remove(account);

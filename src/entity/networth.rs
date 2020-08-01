@@ -11,7 +11,7 @@ use crate::exchange::Exchange;
 use crate::filter::Filter;
 use crate::resource::Resource;
 use crate::service::justetf::Asset;
-use crate::CliResult;
+use crate::{CliResult, Mode};
 
 #[derive(Debug)]
 pub struct Networth {
@@ -32,7 +32,7 @@ impl Networth {
             current: HashMap::new(),
         };
 
-        let resource = Resource::new(&config, false)?;
+        let resource = Resource::new(&config, Mode::Ledger)?;
 
         let filter = Filter::networth(&config);
 

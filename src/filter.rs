@@ -18,23 +18,18 @@ pub struct Filter {
 
 impl Filter {
     pub fn show(args: &show::Args) -> Self {
-        let (start, end) = Self::bounds(
-            args.flag_year,
-            args.flag_month,
-            args.flag_from,
-            args.flag_till,
-        );
+        let (start, end) = Self::bounds(args.year, args.month, args.from, args.till);
 
         Self {
             start,
             end,
-            categories: args.flag_categories.clone(),
+            categories: args.categories.clone(),
             ..Default::default()
         }
     }
 
     pub fn balance(args: &balance::Args) -> Self {
-        let (start, end) = Self::bounds(None, None, None, args.flag_date);
+        let (start, end) = Self::bounds(None, None, None, args.date);
 
         Self {
             start,
@@ -47,16 +42,16 @@ impl Filter {
         let today = Date::today();
 
         let (start, end) = Self::bounds(
-            Some(args.flag_year.unwrap_or_else(|| today.year())),
-            Some(args.flag_month.unwrap_or_else(|| today.month())),
-            args.flag_from,
-            args.flag_till,
+            Some(args.year.unwrap_or_else(|| today.year())),
+            Some(args.month.unwrap_or_else(|| today.month())),
+            args.from,
+            args.till,
         );
 
         Self {
             start,
             end,
-            excluded_categories: args.flag_exclude.clone(),
+            excluded_categories: args.exclude.clone(),
             transfer: config.transfer.clone(),
             ignored_accounts: config.ignored_accounts.clone(),
             investments: config.investments.clone(),

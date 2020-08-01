@@ -1,5 +1,5 @@
+use clap::Clap;
 use indicatif::{ProgressBar, ProgressStyle};
-use serde::Deserialize;
 
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
@@ -12,33 +12,16 @@ use crate::error::CliError;
 use crate::filter::Filter;
 use crate::resource::Resource;
 use crate::service::firefly::Firefly;
-use crate::{util, CliResult};
-
-static USAGE: &str = "
-Push entries and transactions to Firefly III.
-
-This command will push any new entries and transactions into Firefly III (if the configuration file
-is set for Firefly). In order to keep track of the already pushed transactions/entries, they will
-be marked with the returned id and stored back in the CSV. For setting up the configuration with
-Firefly, ensure that the key \"firefly\" has a valid access token in the configuration file.
-
-Usage:
-    ledger push [options]
-
-Options:
-    -h, --help          Display this message
-";
+use crate::{CliResult, Mode};
 
 static MISSING_KEY: &str = "There is no key set up";
 static PROGRESS_BAR_FORMAT: &str = "{spinner:.green}▕{wide_bar:.cyan}▏{percent}% ({eta})";
 static PROGRESS_BAR_CHARS: &str = "█▉▊▋▌▍▎▏  ";
 
-#[derive(Debug, Deserialize)]
-struct Args {}
+#[derive(Clap, Debug, Default)]
+pub struct Args {}
 
-pub fn run(argv: &[&str]) -> CliResult<()> {
-    let args: Args = util::get_args(USAGE, argv)?;
-
+pub fn run(args: Args) -> CliResult<()> {
     let config = Config::new()?;
 
     args.push(config)
@@ -62,16 +45,11 @@ pub struct Push {
 }
 
 impl Push {
-    fn process<F>(
-        config: &Config,
-        networth: bool,
-        pb: &ProgressBar,
-        action: &mut F,
-    ) -> CliResult<()>
+    fn process<F>(config: &Config, mode: Mode, pb: &ProgressBar, action: &mut F) -> CliResult<()>
     where
         F: FnMut(&mut Line, &mut Option<CliError>) -> CliResult<(String, Vec<Line>)>,
     {
-        let resource = Resource::new(&config, networth)?;
+        let resource = Resource::new(&config, mode)?;
 
         let mut error: Option<CliError> = None;
 
@@ -133,10 +111,10 @@ impl Push {
         let client = Firefly::new(&self.options.base_path, &self.options.token);
 
         let mut ledger = Ledger::new(self.user, &filter, &client, self.options.clone());
-        self.push(&config, false, &mut ledger, &pb)?;
+        self.push(&config, Mode::Ledger, &mut ledger, &pb)?;
 
         let mut networth = Networth::new(self.user, &filter, &client);
-        self.push(&config, true, &mut networth, &pb)?;
+        self.push(&config, Mode::Networth, &mut networth, &pb)?;
 
         Ok(())
     }
@@ -144,14 +122,14 @@ impl Push {
     fn push<'a, T>(
         &mut self,
         config: &Config,
-        networth: bool,
+        mode: Mode,
         entity: &'a mut T,
         pb: &ProgressBar,
     ) -> CliResult<()>
     where
         T: Pushable<'a>,
     {
-        Self::process(&config, networth, &pb, &mut |record, error| match error {
+        Self::process(&config, mode, &pb, &mut |record, error| match error {
             None => {
                 let result = self
                     .process_currency(&record)

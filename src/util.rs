@@ -1,8 +1,6 @@
-use docopt::Docopt;
 use prettytable::format::Alignment;
 use prettytable::{color, Attr, Cell};
 use rand::Rng;
-use serde::de::DeserializeOwned;
 use xdg::BaseDirectories;
 
 use std::iter;
@@ -11,31 +9,6 @@ use crate::config::Config;
 use crate::entity::money::{Currency, Money};
 use crate::error::CliError;
 use crate::CliResult;
-
-pub fn version() -> String {
-    let (maj, min, pat) = (
-        option_env!("CARGO_PKG_VERSION_MAJOR"),
-        option_env!("CARGO_PKG_VERSION_MINOR"),
-        option_env!("CARGO_PKG_VERSION_PATCH"),
-    );
-    match (maj, min, pat) {
-        (Some(maj), Some(min), Some(pat)) => format!("{}.{}.{}", maj, min, pat),
-        _ => "".to_owned(),
-    }
-}
-
-pub fn get_args<T>(usage: &str, argv: &[&str]) -> CliResult<T>
-where
-    T: DeserializeOwned,
-{
-    Docopt::new(usage)
-        .and_then(|d| {
-            d.argv(argv.iter().copied())
-                .version(Some(version()))
-                .deserialize()
-        })
-        .map_err(From::from)
-}
 
 pub fn editor() -> CliResult<String> {
     std::env::var("EDITOR").map_err(|_| CliError::UndefinedEditor)
@@ -67,12 +40,8 @@ pub fn config_filepath(filename: &str) -> CliResult<String> {
         })
 }
 
-pub fn currency(value: &str, config: &Config) -> CliResult<Currency> {
-    let currency_code = if value.is_empty() {
-        config.currency.to_string()
-    } else {
-        value.to_string()
-    };
+pub fn currency(value: Option<&String>, config: &Config) -> CliResult<Currency> {
+    let currency_code = value.unwrap_or(&config.currency);
 
     let code = currency_code.to_uppercase();
 

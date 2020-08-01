@@ -1,6 +1,6 @@
+use clap::Clap;
 use prettytable::format::{Alignment, FormatBuilder};
 use prettytable::{color, Attr, Cell, Row, Table};
-use serde::Deserialize;
 
 use std::collections::BTreeMap;
 
@@ -11,34 +11,19 @@ use crate::entity::money::{Currency, Money};
 use crate::entity::networth::Networth;
 use crate::exchange::Exchange;
 use crate::resource::Resource;
-use crate::{util, CliResult};
+use crate::{util, CliResult, Mode};
 
-static USAGE: &str = "
-Calculate the current networth.
-Shows list of entries that match the filters.
-
-This command will print the list of the current networth, per asset. If the storage option is
-provided, then the total amount of the current networth is stored in the networth CSV as a new
-entry.
-
-Usage:
-    ledger networth [options]
-
-Options:
-    -C, --currency=<currency>           Display entries on the currency
-    -S, --save                          Save the total networth to the networth CSV
-    -h, --help                          Display this message
-";
-
-#[derive(Debug, Deserialize)]
-struct Args {
-    flag_currency: String,
-    flag_save: bool,
+#[derive(Clap, Debug)]
+pub struct Args {
+    /// Display entries on the same currency (format ISO 4217)
+    #[clap(short, long)]
+    currency: Option<String>,
+    /// Save the total networth to the networth CSV
+    #[clap(short, long)]
+    save: bool,
 }
 
-pub fn run(argv: &[&str]) -> CliResult<()> {
-    let args: Args = util::get_args(USAGE, argv)?;
-
+pub fn run(args: Args) -> CliResult<()> {
     let config = Config::new()?;
 
     args.generate(config)
@@ -48,11 +33,11 @@ impl Args {
     fn generate(&self, config: Config) -> CliResult<()> {
         let exchange = Exchange::new(&config)?;
 
-        let currency = util::currency(&self.flag_currency, &config)?;
+        let currency = util::currency(self.currency.as_ref(), &config)?;
 
         let report = Report::new(config, exchange, currency)?;
 
-        if self.flag_save {
+        if self.save {
             report.save()?
         } else {
             report.display()
@@ -91,7 +76,7 @@ impl Report {
     }
 
     fn save(&self) -> CliResult<()> {
-        let resource = Resource::new(&self.config, true)?;
+        let resource = Resource::new(&self.config, Mode::Networth)?;
 
         let entries = self.entries(&resource)?;
 

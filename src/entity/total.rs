@@ -14,7 +14,7 @@ pub struct Total {
 }
 
 impl Total {
-    pub fn new(currency: &str, config: &Config, date: Option<Date>) -> CliResult<Self> {
+    pub fn new(currency: Option<&String>, config: &Config, date: Option<Date>) -> CliResult<Self> {
         Ok(Self {
             value: 0,
             currency: util::currency(currency, &config)?,

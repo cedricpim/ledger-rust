@@ -1,5 +1,5 @@
+use clap::Clap;
 use prettytable::{format, Cell, Row, Table};
-use serde::Deserialize;
 
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -12,42 +12,31 @@ use crate::entity::{date::Date, total::Total};
 use crate::exchange::Exchange;
 use crate::filter::Filter;
 use crate::resource::Resource;
-use crate::{util, CliResult};
+use crate::{util, CliResult, Mode};
 
-static USAGE: &str = "
-Generate a report about transactions made during a given a period.
-
-This command will generate a report, based on a defined time period, about all the transactions
-included in that time period. This report is shown in a single currency (all transactions that are
-not in this currency, are exchanged to it with the current rates) and there is no distinction made
-regarding different accounts - transactions are only aggregate per category.
-
-Usage:
-    ledger report [options] [--exclude=<excluded>...]
-
-Options:
-    -y, --year=<year>                   Select entries that occurred on the year
-    -m, --month=<month>                 Select entries that occurred on the month
-    -f, --from=<from>                   Select entries that occurred after the date
-    -t, --till=<till>                   Select entries that occurred before the date
-    -e, --exclude=<excluded>            Exclude entries that match the categories
-    -C, --currency=<currency>           Display entries on the currency
-    -h, --help                          Display this message
-";
-
-#[derive(Debug, Deserialize)]
+#[derive(Clap, Debug)]
 pub struct Args {
-    pub flag_year: Option<i32>,
-    pub flag_month: Option<u32>,
-    pub flag_from: Option<Date>,
-    pub flag_till: Option<Date>,
-    pub flag_exclude: Vec<String>,
-    flag_currency: String,
+    /// Select entries that occurred on the year
+    #[clap(short, long)]
+    pub year: Option<i32>,
+    /// Select entries that occurred on the month
+    #[clap(short, long)]
+    pub month: Option<u32>,
+    /// Select entries that occurred after the date
+    #[clap(short, long)]
+    pub from: Option<Date>,
+    /// Select entries that occurred before the date
+    #[clap(short, long)]
+    pub till: Option<Date>,
+    /// Exclude entries that match the categories
+    #[clap(short, long)]
+    pub exclude: Vec<String>,
+    /// Display entries on the same currency (format ISO 4217)
+    #[clap(short, long)]
+    currency: Option<String>,
 }
 
-pub fn run(argv: &[&str]) -> CliResult<()> {
-    let args: Args = util::get_args(USAGE, argv)?;
-
+pub fn run(args: Args) -> CliResult<()> {
     let config = Config::new()?;
 
     args.generate(&config)
@@ -59,7 +48,7 @@ impl Args {
 
         let filter = Filter::report(&self, &config);
 
-        let mut total = Total::new(&config.currency.to_string(), &config, filter.end)?;
+        let mut total = Total::new(self.currency.as_ref(), &config, filter.end)?;
 
         let report = Report::new(&self, &mut total, &config, &exchange, &filter)?;
 
@@ -106,11 +95,11 @@ impl Report {
         filter: &Filter,
     ) -> CliResult<Report> {
         let mut report = Self {
-            currency: util::currency(&args.flag_currency, &config)?,
+            currency: util::currency(args.currency.as_ref(), &config)?,
             ..Default::default()
         };
 
-        let resource = Resource::new(&config, false)?;
+        let resource = Resource::new(&config, Mode::Ledger)?;
 
         resource.line(&mut |record| {
             total.sum(record, &exchange)?;

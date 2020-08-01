@@ -1,36 +1,21 @@
-use serde::Deserialize;
+use clap::Clap;
 
 use std::path::Path;
 
 use crate::config::Config;
 use crate::error::CliError;
-use crate::{util, CliResult};
-
-static USAGE: &str = "
-Copies the default configuration file for the application.
-
-In order to allow some flexibility to the application, there are some options that can be defined
-in a configuration file. To improve the usability, there is a default configuration file, properly
-commented, and this command copies it to the expected location.
-
-Usage:
-    ledger configure [options]
-
-Options:
-    -f, --force  Copy the default configuration file, overriding existing file
-    -h, --help   Display this message
-";
+use crate::CliResult;
 
 static SUCCESS: &str = "Generated default configuration file on";
 
-#[derive(Debug, Deserialize)]
-struct Args {
-    flag_force: bool,
+#[derive(Clap, Debug)]
+pub struct Args {
+    /// Copy the default configuration file, overriding existing file
+    #[clap(short, long)]
+    force: bool,
 }
 
-pub fn run(argv: &[&str]) -> CliResult<()> {
-    let args: Args = util::get_args(USAGE, argv)?;
-
+pub fn run(args: Args) -> CliResult<()> {
     args.configure()
 }
 
@@ -38,7 +23,7 @@ impl Args {
     fn configure(&self) -> CliResult<()> {
         let config_path = Config::path()?;
 
-        if Path::new(&config_path).exists() && !self.flag_force {
+        if Path::new(&config_path).exists() && !self.force {
             Err(CliError::ExistingConfiguration)
         } else {
             Config::default(&config_path)?;

@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use clap::Clap;
 
 use std::path::Path;
 
@@ -6,35 +6,28 @@ use crate::config::Config;
 use crate::error::CliError;
 
 use crate::resource::Resource;
-use crate::{util, CliResult};
-
-static USAGE: &str = "
-Creates the ledger or networth file that will be used to store the entries.
-
-This allows the initial set up of the main file that will be used to store either the transactions
-or the networth entries. If the file already exists, it won't be touched. The file will be
-created with the headers, and if encryption is set, it will also be encrypted.
-
-Usage:
-    ledger create [options]
-
-Options:
-    -n, --networth      Create networth CSV instead of ledger CSV
-    -f, --force         Create the initial file, overriding existing one
-    -h, --help          Display this message
-";
+use crate::CliResult;
 
 static SUCCESS: &str = "Generated default file on";
 
-#[derive(Debug, Deserialize)]
-struct Args {
-    flag_networth: bool,
-    flag_force: bool,
+#[derive(Clap, Debug)]
+pub struct Args {
+    #[clap(
+        arg_enum,
+        default_value = "ledger",
+        default_value_if("networth", None, "networth"),
+        hidden = true
+    )]
+    mode: crate::Mode,
+    /// Create networth CSV instead of ledger CSV
+    #[clap(short, long)]
+    networth: bool,
+    /// Create the initial file, overriding existing one
+    #[clap(short, long)]
+    force: bool,
 }
 
-pub fn run(argv: &[&str]) -> CliResult<()> {
-    let args: Args = util::get_args(USAGE, argv)?;
-
+pub fn run(args: Args) -> CliResult<()> {
     let config = Config::new()?;
 
     args.create(&config)
@@ -42,9 +35,9 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 
 impl Args {
     fn create(&self, config: &Config) -> CliResult<()> {
-        let resource = Resource::new(&config, self.flag_networth)?;
+        let resource = Resource::new(&config, self.mode)?;
 
-        if Path::new(&resource.filepath).exists() && !self.flag_force {
+        if Path::new(&resource.filepath).exists() && !self.force {
             Err(CliError::ExistingFile {
                 filepath: resource.filepath,
             })

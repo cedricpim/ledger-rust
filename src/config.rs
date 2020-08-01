@@ -8,7 +8,7 @@ use std::time::{Duration, SystemTime};
 use crate::entity::line::Liner;
 use crate::error::CliError;
 use crate::resource::Resource;
-use crate::{util, CliResult};
+use crate::{util, CliResult, Mode};
 
 const CONFIGURATION_FILENAME: &str = "config";
 
@@ -107,14 +107,13 @@ impl Config {
         self.exchange.clone()
     }
 
-    pub fn filepath(&self, networth: bool) -> String {
-        let val = if networth {
-            &self.files.networth
-        } else {
-            &self.files.ledger
+    pub fn filepath(&self, mode: Mode) -> String {
+        let path = match mode {
+            Mode::Ledger => &self.files.ledger,
+            Mode::Networth => &self.files.networth,
         };
 
-        shellexpand::tilde(val).to_string()
+        shellexpand::tilde(path).to_string()
     }
 
     pub fn pass(&self) -> Option<String> {
@@ -123,7 +122,7 @@ impl Config {
 
     pub fn total_pushable_lines(&self) -> CliResult<usize> {
         let mut ledger_lines = 0;
-        Resource::new(&self, false)?.line(&mut |record| {
+        Resource::new(&self, Mode::Ledger)?.line(&mut |record| {
             if record.pushable() {
                 ledger_lines += 1
             };
@@ -131,7 +130,7 @@ impl Config {
         })?;
 
         let mut networth_lines = 0;
-        Resource::new(&self, true)?.line(&mut |record| {
+        Resource::new(&self, Mode::Networth)?.line(&mut |record| {
             if record.pushable() {
                 networth_lines += 1
             };

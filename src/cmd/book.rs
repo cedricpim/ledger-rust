@@ -1,42 +1,31 @@
-use serde::Deserialize;
+use clap::Clap;
 
 use std::io;
 use std::io::prelude::*;
 
 use crate::config::Config;
-use crate::entity::line::{Line, Liner};
+use crate::entity::line::Line;
 use crate::resource::Resource;
-use crate::{util, CliResult};
+use crate::CliResult;
 
-static USAGE: &str = "
-Adds a transaction to the ledger.
-
-This command will, if used without any arguments, request all the fields that compose a single
-transaction/entry or create a transaction/entry based in the arguments provided. It will then store
-the transaction in the ledger file (or the entry in the networth file).
-
-Order of attribute:
-    - Transaction: account, date, category, description, quantity, venue, amount, currency, trip
-    - Entry: date, invested, investment, amount, currency
-
-Usage:
-    ledger book [options] [--attributes=<attributes>...]
-
-Options:
-    -a, --attributes=<attributes>     Define the list of values that compose an transaction/entry
-    -n, --networth                    Create an entry for networth CSV instead of for ledger CSV
-    -h, --help                        Display this message
-";
-
-#[derive(Debug, Deserialize)]
-struct Args {
-    flag_attributes: Vec<String>,
-    flag_networth: bool,
+#[derive(Clap, Debug)]
+pub struct Args {
+    /// Define the list of values that compose an transaction/entry
+    #[clap(short, long)]
+    attributes: Vec<String>,
+    #[clap(
+        arg_enum,
+        default_value = "ledger",
+        default_value_if("networth", None, "networth"),
+        hidden = true
+    )]
+    mode: crate::Mode,
+    /// Create an entry for networth CSV instead of for ledger CSV
+    #[clap(short, long)]
+    networth: bool,
 }
 
-pub fn run(argv: &[&str]) -> CliResult<()> {
-    let args: Args = util::get_args(USAGE, argv)?;
-
+pub fn run(args: Args) -> CliResult<()> {
     let config = Config::new()?;
 
     args.book(&config)
@@ -44,15 +33,15 @@ pub fn run(argv: &[&str]) -> CliResult<()> {
 
 impl Args {
     fn book(&self, config: &Config) -> CliResult<()> {
-        let resource = Resource::new(&config, self.flag_networth)?;
+        let resource = Resource::new(&config, self.mode)?;
 
-        let mut values = self.flag_attributes.clone();
+        let mut values = self.attributes.clone();
 
         if values.is_empty() {
             self.collect_attributes(&mut values, &resource)?
         };
 
-        let line = Line::build(values, self.flag_networth)?;
+        let line = Line::build(values, self.mode)?;
 
         resource.book(&[line])
     }
@@ -61,7 +50,7 @@ impl Args {
         let stdout = io::stdout();
         let mut handle = stdout.lock();
 
-        for name in resource.kind.headers().iter() {
+        for name in resource.headers().iter() {
             handle
                 .write_all(format!("{}: ", name).as_bytes())
                 .and_then(|_v| handle.flush())?;

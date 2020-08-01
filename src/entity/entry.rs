@@ -12,6 +12,9 @@ use crate::CliResult;
 
 pub static DEFAULT_ACCOUNT: &str = "Investments";
 
+pub static FIELDS: [&'static str; 6] =
+    ["Date", "Invested", "Investment", "Amount", "Currency", "Id"];
+
 #[derive(Clone, Debug, Serialize, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct Entry {
@@ -39,10 +42,6 @@ impl Entry {
 }
 
 impl Liner for Entry {
-    fn headers(&self) -> Vec<&'static str> {
-        vec!["Date", "Invested", "Investment", "Amount", "Currency", "Id"]
-    }
-
     fn account(&self) -> String {
         DEFAULT_ACCOUNT.to_string()
     }

@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use clap::Clap;
 
 use crate::config::Config;
 use crate::config::FireflyOptions;
@@ -7,31 +7,14 @@ use crate::entity::pull::Transaction;
 use crate::error::CliError;
 use crate::resource::Resource;
 use crate::service::firefly::Firefly;
-use crate::{util, CliResult};
-
-static USAGE: &str = "
-Pull entries and transactions from Firefly III.
-
-This command will get the latest transaction locally (by id), and pull and the entries above that
-id from Firefly III (if the configuration file is set for Firefly). For setting up the
-configuration with Firefly, ensure that the key \"firefly\" has a valid access token in the
-configuration file.
-
-Usage:
-    ledger pull [options]
-
-Options:
-    -h, --help          Display this message
-";
+use crate::{CliResult, Mode};
 
 static MISSING_KEY: &str = "There is no key set up";
 
-#[derive(Debug, Deserialize)]
-struct Args {}
+#[derive(Clap, Debug, Default)]
+pub struct Args {}
 
-pub fn run(argv: &[&str]) -> CliResult<()> {
-    let args: Args = util::get_args(USAGE, argv)?;
-
+pub fn run(args: Args) -> CliResult<()> {
     let config = Config::new()?;
 
     args.pull(config)
@@ -72,9 +55,9 @@ impl Pull {
     }
 
     fn load(&mut self, config: &Config) -> CliResult<()> {
-        Resource::new(&config, false)?.line(&mut |record| self.find_highest_id(record))?;
+        Resource::new(&config, Mode::Ledger)?.line(&mut |record| self.find_highest_id(record))?;
 
-        Resource::new(&config, true)?.line(&mut |record| self.find_highest_id(record))?;
+        Resource::new(&config, Mode::Networth)?.line(&mut |record| self.find_highest_id(record))?;
 
         Ok(())
     }
@@ -86,7 +69,7 @@ impl Pull {
                     self.transactions.push(record);
 
                     Ok(())
-                },
+                }
                 Line::Entry { .. } => Err(CliError::NotPullableLine {
                     line: format!("{:?}", record),
                 }),
@@ -100,7 +83,7 @@ impl Pull {
         let sorter = |a: &Line, b: &Line| a.date().cmp(&b.date()).then(a.id().cmp(&b.id()));
 
         self.transactions.sort_by(sorter);
-        Resource::new(&config, false)?.book(&self.transactions)?;
+        Resource::new(&config, Mode::Ledger)?.book(&self.transactions)?;
 
         Ok(())
     }

@@ -8,10 +8,15 @@ use crate::entity::line::Line;
 use crate::resource::Resource;
 use crate::CliResult;
 
+// This usage is necessary because, unfortunately, clap does not handle empty values as expected
+// for options that take multiple values.
+// https://github.com/clap-rs/clap/issues/1740
+pub static DEFAULT_EMPTY: &str = " ";
+
 #[derive(Clap, Debug)]
 pub struct Args {
     /// Define the list of values that compose an transaction/entry
-    #[clap(short, long)]
+    #[clap(short, long, allow_hyphen_values = true)]
     attributes: Vec<String>,
     #[clap(
         arg_enum,
@@ -39,6 +44,12 @@ impl Args {
 
         if values.is_empty() {
             self.collect_attributes(&mut values, &resource)?
+        } else {
+            for val in values.iter_mut() {
+                if val == DEFAULT_EMPTY {
+                    val.clear()
+                }
+            }
         };
 
         let line = Line::build(values, self.mode)?;

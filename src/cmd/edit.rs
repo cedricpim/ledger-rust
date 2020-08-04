@@ -48,7 +48,7 @@ impl Args {
     fn filepath(&self, filepath: std::path::Display) -> String {
         match self.line {
             Some(val) => format!("{}:{}", filepath, val),
-            None => format!("{}", filepath)
+            None => format!("{}", filepath),
         }
     }
 }

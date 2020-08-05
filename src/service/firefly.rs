@@ -207,7 +207,7 @@ impl Firefly {
 
         account.currency_code = data.currency.clone();
         account.include_net_worth = Some(data.networth);
-        account.opening_balance = data.value.map(|v| v.to_number());
+        account.opening_balance = data.value.map(|v| v.to_string());
         account.opening_balance_date = data.date.map(|v| v.format("%Y-%m-%d").to_string());
 
         if let account::Type::Asset = account._type {

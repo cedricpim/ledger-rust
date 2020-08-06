@@ -166,7 +166,7 @@ impl PartialEq for Money {
 
 impl std::fmt::Display for Money {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}", self.to_storage(), self.symbol())
+        write!(f, "{}{}", self.to_display(), self.symbol())
     }
 }
 
@@ -241,7 +241,7 @@ impl Serialize for Money {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&self.to_storage().replace(",", ""))
+        serializer.serialize_str(&self.to_storage())
     }
 }
 
@@ -264,7 +264,7 @@ impl Money {
         }
     }
 
-    pub fn to_storage(&self) -> String {
+    pub fn to_display(&self) -> String {
         let val = FormatSpec::new(',', '.', vec![FormatPart::Amount])
             .display_for(&self.value)
             .to_string();
@@ -283,6 +283,10 @@ impl Money {
         };
 
         format!("{}{}{:0<width$}", sign, integer, fractional, width = 3)
+    }
+
+    pub fn to_storage(&self) -> String {
+        self.to_display().replace(",", "")
     }
 
     pub fn new(currency: Currency, value: i64) -> Money {

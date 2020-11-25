@@ -43,10 +43,7 @@ encryption: SOME_PASS
 files:
   ledger: ~/.config/ledger/ledger.csv
   networth: ~/.config/ledger/networth.csv
-exchange:
-  api_key: API_KEY
-  cache_file: /tmp/exchange-cache.yml
-  ttl: 86400 # value in seconds
+exchange_key: API_KEY
 transfer: Transfer
 ignored_accounts: ['Vacation', 'Personal']
 investments: Investment
@@ -74,15 +71,15 @@ will contain all the income and expenses and it it the file that is primarily
 used. Networth points to the file that contains entries for the calculated
 networth from `ledger networth --save` command.
 
-#### Exchange
+#### Exchange Key
 
 This is mandatory, even though maybe it didn't need to be. The idea is to
 support multiple currencies (one per account) and for that, you can create an
 account with [open exchange rates](https://openexchangerates.org/) for free,
-generate the `api_key`, where to store the cached rates (`cache_file`) and for
-how long (`ttl`). Then, `ledger` will be able to convert entries with
-alternative currencies and it will be able to consolidate all accounts with
-different currencies into a single one, the default one.
+generate the API key and add it as `exchange_key`. Then, `ledger` will be able
+to convert entries with alternative currencies and it will be able to
+consolidate all accounts with different currencies into a single one, the
+default one.
 
 #### Transfer
 

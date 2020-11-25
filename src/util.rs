@@ -1,7 +1,6 @@
 use prettytable::format::Alignment;
 use prettytable::{color, Attr, Cell};
 use rand::Rng;
-use xdg::BaseDirectories;
 
 use std::iter;
 
@@ -14,10 +13,6 @@ pub fn editor() -> CliResult<String> {
     std::env::var("EDITOR").map_err(|_| CliError::UndefinedEditor)
 }
 
-pub fn main_directory() -> CliResult<BaseDirectories> {
-    BaseDirectories::with_prefix(env!("CARGO_PKG_NAME")).map_err(CliError::from)
-}
-
 pub fn random_pass() -> Option<String> {
     let mut rng = rand::thread_rng();
     let chars: String = iter::repeat(())
@@ -26,18 +21,6 @@ pub fn random_pass() -> Option<String> {
         .collect();
 
     Some(chars)
-}
-
-pub fn config_filepath(filename: &str) -> CliResult<String> {
-    let dir = main_directory()?
-        .place_config_file(filename)
-        .map_err(CliError::from)?;
-
-    dir.to_str()
-        .map(|v| v.to_string())
-        .ok_or(CliError::IncorrectPath {
-            filename: filename.to_string(),
-        })
 }
 
 pub fn currency(value: Option<&String>, config: &Config) -> CliResult<Currency> {

@@ -15,6 +15,7 @@ mod filter;
 mod resource;
 mod service;
 mod util;
+mod xdg;
 
 #[macro_export]
 macro_rules! wout {

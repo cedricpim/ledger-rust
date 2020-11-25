@@ -23,7 +23,7 @@ pub struct Args {
     #[clap(short, long)]
     pub till: Option<Date>,
     /// Select entries that match the categories
-    #[clap(short = "C", long)]
+    #[clap(short = 'C', long)]
     pub categories: Vec<String>,
     /// Display entries on the same currency (format ISO 4217)
     #[clap(short, long)]

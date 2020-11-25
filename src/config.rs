@@ -3,11 +3,10 @@ use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
-use std::time::{Duration, SystemTime};
 
 use crate::entity::line::Liner;
-use crate::error::CliError;
 use crate::resource::Resource;
+use crate::xdg::Xdg;
 use crate::{util, CliResult, Mode};
 
 const CONFIGURATION_FILENAME: &str = "config";
@@ -16,7 +15,7 @@ const CONFIGURATION_FILENAME: &str = "config";
 pub struct Config {
     encryption: Option<String>,
     files: Files,
-    exchange: Exchange,
+    exchange_key: String,
     pub transfer: String,
     pub ignored_accounts: Vec<String>,
     pub investments: String,
@@ -53,13 +52,6 @@ impl FireflyOptions {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Exchange {
-    api_key: String,
-    cache_file: String,
-    ttl: u64,
-}
-
 impl Config {
     pub fn new() -> CliResult<Config> {
         let config_path = Config::path()?;
@@ -78,14 +70,10 @@ impl Config {
         let default = Config {
             encryption: util::random_pass(),
             files: Files {
-                ledger: util::config_filepath("ledger.csv")?,
-                networth: util::config_filepath("networth.csv")?,
+                ledger: Xdg::Config("ledger.csv".to_string()).filepath()?,
+                networth: Xdg::Config("networth.csv".to_string()).filepath()?,
             },
-            exchange: Exchange {
-                api_key: "your app id from https://openexchangerates.org/signup".to_string(),
-                cache_file: "/tmp/exchange-cache-rust.yml".to_string(),
-                ttl: 86400, // 1 day
-            },
+            exchange_key: "your app id from https://openexchangerates.org/signup".to_string(),
             currency: "EUR".to_string(),
             transfer: "Transfer".to_string(),
             ignored_accounts: vec!["Personal".to_string()],
@@ -100,11 +88,7 @@ impl Config {
     }
 
     pub fn path() -> CliResult<String> {
-        util::config_filepath(CONFIGURATION_FILENAME)
-    }
-
-    pub fn exchange(&self) -> Exchange {
-        self.exchange.clone()
+        Xdg::Config(CONFIGURATION_FILENAME.to_string()).filepath()
     }
 
     pub fn filepath(&self, mode: Mode) -> String {
@@ -118,6 +102,10 @@ impl Config {
 
     pub fn pass(&self) -> Option<String> {
         self.encryption.to_owned()
+    }
+
+    pub fn exchange_key(&self) -> String {
+        self.exchange_key.to_owned()
     }
 
     pub fn total_pushable_lines(&self) -> CliResult<usize> {
@@ -138,37 +126,5 @@ impl Config {
         })?;
 
         Ok(networth_lines + ledger_lines)
-    }
-}
-
-impl Exchange {
-    pub fn cached(&self) -> bool {
-        let path = Path::new(&self.cache_file);
-
-        let mtime = path
-            .metadata()
-            .and_then(|v| v.modified())
-            .unwrap_or(SystemTime::UNIX_EPOCH);
-
-        let default = Duration::new(self.ttl, 0);
-
-        let interval = SystemTime::now()
-            .duration_since(mtime)
-            .unwrap_or(default)
-            .as_secs();
-
-        path.exists() && interval < self.ttl
-    }
-
-    pub fn open(&self) -> CliResult<File> {
-        File::open(&self.cache_file).map_err(CliError::from)
-    }
-
-    pub fn create(&self) -> CliResult<File> {
-        File::create(&self.cache_file).map_err(CliError::from)
-    }
-
-    pub fn key(&self) -> String {
-        self.api_key.to_owned()
     }
 }

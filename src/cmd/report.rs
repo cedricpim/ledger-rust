@@ -1,7 +1,7 @@
 use clap::Clap;
 
 use crate::config::Config;
-use crate::entity::report::{general, movement};
+use crate::entity::report::{check, general};
 use crate::entity::{date::Date, total::Total};
 use crate::exchange::Exchange;
 use crate::filter::Filter;
@@ -25,11 +25,11 @@ pub struct Args {
     #[clap(short, long)]
     pub exclude: Vec<String>,
     /// Display entries on the same currency (format ISO 4217)
-    #[clap(short, long)]
+    #[clap(short = 'C', long)]
     pub currency: Option<String>,
-    /// Display report with information aggregated by movement
+    /// Display report with aggregated information
     #[clap(short, long)]
-    movements: bool,
+    check: bool,
 }
 
 pub fn run(args: Args) -> CliResult<()> {
@@ -44,8 +44,8 @@ impl Args {
 
         let filter = Filter::report(&self, &config);
 
-        if self.movements {
-            let report = movement::Report::new(&config, &filter)?;
+        if self.check {
+            let report = check::Report::new(&config, &filter)?;
 
             report.display();
         } else {

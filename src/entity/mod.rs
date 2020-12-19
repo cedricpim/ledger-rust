@@ -7,3 +7,4 @@ pub mod pull;
 pub mod push;
 pub mod total;
 pub mod transaction;
+pub mod reporting;

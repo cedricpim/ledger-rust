@@ -35,11 +35,11 @@ impl Args {
 
         let mut total = Total::new(Some(&config.currency), &config, filter.end)?;
 
-        let report = Report::new(&self, &mut total, &config, &exchange, &filter)?;
+        let report = Report::new(&mut total, &config, &exchange, &filter)?;
 
         let summary = Summary::new(total);
 
-        report.display();
+        report.display(&self);
 
         summary.display();
 
@@ -65,7 +65,6 @@ impl Report {
     }
 
     fn new(
-        args: &Args,
         total: &mut Total,
         config: &Config,
         exchange: &Exchange,
@@ -89,14 +88,6 @@ impl Report {
             Ok(())
         })?;
 
-        if !args.all {
-            for (account, item) in &report.items.clone() {
-                if item.value.zero() {
-                    report.items.remove(account);
-                }
-            }
-        };
-
         Ok(report)
     }
 
@@ -107,7 +98,7 @@ impl Report {
             .or_insert(item);
     }
 
-    fn display(&self) {
+    fn display(&self, args: &Args) {
         let mut table = Table::new();
 
         table.set_format(format::FormatBuilder::new().padding(3, 5).build());
@@ -117,7 +108,9 @@ impl Report {
         table.add_row(Report::headers());
 
         for item in self.items.values() {
-            table.add_row(item.row());
+            if args.all || !item.value.zero() {
+                table.add_row(item.row());
+            }
         }
 
         table.printstd();

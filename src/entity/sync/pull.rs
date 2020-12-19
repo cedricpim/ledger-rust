@@ -38,9 +38,15 @@ impl Pull {
     }
 
     fn load(&mut self, config: &Config) -> CliResult<()> {
-        Resource::new(&config, Mode::Ledger)?.line(&mut |record| self.find_highest_id(record))?;
+        Resource::new(&config, Mode::Ledger)?.line(&mut |record| {
+            self.find_highest_id(record);
+            Ok(())
+        })?;
 
-        Resource::new(&config, Mode::Networth)?.line(&mut |record| self.find_highest_id(record))?;
+        Resource::new(&config, Mode::Networth)?.line(&mut |record| {
+            self.find_highest_id(record);
+            Ok(())
+        })?;
 
         Ok(())
     }
@@ -71,14 +77,12 @@ impl Pull {
         Ok(())
     }
 
-    fn find_highest_id(&mut self, record: &Line) -> CliResult<()> {
+    fn find_highest_id(&mut self, record: &Line) {
         let parsed_id = record.id().parse::<i32>().unwrap_or_default();
 
         if self.from < parsed_id {
             self.from = parsed_id;
-        }
-
-        Ok(())
+        };
     }
 }
 
@@ -173,7 +177,7 @@ impl Pullable for TransactionSplit {
                 self.category_name.clone().unwrap_or_default(),
                 amount,
                 self.currency_code.clone().unwrap_or_default(),
-                self.tags.clone().unwrap_or(vec![]).join(","),
+                self.tags.clone().unwrap_or_default().join(","),
                 self.transaction_journal_id.unwrap_or_default().to_string(),
             ],
             Mode::Networth => vec![

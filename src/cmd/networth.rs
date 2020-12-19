@@ -1,7 +1,7 @@
 use clap::Clap;
 
 use crate::config::Config;
-use crate::entity::reporting;
+use crate::entity::report::networth;
 use crate::exchange::Exchange;
 use crate::{util, CliResult};
 
@@ -27,7 +27,7 @@ impl Args {
 
         let currency = util::currency(self.currency.as_ref(), &config)?;
 
-        let report = reporting::networth::Report::new(config, exchange, currency)?;
+        let report = networth::Report::new(config, exchange, currency)?;
 
         if self.save {
             report.save()?

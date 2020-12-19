@@ -34,6 +34,9 @@ pub struct Args {
     /// Display entries on the same currency (format ISO 4217)
     #[clap(short, long)]
     currency: Option<String>,
+    /// Display report with information aggregated by movement
+    #[clap(short, long)]
+    movements: bool,
 }
 
 pub fn run(args: Args) -> CliResult<()> {
@@ -48,17 +51,169 @@ impl Args {
 
         let filter = Filter::report(&self, &config);
 
-        let mut total = Total::new(self.currency.as_ref(), &config, filter.end)?;
+        if self.movements {
+            let report = MovementReport::new(&config, &filter)?;
 
-        let report = Report::new(&self, &mut total, &config, &exchange, &filter)?;
+            report.display();
+        } else {
+            let mut total = Total::new(self.currency.as_ref(), &config, filter.end)?;
 
-        let summary = Summary::new(&report, total);
+            let report = Report::new(&self, &mut total, &config, &exchange, &filter)?;
 
-        report.display();
+            let summary = Summary::new(&report, total);
 
-        summary.display();
+            report.display();
+
+            summary.display();
+        }
 
         Ok(())
+    }
+}
+
+#[derive(Default)]
+struct Movement {
+    account: String,
+    date: Date,
+    identifier: String,
+    amount: Money,
+}
+
+impl From<&mut crate::entity::line::Line> for Movement {
+    fn from(line: &mut Line) -> Movement {
+        let identifier = if line.venue().len() > 0 {
+            line.venue()
+        } else {
+            line.category()
+        };
+
+        Self {
+            account: line.account(),
+            date: line.date(),
+            identifier,
+            amount: line.amount()
+        }
+    }
+}
+
+impl Eq for Movement {}
+
+impl PartialEq for Movement {
+    fn eq(&self, other: &Self) -> bool {
+        self.account == other.account &&
+            self.date == other.date &&
+            self.identifier == other.identifier
+    }
+}
+
+impl Ord for Movement {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.account.cmp(&other.account) {
+            Ordering::Equal => self.date.cmp(&self.date),
+            val => val,
+        }
+    }
+}
+
+impl PartialOrd for Movement {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl AddAssign for Movement {
+    fn add_assign(&mut self, other: Self) {
+        self.amount += other.amount;
+    }
+}
+
+impl Movement {
+    fn row(&self) -> Row {
+        Row::new(vec![
+            Cell::new(&self.account).style_spec("bFW"),
+            Cell::new(&self.date.to_string()).style_spec("bFW"),
+            Cell::new(&self.identifier).style_spec("bFW"),
+            Cell::new(&format!("{}", self.amount)).style_spec("bFW")
+        ])
+    }
+}
+
+#[derive(Default)]
+struct MovementReport {
+    movements: Vec<Movement>,
+    current: Option<Movement>
+}
+
+impl MovementReport {
+    fn title() -> Row {
+        Row::new(vec![Cell::new("Movements").with_hspan(4).style_spec("bcFC")])
+    }
+
+    fn headers() -> Row {
+        Row::new(vec![
+            Cell::new("Account").style_spec("bcFB"),
+            Cell::new("Date").style_spec("bcFB"),
+            Cell::new("Identifier").style_spec("bcFB"),
+            Cell::new("Amount").style_spec("bFB"),
+        ])
+    }
+
+    fn new(
+        config: &Config,
+        filter: &Filter,
+    ) -> CliResult<MovementReport> {
+        let mut report = Self::default();
+
+        let resource = Resource::new(&config, Mode::Ledger)?;
+
+        resource.line(&mut |record| {
+            if !filter.within(record.date()) || filter.investment(&record.category()) {
+                return Ok(());
+            }
+
+            let movement: Movement = record.into();
+
+            let current_movement = match report.current.take() {
+                None => movement,
+                Some(mut existing_movement) => {
+                    if existing_movement == movement {
+                        existing_movement += movement;
+                        existing_movement
+                    } else {
+                        report.movements.push(existing_movement);
+                        movement
+                    }
+                }
+            };
+
+            report.current = Some(current_movement);
+
+            Ok(())
+        })?;
+
+        if let Some(current_movement) = report.current.take() {
+            report.movements.push(current_movement);
+        };
+
+        report.movements.sort();
+
+        Ok(report)
+    }
+
+    fn display(&self) {
+        let mut table = Table::new();
+
+        table.set_format(format::FormatBuilder::new().padding(2, 3).build());
+
+        table.set_titles(MovementReport::title());
+
+        table.add_row(MovementReport::headers());
+
+        for movement in self.movements.iter() {
+            table.add_row(movement.row());
+        }
+
+        table.printstd();
     }
 }
 

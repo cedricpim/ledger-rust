@@ -14,6 +14,12 @@ pub struct Date {
     value: chrono::naive::NaiveDate,
 }
 
+impl std::fmt::Display for Date {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.format(DATE_FORMAT))
+    }
+}
+
 impl Default for Date {
     fn default() -> Self {
         Date {

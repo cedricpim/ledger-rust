@@ -208,7 +208,7 @@ impl Firefly {
         account.currency_code = data.currency.clone();
         account.include_net_worth = Some(data.networth);
         account.opening_balance = data.value.map(|v| v.to_storage());
-        account.opening_balance_date = data.date.map(|v| v.format("%Y-%m-%d").to_string());
+        account.opening_balance_date = data.date.map(|v| v.to_string());
 
         if let account::Type::Asset = account._type {
             account.account_role = Some(account::AccountRole::DefaultAsset);
@@ -276,7 +276,7 @@ impl Firefly {
 
     fn build_split(line: &Line, amount: Money, ids: (i32, i32)) -> TransactionSplit {
         let mut split = TransactionSplit::new(
-            line.date().format("%Y-%m-%d").to_string(),
+            line.date().to_string(),
             amount.abs().to_number().to_string(),
             line.description(),
             Some(ids.0),

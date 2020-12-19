@@ -15,7 +15,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::entity::line::{Line, Liner};
 use crate::entity::money::Money;
-use crate::entity::push;
+use crate::entity::sync::push;
 
 custom_error! { pub Error
     ReqwestError { source: reqwest::Error }       = @{ source },

@@ -1,14 +1,169 @@
 use firefly_iii::models::account::Type;
+use indicatif::{ProgressBar, ProgressStyle};
 
-use crate::cmd::push::Push;
+use std::collections::hash_map::Entry;
+use std::collections::{HashMap, HashSet};
+
+use crate::config::Config;
 use crate::config::FireflyOptions;
 use crate::entity::date::Date;
 use crate::entity::line::{Line, Liner};
 use crate::entity::money::Money;
 use crate::error::CliError;
 use crate::filter::Filter;
+use crate::resource::Resource;
 use crate::service::firefly::Firefly;
-use crate::CliResult;
+use crate::{CliResult, Mode};
+
+static PROGRESS_BAR_FORMAT: &str = "{spinner:.green}▕{wide_bar:.cyan}▏{percent}% ({eta})";
+static PROGRESS_BAR_CHARS: &str = "█▉▊▋▌▍▎▏  ";
+
+pub struct Push {
+    user: i32,
+    firefly: Firefly,
+    options: FireflyOptions,
+    currencies: HashSet<String>,
+    accounts: HashMap<(String, String), i32>,
+}
+
+impl Push {
+    fn process<F>(config: &Config, mode: Mode, pb: &ProgressBar, action: &mut F) -> CliResult<()>
+    where
+        F: FnMut(&mut Line, &mut Option<CliError>) -> CliResult<(String, Vec<Line>)>,
+    {
+        let resource = Resource::new(&config, mode)?;
+
+        let mut error: Option<CliError> = None;
+
+        resource.rewrite(&mut |record| {
+            if record.pushable() {
+                pb.inc(1);
+            };
+
+            let (id, mut lines) = action(record, &mut error)?;
+
+            lines
+                .iter_mut()
+                .for_each(|line| line.set_id(id.to_string()));
+
+            Ok(lines)
+        })?;
+
+        error.map_or(Ok(()), Err)
+    }
+
+    pub fn new(options: &FireflyOptions, config: &Config) -> CliResult<Self> {
+        let client = Firefly::new(&options.base_path, &options.token);
+
+        Ok(Self {
+            user: client.user()?.parse::<i32>()?,
+            firefly: client,
+            options: FireflyOptions::build(&options, &config),
+            currencies: HashSet::new(),
+            accounts: HashMap::new(),
+        })
+    }
+
+    pub fn perform(&mut self, config: Config) -> CliResult<()> {
+        let pb = ProgressBar::new(config.total_pushable_lines()? as u64);
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template(PROGRESS_BAR_FORMAT)
+                .progress_chars(PROGRESS_BAR_CHARS),
+        );
+
+        self.load()?;
+
+        let filter = Filter::push(&config);
+        let client = Firefly::new(&self.options.base_path, &self.options.token);
+
+        let mut ledger = Ledger::new(self.user, &filter, &client, self.options.clone());
+        self.push(&config, Mode::Ledger, &mut ledger, &pb)?;
+
+        let mut networth = Networth::new(self.user, &filter, &client);
+        self.push(&config, Mode::Networth, &mut networth, &pb)?;
+
+        Ok(())
+    }
+
+    pub fn account(&mut self, account: &AccountData) -> CliResult<i32> {
+        match self.accounts.entry(account.key()) {
+            Entry::Occupied(v) => Ok(*v.get()),
+            Entry::Vacant(v) => {
+                let id = self.firefly.create_account(&account)?;
+
+                let parsed_id = id.parse::<i32>()?;
+
+                v.insert(parsed_id);
+
+                Ok(parsed_id)
+            }
+        }
+    }
+
+    fn push<'a, T>(
+        &mut self,
+        config: &Config,
+        mode: Mode,
+        entity: &'a mut T,
+        pb: &ProgressBar,
+    ) -> CliResult<()>
+    where
+        T: Pushable<'a>,
+    {
+        Self::process(&config, mode, &pb, &mut |record, error| match error {
+            None => {
+                let result = self
+                    .process_currency(&record)
+                    .and(entity.process(record, self));
+
+                let handle_error = |e: CliError| -> CliResult<(String, Vec<Line>)> {
+                    *error = Some(e);
+                    Ok(entity.previous().map_or_else(
+                        || record.pushed(),
+                        |v| (record.id(), vec![v.clone(), record.clone()]),
+                    ))
+                };
+
+                result.or_else(handle_error)
+            }
+            Some(_) => Ok(record.pushed()),
+        })
+    }
+
+    fn process_currency(&mut self, record: &Line) -> CliResult<()> {
+        if !self.currencies.contains(&record.currency().code()) {
+            self.firefly.enable_currency(record.currency().code())?;
+            self.currencies.insert(record.currency().code());
+        }
+
+        Ok(())
+    }
+
+    fn load(&mut self) -> CliResult<()> {
+        self.firefly
+            .default_currency(self.options.currency.to_string())?;
+
+        for account in self.firefly.accounts()? {
+            let info = (
+                account.attributes.name.to_string(),
+                format!("{:?}", account.attributes._type),
+            );
+
+            let id = account.id.parse::<i32>()?;
+
+            self.accounts.entry(info).or_insert_with(|| id);
+        }
+
+        for currency in self.firefly.currencies()? {
+            if currency.attributes.enabled.unwrap_or_default() {
+                self.currencies.insert(currency.attributes.code);
+            }
+        }
+
+        Ok(())
+    }
+}
 
 pub struct AccountData {
     pub id: Option<i32>,

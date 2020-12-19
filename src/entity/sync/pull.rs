@@ -3,10 +3,84 @@ use firefly_iii::models::transaction_split::TransactionSplit;
 use firefly_iii::models::transaction_split::Type;
 
 use crate::config::Config;
+use crate::config::FireflyOptions;
 use crate::entity::entry;
-use crate::entity::line::Line;
+use crate::entity::line::{Line, Liner};
 use crate::entity::money::Money;
+use crate::error::CliError;
+use crate::resource::Resource;
+use crate::service::firefly::Firefly;
 use crate::{CliResult, Mode};
+
+pub struct Pull {
+    from: i32,
+    firefly: Firefly,
+    transactions: Vec<Line>,
+}
+
+impl Pull {
+    pub fn new(options: &FireflyOptions) -> Self {
+        Self {
+            from: 0,
+            firefly: Firefly::new(&options.base_path, &options.token),
+            transactions: Vec::new(),
+        }
+    }
+
+    pub fn perform(&mut self, config: Config) -> CliResult<()> {
+        self.load(&config)?;
+
+        self.pull(&config)?;
+
+        self.store(&config)?;
+
+        Ok(())
+    }
+
+    fn load(&mut self, config: &Config) -> CliResult<()> {
+        Resource::new(&config, Mode::Ledger)?.line(&mut |record| self.find_highest_id(record))?;
+
+        Resource::new(&config, Mode::Networth)?.line(&mut |record| self.find_highest_id(record))?;
+
+        Ok(())
+    }
+
+    fn pull(&mut self, config: &Config) -> CliResult<()> {
+        for transaction in self.firefly.transactions(self.from)? {
+            Transaction::new(transaction, &config).process(&mut |record: Line| match record {
+                Line::Transaction { .. } => {
+                    self.transactions.push(record);
+
+                    Ok(())
+                }
+                Line::Entry { .. } => Err(CliError::NotPullableLine {
+                    line: format!("{:?}", record),
+                }),
+            })?;
+        }
+
+        Ok(())
+    }
+
+    fn store(&mut self, config: &Config) -> CliResult<()> {
+        let sorter = |a: &Line, b: &Line| a.date().cmp(&b.date()).then(a.id().cmp(&b.id()));
+
+        self.transactions.sort_by(sorter);
+        Resource::new(&config, Mode::Ledger)?.book(&self.transactions)?;
+
+        Ok(())
+    }
+
+    fn find_highest_id(&mut self, record: &Line) -> CliResult<()> {
+        let parsed_id = record.id().parse::<i32>().unwrap_or_default();
+
+        if self.from < parsed_id {
+            self.from = parsed_id;
+        }
+
+        Ok(())
+    }
+}
 
 pub struct Transaction {
     splits: Vec<TransactionSplit>,
@@ -99,7 +173,7 @@ impl Pullable for TransactionSplit {
                 self.category_name.clone().unwrap_or_default(),
                 amount,
                 self.currency_code.clone().unwrap_or_default(),
-                self.tags.clone().unwrap_or_else(|| vec![]).join(","),
+                self.tags.clone().unwrap_or(vec![]).join(","),
                 self.transaction_journal_id.unwrap_or_default().to_string(),
             ],
             Mode::Networth => vec![

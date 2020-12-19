@@ -97,10 +97,10 @@ struct Item {
 
 impl From<&mut crate::entity::line::Line> for Item {
     fn from(line: &mut Line) -> Item {
-        let identifier = if line.venue().len() > 0 {
-            line.venue()
-        } else {
+        let identifier = if line.venue().is_empty() {
             line.category()
+        } else {
+            line.venue()
         };
 
         Self {

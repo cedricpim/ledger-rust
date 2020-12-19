@@ -4,9 +4,9 @@ use std::cmp::Ordering;
 use std::ops::AddAssign;
 
 use crate::config::Config;
+use crate::entity::date::Date;
 use crate::entity::line::{Line, Liner};
 use crate::entity::money::Money;
-use crate::entity::date::Date;
 use crate::filter::Filter;
 use crate::resource::Resource;
 use crate::{CliResult, Mode};
@@ -14,7 +14,7 @@ use crate::{CliResult, Mode};
 #[derive(Default)]
 pub struct Report {
     items: Vec<Item>,
-    current: Option<Item>
+    current: Option<Item>,
 }
 
 impl Report {
@@ -31,10 +31,7 @@ impl Report {
         ])
     }
 
-    pub fn new(
-        config: &Config,
-        filter: &Filter,
-    ) -> CliResult<Report> {
+    pub fn new(config: &Config, filter: &Filter) -> CliResult<Report> {
         let mut report = Self::default();
 
         let resource = Resource::new(&config, Mode::Ledger)?;
@@ -110,7 +107,7 @@ impl From<&mut crate::entity::line::Line> for Item {
             account: line.account(),
             date: line.date(),
             identifier,
-            amount: line.amount()
+            amount: line.amount(),
         }
     }
 }
@@ -119,9 +116,9 @@ impl Eq for Item {}
 
 impl PartialEq for Item {
     fn eq(&self, other: &Self) -> bool {
-        self.account == other.account &&
-            self.date == other.date &&
-            self.identifier == other.identifier
+        self.account == other.account
+            && self.date == other.date
+            && self.identifier == other.identifier
     }
 }
 
@@ -152,8 +149,7 @@ impl Item {
             Cell::new(&self.account).style_spec("bFW"),
             Cell::new(&self.date.to_string()).style_spec("bFW"),
             Cell::new(&self.identifier).style_spec("bFW"),
-            Cell::new(&format!("{}", self.amount)).style_spec("bFW")
+            Cell::new(&format!("{}", self.amount)).style_spec("bFW"),
         ])
     }
 }
-

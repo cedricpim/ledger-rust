@@ -12,8 +12,7 @@ use crate::CliResult;
 
 pub static DEFAULT_ACCOUNT: &str = "Investments";
 
-pub static FIELDS: [&'static str; 6] =
-    ["Date", "Invested", "Investment", "Amount", "Currency", "Id"];
+pub static FIELDS: [&str; 6] = ["Date", "Invested", "Investment", "Amount", "Currency", "Id"];
 
 #[derive(Clone, Debug, Serialize, Default)]
 #[serde(rename_all = "PascalCase")]

@@ -10,7 +10,7 @@ use crate::error::CliError;
 use crate::exchange::Exchange;
 use crate::CliResult;
 
-pub static FIELDS: [&'static str; 10] = [
+pub static FIELDS: [&str; 10] = [
     "Account",
     "Date",
     "Category",

@@ -5,6 +5,6 @@ pub mod money;
 pub mod networth;
 pub mod pull;
 pub mod push;
+pub mod reporting;
 pub mod total;
 pub mod transaction;
-pub mod reporting;

@@ -1,8 +1,8 @@
 use clap::Clap;
 
 use crate::config::Config;
-use crate::entity::{date::Date, total::Total};
 use crate::entity::reporting::{general, movement};
+use crate::entity::{date::Date, total::Total};
 use crate::exchange::Exchange;
 use crate::filter::Filter;
 use crate::CliResult;

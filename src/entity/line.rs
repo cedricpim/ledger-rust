@@ -23,6 +23,26 @@ impl Line {
     }
 }
 
+impl Eq for Line {}
+
+impl PartialEq for Line {
+    fn eq(&self, other: &Line) -> bool {
+        self.date() == other.date()
+    }
+}
+
+impl PartialOrd for Line {
+    fn partial_cmp(&self, other: &Line) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Line {
+    fn cmp(&self, other: &Line) -> std::cmp::Ordering {
+        self.date().cmp(&other.date())
+    }
+}
+
 #[enum_dispatch(Line)]
 pub trait Liner {
     fn account(&self) -> String;

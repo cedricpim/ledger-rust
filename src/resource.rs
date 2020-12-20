@@ -50,6 +50,21 @@ impl Resource {
         Ok(())
     }
 
+    pub fn create_with(&self, lines: Vec<Line>) -> CliResult<()> {
+        let nfile = tempfile::Builder::new().suffix(".csv").tempfile()?;
+
+        let mut wtr = csv::WriterBuilder::new().from_path(nfile.path())?;
+
+        for line in lines {
+            line.write(&mut wtr)?;
+            wtr.flush()?;
+        }
+
+        self.close(&nfile)?;
+
+        Ok(())
+    }
+
     pub fn book(&self, lines: &[Line]) -> CliResult<()> {
         self.apply(|file| {
             let afile = OpenOptions::new().append(true).open(file.path())?;

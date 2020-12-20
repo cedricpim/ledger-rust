@@ -137,6 +137,12 @@ pub enum SubCommand {
     /// no distinction made regarding different accounts - transactions are
     /// only aggregate per category.
     Show(cmd::show::Args),
+    /// Sort the entries in the ledger.
+    ///
+    /// This command will rewrite the existing file, but sorted according to
+    /// the date of each entry. Unless the date is different, the entries
+    /// should remain unchanged (date is the only attribute used for sorting).
+    Sort(cmd::sort::Args),
 }
 
 #[derive(Clap, Clone, Copy, Debug)]
@@ -158,6 +164,7 @@ fn main() {
         SubCommand::Sync(args) => cmd::sync::run(args),
         SubCommand::Report(args) => cmd::report::run(args),
         SubCommand::Show(args) => cmd::show::run(args),
+        SubCommand::Sort(args) => cmd::sort::run(args),
     };
 
     match result {

@@ -66,7 +66,7 @@ impl Resource {
         Ok(())
     }
 
-    pub fn book(&self, lines: &[Line]) -> CliResult<()> {
+    pub fn book(&mut self, lines: &[Line]) -> CliResult<()> {
         self.apply(|file| {
             let afile = OpenOptions::new().append(true).open(file.path())?;
             let mut wtr = csv::WriterBuilder::new()
@@ -83,11 +83,11 @@ impl Resource {
         })
     }
 
-    pub fn apply<F>(&self, action: F) -> CliResult<()>
+    pub fn apply<F>(&mut self, action: F) -> CliResult<()>
     where
         F: FnOnce(&NamedTempFile) -> CliResult<()>,
     {
-        self.open(&self.tempfile)?;
+        self.open()?;
 
         action(&self.tempfile)?;
 
@@ -96,7 +96,7 @@ impl Resource {
         Ok(())
     }
 
-    pub fn rewrite<F>(&self, action: &mut F) -> CliResult<()>
+    pub fn rewrite<F>(&mut self, action: &mut F) -> CliResult<()>
     where
         F: FnMut(&mut Line) -> CliResult<Vec<Line>>,
     {
@@ -119,14 +119,16 @@ impl Resource {
         Ok(())
     }
 
-    pub fn line<F>(&self, action: &mut F) -> CliResult<()>
+    pub fn line<F>(&mut self, action: &mut F) -> CliResult<()>
     where
         F: FnMut(&mut Line) -> CliResult<()>,
     {
+        let mode = self.mode;
+
         self.apply(|file| {
             let mut rdr = csv::Reader::from_reader(file);
 
-            match self.mode {
+            match mode {
                 Mode::Ledger => {
                     for result in rdr.deserialize() {
                         action(&mut Line::Transaction(result?))?;
@@ -145,15 +147,26 @@ impl Resource {
         Ok(())
     }
 
-    fn open(&self, tempfile: &NamedTempFile) -> CliResult<()> {
-        match &self.pass {
+    fn open(&mut self) -> CliResult<()> {
+        match self.pass.take() {
             Some(pass) => {
                 let mut in_file = File::open(&self.filepath)?;
-                let mut out_file = tempfile.reopen()?;
-                crypto::decrypt(&mut in_file, &mut out_file, &pass)?;
+                let mut out_file = self.tempfile.reopen()?;
+
+                match crypto::decrypt(&mut in_file, &mut out_file, &pass) {
+                    Ok(_) => {
+                        self.pass = Some(pass);
+                        Ok(())
+                    }
+                    Err(CliError::CryptoIncorrectPassword) => {
+                        std::fs::copy(&self.filepath, self.tempfile.path())?;
+                        Ok(())
+                    }
+                    Err(err) => Err(err),
+                }?;
             }
             None => {
-                std::fs::copy(&self.filepath, tempfile.path())?;
+                std::fs::copy(&self.filepath, self.tempfile.path())?;
             }
         };
 

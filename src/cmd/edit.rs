@@ -34,7 +34,7 @@ impl Args {
     // the file is saved so that errors can be fixed and all the data already input is not lost.
     fn edit(&self, config: &Config) -> CliResult<()> {
         let editor = util::editor()?;
-        let resource = Resource::new(&config, self.mode)?;
+        let mut resource = Resource::new(&config, self.mode)?;
 
         resource.apply(|file| {
             let filepath = self.filepath(file.path().display());

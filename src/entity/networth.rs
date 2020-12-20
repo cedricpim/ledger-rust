@@ -32,7 +32,7 @@ impl Networth {
             current: HashMap::new(),
         };
 
-        let resource = Resource::new(&config, Mode::Ledger)?;
+        let mut resource = Resource::new(&config, Mode::Ledger)?;
 
         let filter = Filter::networth(&config);
 

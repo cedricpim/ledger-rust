@@ -38,7 +38,7 @@ pub fn run(args: Args) -> CliResult<()> {
 
 impl Args {
     fn book(&self, config: &Config) -> CliResult<()> {
-        let resource = Resource::new(&config, self.mode)?;
+        let mut resource = Resource::new(&config, self.mode)?;
 
         let mut values = self.attributes.clone();
 

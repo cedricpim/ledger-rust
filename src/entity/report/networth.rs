@@ -41,9 +41,9 @@ impl Report {
     }
 
     pub fn save(&self) -> CliResult<()> {
-        let resource = Resource::new(&self.config, Mode::Networth)?;
+        let mut resource = Resource::new(&self.config, Mode::Networth)?;
 
-        let entries = self.entries(&resource)?;
+        let entries = self.entries(&mut resource)?;
 
         resource.apply(|file| {
             let mut wtr = csv::WriterBuilder::new().from_path(file.path())?;
@@ -102,7 +102,7 @@ impl Report {
         table.printstd();
     }
 
-    fn entries(&self, resource: &Resource) -> CliResult<BTreeMap<Date, Line>> {
+    fn entries(&self, resource: &mut Resource) -> CliResult<BTreeMap<Date, Line>> {
         let mut result: BTreeMap<Date, Line> = BTreeMap::new();
 
         resource.line(&mut |record| {

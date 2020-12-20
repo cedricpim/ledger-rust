@@ -51,7 +51,7 @@ impl Report {
             ..Default::default()
         };
 
-        let resource = Resource::new(&config, Mode::Ledger)?;
+        let mut resource = Resource::new(&config, Mode::Ledger)?;
 
         resource.line(&mut |record| {
             total.sum(record, &exchange)?;

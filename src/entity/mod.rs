@@ -4,6 +4,6 @@ pub mod line;
 pub mod money;
 pub mod networth;
 pub mod report;
+pub mod sync;
 pub mod total;
 pub mod transaction;
-pub mod sync;

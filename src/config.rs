@@ -92,12 +92,15 @@ impl Config {
     }
 
     pub fn filepath(&self, mode: Mode) -> String {
-        let path = match mode {
-            Mode::Ledger => &self.files.ledger,
-            Mode::Networth => &self.files.networth,
+        let path = match std::env::var("LEDGER_PATH") {
+            Ok(val) => val,
+            Err(_) => match mode {
+                Mode::Ledger => self.files.ledger.to_string(),
+                Mode::Networth => self.files.networth.to_string(),
+            },
         };
 
-        shellexpand::tilde(path).to_string()
+        shellexpand::tilde(&path).to_string()
     }
 
     pub fn pass(&self) -> Option<String> {

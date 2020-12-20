@@ -31,7 +31,7 @@ impl Push {
     where
         F: FnMut(&mut Line, &mut Option<CliError>) -> CliResult<(String, Vec<Line>)>,
     {
-        let resource = Resource::new(&config, mode)?;
+        let mut resource = Resource::new(&config, mode)?;
 
         let mut error: Option<CliError> = None;
 

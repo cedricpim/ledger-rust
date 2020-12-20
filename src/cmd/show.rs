@@ -51,7 +51,7 @@ pub fn run(args: Args) -> CliResult<()> {
 
 impl Args {
     fn show(&self, config: &Config) -> CliResult<()> {
-        let resource = Resource::new(&config, self.mode)?;
+        let mut resource = Resource::new(&config, self.mode)?;
 
         let filter = Filter::show(&self);
 

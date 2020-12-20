@@ -57,8 +57,9 @@ impl Resource {
 
         for line in lines {
             line.write(&mut wtr)?;
-            wtr.flush()?;
         }
+
+        wtr.flush()?;
 
         self.close(&nfile)?;
 
@@ -74,8 +75,9 @@ impl Resource {
 
             for line in lines {
                 line.write(&mut wtr)?;
-                wtr.flush()?;
             }
+
+            wtr.flush()?;
 
             Ok(())
         })
@@ -105,8 +107,9 @@ impl Resource {
         self.line(&mut |record| {
             for line in action(record)? {
                 line.write(&mut wtr)?;
-                wtr.flush()?;
             }
+
+            wtr.flush()?;
 
             Ok(())
         })?;

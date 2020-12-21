@@ -1,7 +1,7 @@
 use custom_error::custom_error;
 use kuchiki::traits::*;
 
-const URL: &str = "https://www.justetf.com/uk/etf-profile.html";
+const URL: &str = "https://www.justetf.com/en/etf-profile.html";
 const NAME_CSS: &str = ".h1";
 const VALUE_CSS: &str = "div.val span";
 

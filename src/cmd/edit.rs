@@ -6,11 +6,13 @@ use crate::config::Config;
 use crate::resource::Resource;
 use crate::{util, CliResult};
 
+static VIM: &str = "vim";
+
 #[derive(Clap, Debug)]
 pub struct Args {
-    /// Line in which to open the file
+    /// Open file with cursor in the last line (Only supported for vim and variants)
     #[clap(short, long)]
-    line: Option<u32>,
+    bottom: bool,
     #[clap(
         arg_enum,
         default_value = "ledger",
@@ -37,18 +39,19 @@ impl Args {
         let mut resource = Resource::new(&config, self.mode)?;
 
         resource.apply(|file| {
-            let filepath = self.filepath(file.path().display());
-            Command::new(editor).arg(filepath).status()?;
+            let arguments = self.arguments(&editor, file.path().display());
+            Command::new(editor).args(arguments).status()?;
             Ok(())
         })?;
 
         resource.line(&mut |_record| Ok(()))
     }
 
-    fn filepath(&self, filepath: std::path::Display) -> String {
-        match self.line {
-            Some(val) => format!("{}:{}", filepath, val),
-            None => format!("{}", filepath),
+    fn arguments(&self, editor: &str, filepath: std::path::Display) -> Vec<String> {
+        if self.bottom && editor.contains(VIM){
+            vec!["+".to_string(), filepath.to_string()]
+        } else {
+            vec![filepath.to_string()]
         }
     }
 }

@@ -263,7 +263,7 @@ impl Firefly {
     async fn post_transaction(&self, split: TransactionSplit, user: i32) -> Result<String, Error> {
         let mut transaction = Transaction::new(vec![split]);
 
-        transaction.user = Some(user);
+        transaction.user = Some(user.to_string());
 
         let response = self
             .client
@@ -279,8 +279,8 @@ impl Firefly {
             line.date().to_string(),
             amount.abs().to_number().to_string(),
             line.description(),
-            Some(ids.0),
-            Some(ids.1),
+            Some(ids.0.to_string()),
+            Some(ids.1.to_string()),
         );
 
         split.currency_code = Some(line.currency().code());

@@ -377,7 +377,7 @@ dependencies = [
 [[package]]
 name = "firefly-iii"
 version = "0.2.3-alpha.0"
-source = "git+https://github.com/cedricpim/firefly-iii-rs#d6bd7fa6c7d5737e91cb1cea28f76be12f238dfc"
+source = "git+https://github.com/cedricpim/firefly-iii-rs#5bb8e2089325ce3cfe12f75ca5c1817787ba90c3"
 dependencies = [
  "async-trait",
  "reqwest",

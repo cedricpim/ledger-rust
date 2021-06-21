@@ -6,7 +6,7 @@ custom_error! { pub CliError
     Yaml { source: serde_yaml::Error }                            = @{ source },
     Xdg { source: xdg::BaseDirectoriesError }                     = @{ source },
     Value { source: std::num::ParseIntError }                     = @{ source },
-    JustETF { source: crate::service::justetf::Error }            = @{ source },
+    JustEtf { source: crate::service::justetf::Error }            = @{ source },
     NumberFormat { source: std::num::ParseFloatError }            = @{ source },
     MoneyFormat { source: steel_cent::formatting::ParseError }    = @{ source },
     Exchange { source: crate::service::openexchangerates::Error } = @{ source },

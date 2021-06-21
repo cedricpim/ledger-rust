@@ -152,7 +152,7 @@ pub enum Mode {
 }
 
 fn main() {
-    if !std::env::var("DEBUG").is_err() {
+    if std::env::var("DEBUG").is_ok() {
         std::env::set_var("RUST_LOG", "TRACE");
     }
 

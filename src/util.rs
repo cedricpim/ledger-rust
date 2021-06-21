@@ -15,12 +15,14 @@ pub fn editor() -> CliResult<String> {
 
 pub fn random_pass() -> Option<String> {
     let mut rng = rand::thread_rng();
-    let chars: String = iter::repeat(())
+    let bytes = iter::repeat(())
         .map(|()| rng.sample(rand::distributions::Alphanumeric))
         .take(32)
-        .collect();
+        .collect::<Vec<_>>();
 
-    Some(chars)
+    let value = String::from_utf8_lossy(&bytes).into_owned();
+
+    Some(value)
 }
 
 pub fn currency(value: Option<&String>, config: &Config) -> CliResult<Currency> {

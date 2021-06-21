@@ -56,3 +56,6 @@ kuchiki = "0.8.0"
 firefly-iii = { git = "https://github.com/cedricpim/firefly-iii-rs" }
 # ProgressBar
 indicatif = "0.15.0"
+# Logging
+log = "0.4.0"
+env_logger = "0.8.4"

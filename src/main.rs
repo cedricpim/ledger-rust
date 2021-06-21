@@ -152,6 +152,12 @@ pub enum Mode {
 }
 
 fn main() {
+    if !std::env::var("DEBUG").is_err() {
+        std::env::set_var("RUST_LOG", "TRACE");
+    }
+
+    env_logger::init();
+
     let result = match App::parse().subcommand {
         SubCommand::Balance(args) => cmd::balance::run(args),
         SubCommand::Book(args) => cmd::book::run(args),

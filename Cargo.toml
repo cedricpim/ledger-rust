@@ -54,6 +54,8 @@ tokio = { version = "1.7", features = ["full"] }
 kuchiki = "0.8"
 # Firefly
 firefly-iii = { git = "https://github.com/cedricpim/firefly-iii-rs" }
+## For local debugging
+# firefly-iii = { path = "../firefly-iii-rs" }
 # ProgressBar
 indicatif = "0.16"
 # Logging

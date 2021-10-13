@@ -178,7 +178,7 @@ impl Pullable for TransactionSplit {
                 amount,
                 self.currency_code.clone().unwrap_or_default(),
                 self.tags.clone().unwrap_or_default().join(","),
-                self.transaction_journal_id.unwrap_or_default().to_string(),
+                self.transaction_journal_id.clone().unwrap_or_default(),
             ],
             Mode::Networth => vec![
                 self.date.to_string(),
@@ -186,7 +186,7 @@ impl Pullable for TransactionSplit {
                 amount,
                 Money::default().to_storage(),
                 self.currency_code.clone().unwrap_or_default(),
-                self.transaction_journal_id.unwrap_or_default().to_string(),
+                self.transaction_journal_id.clone().unwrap_or_default(),
             ],
         };
 

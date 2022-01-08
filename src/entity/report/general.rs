@@ -47,14 +47,14 @@ impl Report {
         filter: &Filter,
     ) -> CliResult<Report> {
         let mut report = Self {
-            currency: util::currency(args.currency.as_ref(), &config)?,
+            currency: util::currency(args.currency.as_ref(), config)?,
             ..Default::default()
         };
 
-        let mut resource = Resource::new(&config, Mode::Ledger)?;
+        let mut resource = Resource::new(config, Mode::Ledger)?;
 
         resource.line(&mut |record| {
-            total.sum(record, &exchange)?;
+            total.sum(record, exchange)?;
 
             if !filter.within(record.date()) || filter.investment(&record.category()) {
                 return Ok(());
@@ -69,13 +69,13 @@ impl Report {
                         {
                             // Set the category as the destination/source account to not show all
                             // transfers with the default category for transfers.
-                            report.process(record, val.account(), &filter, &exchange)?;
-                            report.process(&mut val, record.account(), &filter, &exchange)?;
+                            report.process(record, val.account(), filter, exchange)?;
+                            report.process(&mut val, record.account(), filter, exchange)?;
                         }
                     }
                 }
             } else {
-                report.process(record, record.category(), &filter, &exchange)?;
+                report.process(record, record.category(), filter, exchange)?;
             };
 
             Ok(())
@@ -94,7 +94,7 @@ impl Report {
         table.add_row(Report::headers());
 
         for item in self.sorted() {
-            table.add_row(item.row(&self));
+            table.add_row(item.row(self));
         }
 
         table.add_row(self.row());
@@ -113,7 +113,7 @@ impl Report {
             return Ok(());
         };
 
-        let exchanged = record.exchange(self.currency, &exchange)?;
+        let exchanged = record.exchange(self.currency, exchange)?;
 
         if filter.excluded(&category) {
             self.excluded += exchanged.amount().cents();
@@ -169,7 +169,7 @@ impl Report {
     fn row(&self) -> Row {
         Row::new(vec![
             Cell::new(&format!("({})", self.occurrences)).style_spec("bFY"),
-            Cell::new(&"Total").style_spec("bFY"),
+            Cell::new("Total").style_spec("bFY"),
             Cell::new(&format!("{}", self.total())).style_spec("bFY"),
             Cell::new(&format!("{:.2}", self.percentage())).style_spec("bFY"),
         ])
@@ -205,7 +205,7 @@ impl Item {
             Cell::new(&format!("({})", self.occurrences)).style_spec("bFW"),
             Cell::new(&self.category).style_spec("bFW"),
             Cell::new(&format!("{}", self.value)).style_spec("bFW"),
-            Cell::new(&format!("{:.2}", self.percentage(&report))).style_spec("bFW"),
+            Cell::new(&format!("{:.2}", self.percentage(report))).style_spec("bFW"),
         ])
     }
 }

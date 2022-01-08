@@ -38,12 +38,12 @@ impl Pull {
     }
 
     fn load(&mut self, config: &Config) -> CliResult<()> {
-        Resource::new(&config, Mode::Ledger)?.line(&mut |record| {
+        Resource::new(config, Mode::Ledger)?.line(&mut |record| {
             self.find_highest_id(record);
             Ok(())
         })?;
 
-        Resource::new(&config, Mode::Networth)?.line(&mut |record| {
+        Resource::new(config, Mode::Networth)?.line(&mut |record| {
             self.find_highest_id(record);
             Ok(())
         })?;
@@ -53,7 +53,7 @@ impl Pull {
 
     fn pull(&mut self, config: &Config) -> CliResult<()> {
         for transaction in self.firefly.transactions(self.from)? {
-            Transaction::new(transaction, &config).process(&mut |record: Line| match record {
+            Transaction::new(transaction, config).process(&mut |record: Line| match record {
                 Line::Transaction { .. } => {
                     self.transactions.push(record);
 
@@ -72,7 +72,7 @@ impl Pull {
         let sorter = |a: &Line, b: &Line| a.date().cmp(&b.date()).then(a.id().cmp(&b.id()));
 
         self.transactions.sort_by(sorter);
-        Resource::new(&config, Mode::Ledger)?.book(&self.transactions)?;
+        Resource::new(config, Mode::Ledger)?.book(&self.transactions)?;
 
         Ok(())
     }

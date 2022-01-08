@@ -79,7 +79,7 @@ impl Exchange {
         if cache.valid() {
             Exchange::load(&cache)
         } else {
-            Exchange::download(&config, &cache)
+            Exchange::download(config, &cache)
         }
     }
 
@@ -99,8 +99,8 @@ impl Exchange {
 
     fn download(config: &Config, cache: &Cache) -> CliResult<Exchange> {
         match openexchangerates::Client::new(config.exchange_key()).latest() {
-            Ok(result) => Exchange::store(result.into(), &cache),
-            Err(openexchangerates::Error::Reqwest { .. }) => match Exchange::load(&cache) {
+            Ok(result) => Exchange::store(result.into(), cache),
+            Err(openexchangerates::Error::Reqwest { .. }) => match Exchange::load(cache) {
                 Ok(val) => Ok(val),
                 Err(_) => Err(CliError::ExchangeInternetRequired),
             },

@@ -178,7 +178,7 @@ impl Resource {
             Some(pass) => {
                 let mut in_file = tempfile.reopen()?;
                 let mut out_file = File::create(&self.filepath)?;
-                crypto::encrypt(&mut in_file, &mut out_file, &pass)?;
+                crypto::encrypt(&mut in_file, &mut out_file, pass)?;
             }
             None => {
                 std::fs::copy(tempfile.path(), &self.filepath)?;

@@ -40,18 +40,18 @@ pub fn run(args: Args) -> CliResult<()> {
 
 impl Args {
     fn generate(&self, config: &Config) -> CliResult<()> {
-        let exchange = Exchange::new(&config)?;
+        let exchange = Exchange::new(config)?;
 
-        let filter = Filter::report(&self, &config);
+        let filter = Filter::report(self, config);
 
         if self.check {
-            let report = check::Report::new(&config, &filter)?;
+            let report = check::Report::new(config, &filter)?;
 
             report.display();
         } else {
-            let mut total = Total::new(self.currency.as_ref(), &config, filter.end)?;
+            let mut total = Total::new(self.currency.as_ref(), config, filter.end)?;
 
-            let report = general::Report::new(&self, &mut total, &config, &exchange, &filter)?;
+            let report = general::Report::new(self, &mut total, config, &exchange, &filter)?;
 
             let summary = general::Summary::new(&report, total);
 

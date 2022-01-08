@@ -35,7 +35,7 @@ pub fn run(args: Args) -> CliResult<()> {
 
 impl Args {
     fn create(&self, config: &Config) -> CliResult<()> {
-        let resource = Resource::new(&config, self.mode)?;
+        let resource = Resource::new(config, self.mode)?;
 
         if Path::new(&resource.filepath).exists() && !self.force {
             Err(CliError::ExistingFile {

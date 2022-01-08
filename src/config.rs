@@ -113,7 +113,7 @@ impl Config {
 
     pub fn total_pushable_lines(&self) -> CliResult<usize> {
         let mut ledger_lines = 0;
-        Resource::new(&self, Mode::Ledger)?.line(&mut |record| {
+        Resource::new(self, Mode::Ledger)?.line(&mut |record| {
             if record.pushable() {
                 ledger_lines += 1
             };
@@ -121,7 +121,7 @@ impl Config {
         })?;
 
         let mut networth_lines = 0;
-        Resource::new(&self, Mode::Networth)?.line(&mut |record| {
+        Resource::new(self, Mode::Networth)?.line(&mut |record| {
             if record.pushable() {
                 networth_lines += 1
             };

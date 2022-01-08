@@ -264,7 +264,7 @@ impl Money {
         }
     }
 
-    pub fn to_display(&self) -> String {
+    pub fn to_display(self) -> String {
         let val = FormatSpec::new(',', '.', vec![FormatPart::Amount])
             .display_for(&self.value)
             .to_string();
@@ -285,7 +285,7 @@ impl Money {
         format!("{}{}{:0<width$}", sign, integer, fractional, width = 3)
     }
 
-    pub fn to_storage(&self) -> String {
+    pub fn to_storage(self) -> String {
         self.to_display().replace(",", "")
     }
 
@@ -322,7 +322,7 @@ impl Money {
         self.cents() < 0
     }
 
-    pub fn to_number(&self) -> f64 {
+    pub fn to_number(self) -> f64 {
         self.cents() as f64 / (10_i32.pow(self.currency().decimal_places().into())) as f64
     }
 

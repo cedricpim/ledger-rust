@@ -31,7 +31,7 @@ impl Push {
     where
         F: FnMut(&mut Line, &mut Option<CliError>) -> CliResult<(String, Vec<Line>)>,
     {
-        let mut resource = Resource::new(&config, mode)?;
+        let mut resource = Resource::new(config, mode)?;
 
         let mut error: Option<CliError> = None;
 
@@ -58,7 +58,7 @@ impl Push {
         Ok(Self {
             user: client.user()?.parse::<i32>()?,
             firefly: client,
-            options: FireflyOptions::build(&options, &config),
+            options: FireflyOptions::build(options, config),
             currencies: HashSet::new(),
             accounts: HashMap::new(),
         })
@@ -90,7 +90,7 @@ impl Push {
         match self.accounts.entry(account.key()) {
             Entry::Occupied(v) => Ok(*v.get()),
             Entry::Vacant(v) => {
-                let id = self.firefly.create_account(&account)?;
+                let id = self.firefly.create_account(account)?;
 
                 let parsed_id = id.parse::<i32>()?;
 
@@ -111,10 +111,10 @@ impl Push {
     where
         T: Pushable<'a>,
     {
-        Self::process(&config, mode, &pb, &mut |record, error| match error {
+        Self::process(config, mode, pb, &mut |record, error| match error {
             None => {
                 let result = self
-                    .process_currency(&record)
+                    .process_currency(record)
                     .and(entity.process(record, self));
 
                 let handle_error = |e: CliError| -> CliResult<(String, Vec<Line>)> {
@@ -210,7 +210,7 @@ pub enum Account {
 
 impl Account {
     fn balance(line: &Line, value: Money, filter: &Filter, push: &mut Push) -> CliResult<Self> {
-        let mut account = AccountData::asset(&line, &filter);
+        let mut account = AccountData::asset(line, filter);
 
         account.date = Some(line.date());
         account.value = Some(value);
@@ -220,21 +220,20 @@ impl Account {
     }
 
     fn transaction(line: &Line, value: Money, filter: &Filter, push: &mut Push) -> CliResult<Self> {
-        let mut asset = AccountData::asset(&line, &filter);
+        let mut asset = AccountData::asset(line, filter);
         asset.id = Some(push.account(&asset)?);
 
+        let mut data = AccountData::new(line.category());
         if value.negative() {
-            let mut expense = AccountData::new(line.category());
-            expense._type = Type::Expense;
-            expense.id = Some(push.account(&expense)?);
+            data._type = Type::Expense;
+            data.id = Some(push.account(&data)?);
 
-            Ok(Self::DoubleEntry(asset, expense))
+            Ok(Self::DoubleEntry(asset, data))
         } else {
-            let mut revenue = AccountData::new(line.category());
-            revenue._type = Type::Revenue;
-            revenue.id = Some(push.account(&revenue)?);
+            data._type = Type::Revenue;
+            data.id = Some(push.account(&data)?);
 
-            Ok(Self::DoubleEntry(revenue, asset))
+            Ok(Self::DoubleEntry(data, asset))
         }
     }
 
@@ -244,10 +243,10 @@ impl Account {
         filter: &Filter,
         push: &mut Push,
     ) -> CliResult<Self> {
-        let mut one = AccountData::asset(&line, &filter);
+        let mut one = AccountData::asset(line, filter);
         one.id = Some(push.account(&one)?);
 
-        let mut other = AccountData::asset(&other_line, &filter);
+        let mut other = AccountData::asset(other_line, filter);
         other.id = Some(push.account(&other)?);
 
         if line.amount().negative() {
@@ -284,7 +283,7 @@ pub struct Transaction<'a> {
 
 impl<'a> Transaction<'a> {
     pub fn new(line: &'a Line, value: Money, filter: &Filter, push: &mut Push) -> CliResult<Self> {
-        let accounts = Account::transaction(&line, value, &filter, push)?;
+        let accounts = Account::transaction(line, value, filter, push)?;
 
         Ok(Self {
             ids: accounts.ids()?,
@@ -312,7 +311,7 @@ impl<'a> Transfer<'a> {
         filter: &Filter,
         push: &mut Push,
     ) -> CliResult<Self> {
-        let accounts = Account::transfer(&line, &other_line, &filter, push)?;
+        let accounts = Account::transfer(line, other_line, filter, push)?;
 
         Ok(Self {
             ids: accounts.ids()?,
@@ -359,7 +358,7 @@ impl<'a> Ledger<'a> {
 
         match &self.previous {
             Some(val) => {
-                let transfer = Transfer::new(&val, &record, &self.filter, push)?;
+                let transfer = Transfer::new(val, record, self.filter, push)?;
 
                 id = self.firefly().create_transfer(transfer, self.user)?;
 
@@ -413,13 +412,13 @@ pub trait Pushable<'a> {
         record: &Line,
         push: &mut Push,
     ) -> CliResult<(String, Vec<Line>)> {
-        let id = if self.opening_balance(&record) {
-            let account = Account::balance(&record, self.balance(&record), self.filter(), push)?;
+        let id = if self.opening_balance(record) {
+            let account = Account::balance(record, self.balance(record), self.filter(), push)?;
 
             self.firefly()
                 .get_opening_balance_transaction(account.id()?)?
         } else {
-            let transaction = Transaction::new(&record, self.value(&record), self.filter(), push)?;
+            let transaction = Transaction::new(record, self.value(record), self.filter(), push)?;
 
             self.firefly()
                 .create_transaction(transaction, self.user())?
@@ -433,9 +432,9 @@ impl<'a> Pushable<'a> for Ledger<'a> {
     fn process(&mut self, record: &Line, push: &mut Push) -> CliResult<(String, Vec<Line>)> {
         if record.pushable() {
             if record.category() == self.options.transfer {
-                self.process_transfer(&record, push)
+                self.process_transfer(record, push)
             } else {
-                self.process_transaction(&record, push)
+                self.process_transaction(record, push)
             }
         } else {
             Ok(record.pushed())
@@ -474,7 +473,7 @@ impl<'a> Pushable<'a> for Ledger<'a> {
 impl<'a> Pushable<'a> for Networth<'a> {
     fn process(&mut self, record: &Line, push: &mut Push) -> CliResult<(String, Vec<Line>)> {
         let result = if record.pushable() {
-            self.process_transaction(&record, push)?
+            self.process_transaction(record, push)?
         } else {
             record.pushed()
         };

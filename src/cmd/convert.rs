@@ -30,9 +30,9 @@ pub fn run(args: Args) -> CliResult<()> {
 
 impl Args {
     fn convert(&self, config: &Config) -> CliResult<()> {
-        let mut resource = Resource::new(&config, self.mode)?;
+        let mut resource = Resource::new(config, self.mode)?;
 
-        let exchange = Exchange::new(&config)?;
+        let exchange = Exchange::new(config)?;
 
         let mut wtr = csv::Writer::from_path(&resource.tempfile)?;
 
@@ -44,7 +44,7 @@ impl Args {
                 .or_insert_with(|| record.currency().code());
 
             record
-                .exchange(util::currency(Some(entry), &config)?, &exchange)?
+                .exchange(util::currency(Some(entry), config)?, &exchange)?
                 .write(&mut wtr)?;
 
             wtr.flush()?;

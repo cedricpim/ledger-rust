@@ -18,7 +18,7 @@ pub fn run(args: Args) -> CliResult<()> {
 impl Args {
     fn push(&self, config: Config) -> CliResult<()> {
         match &config.firefly {
-            Some(val) => Push::new(&val, &config)?.perform(config),
+            Some(val) => Push::new(val, &config)?.perform(config),
             None => crate::werr!(2, "{}", MISSING_KEY),
         }
     }

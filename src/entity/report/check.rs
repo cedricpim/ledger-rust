@@ -34,7 +34,7 @@ impl Report {
     pub fn new(config: &Config, filter: &Filter) -> CliResult<Report> {
         let mut report = Self::default();
 
-        let mut resource = Resource::new(&config, Mode::Ledger)?;
+        let mut resource = Resource::new(config, Mode::Ledger)?;
 
         resource.line(&mut |record| {
             if !filter.within(record.date()) || filter.investment(&record.category()) {

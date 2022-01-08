@@ -61,3 +61,4 @@ indicatif = "0.16"
 # Logging
 log = "0.4"
 env_logger = "0.8"
+retry = "1.3"

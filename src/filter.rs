@@ -83,11 +83,11 @@ impl Filter {
     }
 
     pub fn excluded(&self, value: &str) -> bool {
-        Filter::with(&value, &self.excluded_categories)
+        Filter::with(value, &self.excluded_categories)
     }
 
     pub fn accountable(&self, value: &str) -> bool {
-        !Filter::with(&value, &self.ignored_accounts)
+        !Filter::with(value, &self.ignored_accounts)
     }
 
     pub fn transfer(&self, value: &str) -> bool {
@@ -115,9 +115,9 @@ impl Filter {
     }
 
     fn with(value: &str, list: &[String]) -> bool {
-        let values: Vec<String> = list.iter().map(|v| v.to_uppercase()).collect();
-
-        values.contains(&value.to_uppercase())
+        list.iter()
+            .map(|v| v.to_uppercase())
+            .any(|x| x == value.to_uppercase())
     }
 
     fn bounds(

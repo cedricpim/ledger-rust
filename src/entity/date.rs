@@ -64,7 +64,7 @@ impl std::str::FromStr for Date {
     type Err = crate::error::CliError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Date::parse(&s)
+        Date::parse(s)
     }
 }
 

@@ -27,7 +27,7 @@ pub fn run(args: Args) -> CliResult<()> {
 
 impl Args {
     fn sort(&self, config: &Config) -> CliResult<()> {
-        let mut resource = Resource::new(&config, self.mode)?;
+        let mut resource = Resource::new(config, self.mode)?;
 
         let mut lines: Vec<Line> = Vec::new();
 

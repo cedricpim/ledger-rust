@@ -29,17 +29,17 @@ pub fn run(args: Args) -> CliResult<()> {
 
 impl Args {
     fn calculate(&self, config: &Config) -> CliResult<()> {
-        let exchange = Exchange::new(&config)?;
+        let exchange = Exchange::new(config)?;
 
-        let filter = Filter::balance(&self);
+        let filter = Filter::balance(self);
 
-        let mut total = Total::new(Some(&config.currency), &config, filter.end)?;
+        let mut total = Total::new(Some(&config.currency), config, filter.end)?;
 
-        let report = Report::new(&mut total, &config, &exchange, &filter)?;
+        let report = Report::new(&mut total, config, &exchange, &filter)?;
 
         let summary = Summary::new(total);
 
-        report.display(&self);
+        report.display(self);
 
         summary.display();
 
@@ -74,16 +74,16 @@ impl Report {
             items: BTreeMap::new(),
         };
 
-        let mut resource = Resource::new(&config, Mode::Ledger)?;
+        let mut resource = Resource::new(config, Mode::Ledger)?;
 
         resource.line(&mut |record| {
-            total.sum(record, &exchange)?;
+            total.sum(record, exchange)?;
 
             if !filter.within(record.date()) {
                 return Ok(());
             }
 
-            report.add(Item::new(&record));
+            report.add(Item::new(record));
 
             Ok(())
         })?;

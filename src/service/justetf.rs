@@ -1,14 +1,17 @@
 use custom_error::custom_error;
 use kuchiki::traits::*;
+use retry::{retry_with_index, OperationResult};
 
 const URL: &str = "https://www.justetf.com/en/etf-profile.html";
 const NAME_CSS: &str = ".h1";
 const VALUE_CSS: &str = "div.val span";
+const MAXIMUM_RETRIES: u64 = 5;
 
 custom_error! { pub Error
-    ReqwestError { source: reqwest::Error } = @{ source },
+    Reqwest { source: reqwest::Error }    = @{ source },
+    RepeatableReqwest { message: String } = "Repeatable error: {message}",
 
-    ParserError   = "The element provided could not be parsed",
+    Parser        = "The element provided could not be parsed",
     NameNotFound  = "Asset name could not be found",
     ValueNotFound = "Asset value could not be found",
 }
@@ -23,7 +26,7 @@ pub struct Asset {
 
 impl Asset {
     pub fn download(isin: &str) -> Result<Asset, Error> {
-        let document = Asset::document(&isin)?;
+        let document = Asset::document(isin)?;
 
         let name = Asset::name(&document)?;
 
@@ -60,11 +63,25 @@ impl Asset {
     }
 
     fn document(isin: &str) -> Result<kuchiki::NodeRef, Error> {
-        let body = reqwest::blocking::Client::new()
-            .get(URL)
-            .query(&[("isin", isin)])
-            .send()?
-            .text()?;
+        let client = reqwest::blocking::Client::new();
+
+        let body = retry_with_index(retry::delay::Fixed::from_millis(1000), |current_try| {
+            let response = client.get(URL).query(&[("isin", isin)]).send().unwrap();
+            match response.text() {
+                Ok(val) => OperationResult::Ok(val),
+                Err(err) => {
+                    println!("[{}] Retrying...", isin);
+                    if current_try > MAXIMUM_RETRIES {
+                        OperationResult::Err(err)
+                    } else {
+                        OperationResult::Retry(err)
+                    }
+                }
+            }
+        })
+        .map_err(|err| Error::RepeatableReqwest {
+            message: format!("{:?}", err),
+        })?;
 
         Ok(kuchiki::parse_html().one(body))
     }

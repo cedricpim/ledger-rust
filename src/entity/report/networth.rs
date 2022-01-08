@@ -92,7 +92,7 @@ impl Report {
         let cash = self.networth.current_on(Date::today());
 
         table.add_row(Row::new(vec![
-            Cell::new(&"Cash").with_style(Attr::Bold).with_style(color),
+            Cell::new("Cash").with_style(Attr::Bold).with_style(color),
             util::money_cell(&cash, true, false, Alignment::LEFT).with_style(color),
             util::percentage_cell(&cash, &self.networth.total(), Alignment::LEFT).with_style(color),
         ]));
@@ -130,7 +130,7 @@ impl Report {
         let money = Money::new(self.networth.currency, 1);
 
         Row::new(vec![
-            Cell::new(&"Total").with_style(Attr::Bold).with_style(color),
+            Cell::new("Total").with_style(Attr::Bold).with_style(color),
             util::money_cell(&self.networth.total(), true, false, Alignment::LEFT)
                 .with_style(color),
             util::percentage_cell(&money, &money, Alignment::LEFT).with_style(color),

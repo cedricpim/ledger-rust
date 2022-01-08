@@ -32,13 +32,13 @@ impl Networth {
             current: HashMap::new(),
         };
 
-        let mut resource = Resource::new(&config, Mode::Ledger)?;
+        let mut resource = Resource::new(config, Mode::Ledger)?;
 
-        let filter = Filter::networth(&config);
+        let filter = Filter::networth(config);
 
         resource.line(&mut |record| {
             if filter.accountable(&record.account()) {
-                networth.add(&record, &filter, &exchange)?;
+                networth.add(record, &filter, exchange)?;
             };
 
             Ok(())
@@ -89,7 +89,7 @@ impl Networth {
     }
 
     fn add(&mut self, record: &Line, filter: &Filter, exchange: &Exchange) -> CliResult<()> {
-        let exchanged = record.exchange(self.currency, &exchange)?;
+        let exchanged = record.exchange(self.currency, exchange)?;
 
         self.cash += exchanged.amount();
 
@@ -106,7 +106,7 @@ impl Networth {
             self.investments
                 .entry(exchanged.description())
                 .and_modify(|i| *i += exchanged.clone())
-                .or_insert_with(|| Investment::new(&exchanged, currency, &exchange));
+                .or_insert_with(|| Investment::new(&exchanged, currency, exchange));
 
             self.invested
                 .entry(exchanged.date())
@@ -150,7 +150,7 @@ impl Investment {
         Self {
             code: record.description(),
             spent: record.amount(),
-            price: Investment::price(&asset, &exchange, currency),
+            price: Investment::price(&asset, exchange, currency),
             currency,
             quantity,
             asset,
@@ -173,7 +173,7 @@ impl Investment {
             Money::parse(&asset.value, currency).unwrap_or_else(|e| crate::werr!(1, "{}", e));
 
         money
-            .exchange(to, &exchange)
+            .exchange(to, exchange)
             .unwrap_or_else(|e| crate::werr!(1, "{}", e))
     }
 }

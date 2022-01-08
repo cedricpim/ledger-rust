@@ -36,7 +36,7 @@ impl Args {
     // the file is saved so that errors can be fixed and all the data already input is not lost.
     fn edit(&self, config: &Config) -> CliResult<()> {
         let editor = util::editor()?;
-        let mut resource = Resource::new(&config, self.mode)?;
+        let mut resource = Resource::new(config, self.mode)?;
 
         resource.apply(|file| {
             let arguments = self.arguments(&editor, file.path().display());
@@ -48,7 +48,7 @@ impl Args {
     }
 
     fn arguments(&self, editor: &str, filepath: std::path::Display) -> Vec<String> {
-        if self.bottom && editor.contains(VIM){
+        if self.bottom && editor.contains(VIM) {
             vec!["+".to_string(), filepath.to_string()]
         } else {
             vec![filepath.to_string()]

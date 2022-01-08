@@ -118,7 +118,7 @@ impl Liner for Transaction {
     }
 
     fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Line> {
-        let money = self.amount.exchange(to, &exchange)?;
+        let money = self.amount.exchange(to, exchange)?;
 
         Ok(Transaction {
             account: self.account.to_string(),

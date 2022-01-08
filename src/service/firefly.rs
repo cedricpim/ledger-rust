@@ -18,9 +18,9 @@ use crate::entity::money::Money;
 use crate::entity::sync::push;
 
 custom_error! { pub Error
-    ReqwestError { source: reqwest::Error }       = @{ source },
-    ApiError { source: firefly_iii::apis::Error } = @{ source },
-    Value { source: std::num::ParseIntError }     = @{ source },
+    Reqwest { source: reqwest::Error }        = @{ source },
+    Api { source: firefly_iii::apis::Error }  = @{ source },
+    Value { source: std::num::ParseIntError } = @{ source },
 
     MissingExpectedOpeningBalance = "The account is missing an opening balance transaction",
 }
@@ -229,7 +229,7 @@ impl Firefly {
             return Ok(String::new());
         }
 
-        let mut split = Firefly::build_split(&transfer.line, transfer.value(), transfer.ids);
+        let mut split = Firefly::build_split(transfer.line, transfer.value(), transfer.ids);
 
         split._type = Some(transaction_split::Type::Transfer);
         split.foreign_currency_code = Some(transfer.other_line.currency().code());
@@ -249,7 +249,7 @@ impl Firefly {
         }
 
         let mut split =
-            Firefly::build_split(&transaction.line, transaction.value(), transaction.ids);
+            Firefly::build_split(transaction.line, transaction.value(), transaction.ids);
 
         if transaction.value().positive() {
             split._type = Some(transaction_split::Type::Deposit);

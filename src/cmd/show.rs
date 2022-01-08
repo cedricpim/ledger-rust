@@ -51,18 +51,18 @@ pub fn run(args: Args) -> CliResult<()> {
 
 impl Args {
     fn show(&self, config: &Config) -> CliResult<()> {
-        let mut resource = Resource::new(&config, self.mode)?;
+        let mut resource = Resource::new(config, self.mode)?;
 
-        let filter = Filter::show(&self);
+        let filter = Filter::show(self);
 
-        let currency = util::currency(self.currency.as_ref(), &config)?;
+        let currency = util::currency(self.currency.as_ref(), config)?;
 
-        let exchange = Exchange::new(&config)?;
+        let exchange = Exchange::new(config)?;
 
         let mut wtr = csv::Writer::from_path(&self.output)?;
 
         resource.line(&mut |record| {
-            if filter.display(&record) {
+            if filter.display(record) {
                 record.exchange(currency, &exchange)?.write(&mut wtr)?;
             };
 

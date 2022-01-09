@@ -1,4 +1,4 @@
-use clap::Clap;
+use clap::{ArgEnum, Parser, Subcommand};
 
 use std::process;
 
@@ -39,15 +39,15 @@ macro_rules! werr {
 
 pub type CliResult<T> = Result<T, error::CliError>;
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 #[clap(author, about, version)]
 pub struct App {
     #[clap(subcommand)]
-    pub subcommand: SubCommand,
+    pub command: Commands,
 }
 
-#[derive(Clap, Debug)]
-pub enum SubCommand {
+#[derive(Subcommand, Debug)]
+pub enum Commands {
     /// Calculate the current balances for each account
     ///
     /// This command will calculate the current balance of each account and
@@ -145,7 +145,7 @@ pub enum SubCommand {
     Sort(cmd::sort::Args),
 }
 
-#[derive(Clap, Clone, Copy, Debug)]
+#[derive(ArgEnum, Clone, Copy, Debug)]
 pub enum Mode {
     Ledger,
     Networth,
@@ -158,19 +158,19 @@ fn main() {
 
     env_logger::init();
 
-    let result = match App::parse().subcommand {
-        SubCommand::Balance(args) => cmd::balance::run(args),
-        SubCommand::Book(args) => cmd::book::run(args),
-        SubCommand::Edit(args) => cmd::edit::run(args),
-        SubCommand::Configure(args) => cmd::configure::run(args),
-        SubCommand::Convert(args) => cmd::convert::run(args),
-        SubCommand::Create(args) => cmd::create::run(args),
-        SubCommand::Networth(args) => cmd::networth::run(args),
-        SubCommand::Pull(args) => cmd::pull::run(args),
-        SubCommand::Sync(args) => cmd::sync::run(args),
-        SubCommand::Report(args) => cmd::report::run(args),
-        SubCommand::Show(args) => cmd::show::run(args),
-        SubCommand::Sort(args) => cmd::sort::run(args),
+    let result = match App::parse().command {
+        Commands::Balance(args) => cmd::balance::run(args),
+        Commands::Book(args) => cmd::book::run(args),
+        Commands::Edit(args) => cmd::edit::run(args),
+        Commands::Configure(args) => cmd::configure::run(args),
+        Commands::Convert(args) => cmd::convert::run(args),
+        Commands::Create(args) => cmd::create::run(args),
+        Commands::Networth(args) => cmd::networth::run(args),
+        Commands::Pull(args) => cmd::pull::run(args),
+        Commands::Sync(args) => cmd::sync::run(args),
+        Commands::Report(args) => cmd::report::run(args),
+        Commands::Show(args) => cmd::show::run(args),
+        Commands::Sort(args) => cmd::sort::run(args),
     };
 
     match result {

@@ -1,4 +1,4 @@
-use clap::Clap;
+use clap::Parser;
 
 use crate::config::Config;
 use crate::entity::report::{check, general};
@@ -7,7 +7,7 @@ use crate::exchange::Exchange;
 use crate::filter::Filter;
 use crate::CliResult;
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 pub struct Args {
     /// Select entries that occurred on the year
     #[clap(short, long)]

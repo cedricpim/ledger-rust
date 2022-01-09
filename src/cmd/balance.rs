@@ -1,4 +1,4 @@
-use clap::Clap;
+use clap::Parser;
 use prettytable::{format, Cell, Row, Table};
 
 use std::collections::BTreeMap;
@@ -11,7 +11,7 @@ use crate::filter::Filter;
 use crate::resource::Resource;
 use crate::{util, CliResult, Mode};
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 pub struct Args {
     /// Display all accounts
     #[clap(short, long)]

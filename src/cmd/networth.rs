@@ -1,11 +1,11 @@
-use clap::Clap;
+use clap::Parser;
 
 use crate::config::Config;
 use crate::entity::report::networth;
 use crate::exchange::Exchange;
 use crate::{util, CliResult};
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 pub struct Args {
     /// Display entries on the same currency (format ISO 4217)
     #[clap(short, long)]

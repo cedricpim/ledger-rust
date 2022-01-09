@@ -1,4 +1,4 @@
-use clap::Clap;
+use clap::Parser;
 
 use std::io;
 use std::io::prelude::*;
@@ -13,7 +13,7 @@ use crate::CliResult;
 // https://github.com/clap-rs/clap/issues/1740
 pub static DEFAULT_EMPTY: &str = " ";
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 pub struct Args {
     /// Define the list of values that compose an transaction/entry
     #[clap(short, long, allow_hyphen_values = true)]
@@ -21,8 +21,8 @@ pub struct Args {
     #[clap(
         arg_enum,
         default_value = "ledger",
-        default_value_if("networth", None, "networth"),
-        hidden = true
+        default_value_if("networth", None, Some("networth")),
+        hide = true
     )]
     mode: crate::Mode,
     /// Create an entry for networth CSV instead of for ledger CSV

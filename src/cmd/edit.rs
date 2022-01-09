@@ -1,4 +1,4 @@
-use clap::Clap;
+use clap::Parser;
 
 use std::process::Command;
 
@@ -8,7 +8,7 @@ use crate::{util, CliResult};
 
 static VIM: &str = "vim";
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 pub struct Args {
     /// Open file with cursor in the last line (Only supported for vim and variants)
     #[clap(short, long)]
@@ -16,8 +16,8 @@ pub struct Args {
     #[clap(
         arg_enum,
         default_value = "ledger",
-        default_value_if("networth", None, "networth"),
-        hidden = true
+        default_value_if("networth", None, Some("networth")),
+        hide = true
     )]
     mode: crate::Mode,
     /// Open networth CSV instead of ledger CSV

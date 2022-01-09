@@ -1,4 +1,4 @@
-use clap::Clap;
+use clap::Parser;
 
 use crate::config::Config;
 use crate::entity::sync::push::Push;
@@ -6,7 +6,7 @@ use crate::CliResult;
 
 static MISSING_KEY: &str = "There is no key set up";
 
-#[derive(Clap, Debug, Default)]
+#[derive(Parser, Debug, Default)]
 pub struct Args {}
 
 pub fn run(args: Args) -> CliResult<()> {

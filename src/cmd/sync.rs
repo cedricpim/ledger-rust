@@ -1,9 +1,9 @@
-use clap::Clap;
+use clap::Parser;
 
 use crate::cmd::{pull, push};
 use crate::CliResult;
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 pub struct Args {}
 
 pub fn run(_args: Args) -> CliResult<()> {

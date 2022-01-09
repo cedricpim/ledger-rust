@@ -1,4 +1,4 @@
-use clap::Clap;
+use clap::Parser;
 
 use std::path::Path;
 
@@ -10,13 +10,13 @@ use crate::CliResult;
 
 static SUCCESS: &str = "Generated default file on";
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 pub struct Args {
     #[clap(
         arg_enum,
         default_value = "ledger",
-        default_value_if("networth", None, "networth"),
-        hidden = true
+        default_value_if("networth", None, Some("networth")),
+        hide = true
     )]
     mode: crate::Mode,
     /// Create networth CSV instead of ledger CSV

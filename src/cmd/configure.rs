@@ -1,4 +1,4 @@
-use clap::Clap;
+use clap::Parser;
 
 use std::path::Path;
 
@@ -8,7 +8,7 @@ use crate::CliResult;
 
 static SUCCESS: &str = "Generated default configuration file on";
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 pub struct Args {
     /// Copy the default configuration file, overriding existing file
     #[clap(short, long)]

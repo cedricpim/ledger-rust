@@ -1,4 +1,4 @@
-use clap::Clap;
+use clap::Parser;
 
 use crate::config::Config;
 use crate::entity::date::Date;
@@ -8,7 +8,7 @@ use crate::filter::Filter;
 use crate::resource::Resource;
 use crate::{util, CliResult};
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 pub struct Args {
     /// Select entries that occurred on the year
     #[clap(short, long)]
@@ -34,8 +34,8 @@ pub struct Args {
     #[clap(
         arg_enum,
         default_value = "ledger",
-        default_value_if("networth", None, "networth"),
-        hidden = true
+        default_value_if("networth", None, Some("networth")),
+        hide = true
     )]
     mode: crate::Mode,
     /// Select entries from networth CSV instead of ledger CSV

@@ -56,7 +56,7 @@ impl Report {
         resource.line(&mut |record| {
             total.sum(record, exchange)?;
 
-            if !filter.within(record.date()) || filter.investment(&record.category()) {
+            if !filter.within(record.date()) {
                 return Ok(());
             }
 

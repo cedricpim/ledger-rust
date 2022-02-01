@@ -37,7 +37,7 @@ impl Report {
         let mut resource = Resource::new(config, Mode::Ledger)?;
 
         resource.line(&mut |record| {
-            if !filter.within(record.date()) || filter.investment(&record.category()) {
+            if !filter.within(record.date()) {
                 return Ok(());
             }
 

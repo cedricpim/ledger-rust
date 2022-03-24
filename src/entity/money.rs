@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use serde::{Deserialize, Serialize};
 use steel_cent::formatting::{FormatPart, FormatSpec};
 
@@ -286,7 +288,7 @@ impl Money {
     }
 
     pub fn to_storage(self) -> String {
-        self.to_display().replace(",", "")
+        self.to_display().replace(',', "")
     }
 
     pub fn new(currency: Currency, value: i64) -> Money {
@@ -337,7 +339,7 @@ impl Money {
         if fractional.len() > width {
             format!(
                 "{}{:.*}{}",
-                integer.replace("+", ""),
+                integer.replace('+', ""),
                 width + 1,
                 fractional,
                 currency.code()
@@ -345,7 +347,7 @@ impl Money {
         } else {
             format!(
                 "{}{:0<width$}{}",
-                integer.replace("+", ""),
+                integer.replace('+', ""),
                 fractional,
                 currency.code(),
                 width = width + 1

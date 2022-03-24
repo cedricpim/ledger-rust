@@ -21,11 +21,12 @@ pub struct Report {
 
 impl Report {
     fn title() -> Row {
-        Row::new(vec![Cell::new("Networth").with_hspan(3).style_spec("bcFC")])
+        Row::new(vec![Cell::new("Networth").with_hspan(4).style_spec("bcFC")])
     }
 
     fn headers() -> Row {
         Row::new(vec![
+            Cell::new("# Shares").style_spec("bcFB"),
             Cell::new("Description").style_spec("bcFB"),
             Cell::new("Amount").style_spec("bcFB"),
             Cell::new("(%)").style_spec("bcFB"),
@@ -77,6 +78,9 @@ impl Report {
             let color = Attr::ForegroundColor(color::BRIGHT_WHITE);
 
             table.add_row(Row::new(vec![
+                Cell::new_align(&investment.quantity.to_string(), Alignment::RIGHT)
+                    .with_style(Attr::Bold)
+                    .with_style(color),
                 Cell::new(&investment.name())
                     .with_style(Attr::Bold)
                     .with_style(color),
@@ -92,6 +96,7 @@ impl Report {
         let cash = self.networth.current_on(Date::today());
 
         table.add_row(Row::new(vec![
+            Cell::new(""),
             Cell::new("Cash").with_style(Attr::Bold).with_style(color),
             util::money_cell(&cash, true, false, Alignment::LEFT).with_style(color),
             util::percentage_cell(&cash, &self.networth.total(), Alignment::LEFT).with_style(color),
@@ -130,6 +135,7 @@ impl Report {
         let money = Money::new(self.networth.currency, 1);
 
         Row::new(vec![
+            Cell::new(""),
             Cell::new("Total").with_style(Attr::Bold).with_style(color),
             util::money_cell(&self.networth.total(), true, false, Alignment::LEFT)
                 .with_style(color),

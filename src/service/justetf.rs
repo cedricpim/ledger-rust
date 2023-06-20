@@ -1,14 +1,13 @@
+use crate::entity::money::{Currency, Money};
 use custom_error::custom_error;
-use kuchiki::traits::*;
-use retry::{retry_with_index, OperationResult};
+use serde_json::Value;
 
-const URL: &str = "https://www.justetf.com/en/etf-profile.html";
-const NAME_CSS: &str = ".h1";
-const VALUE_CSS: &str = "div.val span";
-const MAXIMUM_RETRIES: u64 = 5;
+const URL: &str =
+    "https://www.justetf.com/api/etfs/cards?locale=en&currency={CURRENCY}&isin={ISIN}";
 
 custom_error! { pub Error
     Reqwest { source: reqwest::Error }    = @{ source },
+    SerdeJson { source: serde_json::Error } = @{ source },
     RepeatableReqwest { message: String } = "Repeatable error: {message}",
 
     Parser        = "The element provided could not be parsed",
@@ -20,69 +19,49 @@ custom_error! { pub Error
 pub struct Asset {
     pub isin: String,
     pub name: String,
-    pub value: String,
-    pub currency: String,
+    pub quote: Money,
 }
 
 impl Asset {
-    pub fn download(isin: &str) -> Result<Asset, Error> {
-        let document = Asset::document(isin)?;
+    pub fn download(isin: &str, currency: &Currency) -> Result<Asset, Error> {
+        let data = Asset::data(isin, currency)?;
 
-        let name = Asset::name(&document)?;
+        let name = Asset::name(&data)?;
 
-        let (currency, value) = Asset::money(&document)?;
+        let value = Asset::money(&data)?;
+
+        let quote = Money::parse(&value, *currency).unwrap_or_else(|e| crate::werr!(1, "{}", e));
 
         Ok(Asset {
             isin: isin.to_string(),
-            name,
-            value,
-            currency,
+            name: name.to_string(),
+            quote,
         })
     }
 
-    fn money(document: &kuchiki::NodeRef) -> Result<(String, String), Error> {
-        match document.select(VALUE_CSS) {
-            Ok(val) => {
-                let values: Vec<String> = val.take(2).map(|v| v.text_contents()).collect();
-
-                if values.len() == 2 {
-                    Ok((values[0].to_string(), values[1].to_string()))
-                } else {
-                    Err(Error::ValueNotFound)
-                }
-            }
-            Err(_) => Err(Error::ValueNotFound),
-        }
+    fn money(data: &Value) -> Result<String, Error> {
+        data.pointer("/etfs/0/quote/raw")
+            .map(|val| val.to_string())
+            .ok_or(Error::ValueNotFound)
     }
 
-    fn name(document: &kuchiki::NodeRef) -> Result<String, Error> {
-        match document.select_first(NAME_CSS) {
-            Ok(val) => Ok(val.text_contents()),
-            Err(_) => Err(Error::NameNotFound),
-        }
+    fn name(data: &Value) -> Result<&str, Error> {
+        data.pointer("/etfs/0/name")
+            .and_then(|val| val.as_str())
+            .ok_or(Error::NameNotFound)
     }
 
-    fn document(isin: &str) -> Result<kuchiki::NodeRef, Error> {
+    fn data(isin: &str, currency: &Currency) -> Result<Value, Error> {
         let client = reqwest::blocking::Client::new();
 
-        let body = retry_with_index(retry::delay::Fixed::from_millis(1000), |current_try| {
-            let response = client.get(URL).query(&[("isin", isin)]).send().unwrap();
-            match response.text() {
-                Ok(val) => OperationResult::Ok(val),
-                Err(err) => {
-                    println!("[{}] Retrying...", isin);
-                    if current_try > MAXIMUM_RETRIES {
-                        OperationResult::Err(err)
-                    } else {
-                        OperationResult::Retry(err)
-                    }
-                }
-            }
-        })
-        .map_err(|err| Error::RepeatableReqwest {
-            message: format!("{:?}", err),
-        })?;
+        let url = URL
+            .replace("{ISIN}", isin)
+            .replace("{CURRENCY}", &currency.code());
 
-        Ok(kuchiki::parse_html().one(body))
+        let body = client.get(url).send()?.text()?;
+
+        let response: Value = serde_json::from_str(&body)?;
+
+        Ok(response)
     }
 }

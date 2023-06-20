@@ -106,7 +106,7 @@ impl Networth {
             self.investments
                 .entry(exchanged.description())
                 .and_modify(|i| *i += exchanged.clone())
-                .or_insert_with(|| Investment::new(&exchanged, currency, exchange));
+                .or_insert_with(|| Investment::new(&exchanged, currency));
 
             self.invested
                 .entry(exchanged.date())
@@ -137,9 +137,9 @@ pub struct Investment {
 }
 
 impl Investment {
-    pub fn new(record: &Line, currency: Currency, exchange: &Exchange) -> Self {
-        let asset =
-            Asset::download(&record.description()).unwrap_or_else(|e| crate::werr!(1, "{}", e));
+    pub fn new(record: &Line, currency: Currency) -> Self {
+        let asset = Asset::download(&record.description(), &currency)
+            .unwrap_or_else(|e| crate::werr!(1, "{}", e));
 
         let quantity = record
             .quantity()
@@ -150,7 +150,7 @@ impl Investment {
         Self {
             code: record.description(),
             spent: record.amount(),
-            price: Investment::price(&asset, exchange, currency),
+            price: asset.quote,
             currency,
             quantity,
             asset,
@@ -163,18 +163,6 @@ impl Investment {
 
     pub fn name(&self) -> String {
         self.asset.name.to_string()
-    }
-
-    fn price(asset: &Asset, exchange: &Exchange, to: Currency) -> Money {
-        let currency =
-            Currency::parse(&asset.currency).unwrap_or_else(|e| crate::werr!(1, "{}", e));
-
-        let money =
-            Money::parse(&asset.value, currency).unwrap_or_else(|e| crate::werr!(1, "{}", e));
-
-        money
-            .exchange(to, exchange)
-            .unwrap_or_else(|e| crate::werr!(1, "{}", e))
     }
 }
 

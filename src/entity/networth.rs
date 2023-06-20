@@ -48,7 +48,7 @@ impl Networth {
     }
 
     pub fn total(&self) -> Money {
-        self.current_on(Date::today()) + self.from_investment()
+        self.current_on(Date::today()) + self.investments()
     }
 
     pub fn invested_on(&self, date: Date) -> Money {
@@ -75,12 +75,12 @@ impl Networth {
 
     pub fn current(&self) -> Line {
         let today = Date::today();
-        let investment = self.from_investment();
+        let investment = self.investments();
 
         Entry {
             date: today,
             invested: self.invested_on(today),
-            amount: self.current_on(today) + self.from_investment(),
+            amount: self.current_on(today) + self.investments(),
             currency: self.currency,
             investment,
             id: "".to_string(),
@@ -117,7 +117,7 @@ impl Networth {
         Ok(())
     }
 
-    fn from_investment(&self) -> Money {
+    fn investments(&self) -> Money {
         self.investments
             .values()
             .fold(Money::new(self.currency, 0), |acc, investment| {

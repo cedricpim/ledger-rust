@@ -257,14 +257,14 @@ impl Account {
     }
 
     fn id(&self) -> CliResult<i32> {
-        match &*self {
+        match self {
             Self::Balance(account) => account.id.ok_or(CliError::MissingAccountId),
             Self::DoubleEntry(_, _) => Err(CliError::MissingAccountId),
         }
     }
 
     fn ids(&self) -> CliResult<(i32, i32)> {
-        match &*self {
+        match self {
             Self::Balance(_) => Err(CliError::MissingAccountId),
             Self::DoubleEntry(one, other) => Ok((
                 one.id.ok_or(CliError::MissingAccountId)?,

@@ -81,7 +81,7 @@ impl Config {
             firefly: None,
         };
 
-        let mut file = File::create(&config_path)?;
+        let mut file = File::create(config_path)?;
         let yaml = serde_yaml::to_string(&default)?;
         file.write_all(yaml.as_bytes())?;
         Ok(default)

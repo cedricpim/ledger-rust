@@ -1,104 +1,41 @@
-#![allow(dead_code)]
-
 use serde::{Deserialize, Serialize};
-use steel_cent::formatting::{FormatPart, FormatSpec};
 
 use std::cmp::Ordering;
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::BufReader;
 use std::ops::{Add, AddAssign, Mul, Sub};
 
 use crate::error::CliError;
 use crate::exchange::Exchange;
 use crate::CliResult;
 
-lazy_static! {
-    // Commonly used currencies
-    static ref SYMBOLS: HashMap<&'static str, &'static str> = {
-        [
-            ("ars", "$"),
-            ("brl", "R$"),
-            ("chf", "CHF"),
-            ("cny", "¥"),
-            ("eur", "€"),
-            ("jpy", "¥"),
-            ("pln", "zł"),
-            ("usd", "$"),
-            ("vnd", "₫"),
-        ]
-        .iter()
-        .copied()
-        .collect()
-    };
-}
+static DIFFERENT_CURRENCIES: &str = "Cannot perform operations between different currencies";
 
-lazy_static! {
-    static ref CURRENCIES: HashMap<String, CurrencyInfo> = {
-        match File::open("data/currencies.json") {
-            Ok(file) => {
-                let reader = BufReader::new(file);
-                serde_json::from_reader(reader).unwrap_or_default()
-            }
-            Err(_) => HashMap::new(),
-        }
-    };
-}
-
-#[derive(Deserialize, Debug)]
-pub struct CurrencyInfo {
-    #[serde(skip)]
-    priority: i64,
-    iso_code: String,
-    name: String,
-    symbol: String,
-    #[serde(skip)]
-    alternate_symbols: Vec<String>,
-    #[serde(skip)]
-    subunit: String,
-    #[serde(skip)]
-    subunit_to_unit: i64,
-    #[serde(skip)]
-    symbol_first: bool,
-    #[serde(skip)]
-    html_entity: String,
-    #[serde(skip)]
-    decimal_mark: String,
-    #[serde(skip)]
-    thousands_separator: String,
-    #[serde(skip)]
-    iso_numeric: String,
-    #[serde(skip)]
-    smallest_denomination: i64,
-}
-
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Currency {
-    value: steel_cent::currency::Currency,
+    value: iso_currency::Currency,
 }
 
 impl Default for Currency {
     fn default() -> Self {
         Currency {
-            value: steel_cent::currency::EUR,
+            value: iso_currency::Currency::EUR,
         }
     }
 }
 
-impl From<Currency> for steel_cent::currency::Currency {
-    fn from(source: Currency) -> steel_cent::currency::Currency {
+impl From<Currency> for iso_currency::Currency {
+    fn from(source: Currency) -> iso_currency::Currency {
         source.value
     }
 }
 
-impl<'a> From<&'a Currency> for steel_cent::currency::Currency {
-    fn from(source: &'a Currency) -> steel_cent::currency::Currency {
+impl<'a> From<&'a Currency> for iso_currency::Currency {
+    fn from(source: &'a Currency) -> iso_currency::Currency {
         source.value
     }
 }
 
-impl From<steel_cent::currency::Currency> for Currency {
-    fn from(value: steel_cent::currency::Currency) -> Currency {
+impl From<iso_currency::Currency> for Currency {
+    fn from(value: iso_currency::Currency) -> Currency {
         Currency { value }
     }
 }
@@ -108,7 +45,7 @@ impl Serialize for Currency {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&self.value.code())
+        serializer.serialize_str(self.value.code())
     }
 }
 
@@ -126,7 +63,7 @@ impl<'de> Deserialize<'de> for Currency {
 
 impl Currency {
     pub fn parse(code: &str) -> CliResult<Currency> {
-        match steel_cent::currency::with_code(code) {
+        match iso_currency::Currency::from_code(code) {
             Some(value) => Ok(value.into()),
             None => Err(CliError::IncorrectCurrencyCode {
                 code: code.to_string(),
@@ -134,84 +71,77 @@ impl Currency {
         }
     }
 
-    pub fn decimal_places(self) -> u8 {
-        self.value.decimal_places()
+    pub fn decimal_places(self) -> u16 {
+        self.value.exponent().unwrap_or(0)
     }
 
     pub fn code(self) -> String {
-        self.value.code()
+        self.value.code().to_string()
+    }
+
+    pub fn symbol(self) -> String {
+        self.value.symbol().symbol
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq)]
+#[derive(Default, Debug, Copy, Clone, Eq)]
 pub struct Money {
-    value: steel_cent::Money,
+    value: i64,
+    currency: Currency,
 }
 
 impl PartialOrd for Money {
     fn partial_cmp(&self, other: &Money) -> Option<Ordering> {
-        Some(self.cmp(other))
+        if self.currency == other.currency {
+            self.value.partial_cmp(&other.value)
+        } else {
+            None
+        }
     }
 }
 
 impl Ord for Money {
     fn cmp(&self, other: &Money) -> Ordering {
-        self.cents().abs().cmp(&other.cents().abs())
+        self.value.abs().cmp(&other.value.abs())
     }
 }
 
 impl PartialEq for Money {
     fn eq(&self, other: &Money) -> bool {
-        self.value == other.value
+        self.currency == other.currency && self.value == other.value
     }
 }
 
 impl std::fmt::Display for Money {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}", self.to_display(), self.symbol())
-    }
-}
-
-impl From<Money> for steel_cent::Money {
-    fn from(source: Money) -> steel_cent::Money {
-        source.value
-    }
-}
-
-impl<'a> From<&'a Money> for steel_cent::Money {
-    fn from(source: &'a Money) -> steel_cent::Money {
-        source.value
-    }
-}
-
-impl From<steel_cent::Money> for Money {
-    fn from(value: steel_cent::Money) -> Money {
-        Money { value }
-    }
-}
-
-impl Default for Money {
-    fn default() -> Self {
-        Money {
-            value: steel_cent::Money::of_minor(Currency::default().into(), 0),
-        }
+        write!(f, "{}{}", self.to_display(), self.currency.symbol())
     }
 }
 
 impl Add for Money {
     type Output = Self;
 
-    fn add(self, other: Self) -> Self {
+    fn add(self, other: Self) -> Self::Output {
+        if self.currency != other.currency {
+            crate::werr!(2, "{} + {}: {}", self, other, DIFFERENT_CURRENCIES)
+        };
+
         Self {
             value: self.value + other.value,
+            currency: self.currency,
         }
     }
 }
 
 impl AddAssign for Money {
     fn add_assign(&mut self, other: Self) {
+        if self.currency != other.currency {
+            crate::werr!(2, "{} += {}: {}", self, other, DIFFERENT_CURRENCIES)
+        };
+
         *self = Self {
             value: self.value + other.value,
+            currency: self.currency,
         }
     }
 }
@@ -219,9 +149,14 @@ impl AddAssign for Money {
 impl Sub for Money {
     type Output = Self;
 
-    fn sub(self, other: Self) -> Self {
+    fn sub(self, other: Self) -> Self::Output {
+        if self.currency != other.currency {
+            crate::werr!(2, "{} - {}: {}", self, other, DIFFERENT_CURRENCIES)
+        };
+
         Self {
             value: self.value - other.value,
+            currency: self.currency,
         }
     }
 }
@@ -230,10 +165,9 @@ impl Mul<i64> for Money {
     type Output = Self;
 
     fn mul(self, other: i64) -> Self {
-        let cents = self.value.minor_amount();
-
         Self {
-            value: steel_cent::Money::of_minor(self.value.currency, cents * other),
+            value: self.value * other,
+            currency: self.currency,
         }
     }
 }
@@ -249,32 +183,34 @@ impl Serialize for Money {
 
 impl Money {
     pub fn parse(value: &str, currency: Currency) -> CliResult<Money> {
-        let parser = FormatSpec::new(
-            '\0',
-            '.',
-            vec![
-                FormatPart::OptionalMinus,
-                FormatPart::Amount,
-                FormatPart::CurrencySymbol,
-            ],
-        )
-        .parser();
-
-        match parser.parse::<steel_cent::Money>(&Money::formatted_value(value, currency)) {
+        match value.parse::<f64>() {
             Err(err) => Err(CliError::from(err)),
-            Ok(val) => Ok(val.into()),
+            Ok(val) => {
+                let cents = val * (10_i32.pow(currency.decimal_places().into())) as f64;
+
+                Ok(Money {
+                    value: cents.round() as i64,
+                    currency,
+                })
+            }
         }
     }
 
     pub fn to_display(self) -> String {
-        let val = FormatSpec::new(',', '.', vec![FormatPart::Amount])
-            .display_for(&self.value)
-            .to_string();
+        let val = self.to_number().abs().to_string();
 
-        let (integer, fractional) = match val.rfind('.') {
+        let (major, minor) = match val.rfind('.') {
             None => (&val[..], ".00"),
             Some(index) => val.split_at(index),
         };
+        let split_major: Vec<String> = major
+            .chars()
+            .rev()
+            .collect::<Vec<_>>()
+            .chunks(3)
+            .map(|chunk| chunk.iter().rev().collect())
+            .rev()
+            .collect();
 
         let sign = if self.positive() {
             "+"
@@ -284,7 +220,13 @@ impl Money {
             ""
         };
 
-        format!("{}{}{:0<width$}", sign, integer, fractional, width = 3)
+        format!(
+            "{}{}{:0<width$}",
+            sign,
+            split_major.join(","),
+            minor,
+            width = 3
+        )
     }
 
     pub fn to_storage(self) -> String {
@@ -292,77 +234,54 @@ impl Money {
     }
 
     pub fn new(currency: Currency, value: i64) -> Money {
-        steel_cent::Money::of_minor(currency.into(), value).into()
+        Self { value, currency }
     }
 
     pub fn currency(&self) -> Currency {
-        self.value.currency.into()
-    }
-
-    pub fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Money> {
-        let rate = exchange.rate(self.currency(), to)?;
-        Ok(self.value.convert_to(to.into(), rate.into()).into())
-    }
-
-    pub fn abs(&self) -> Money {
-        self.value.abs().into()
+        self.currency
     }
 
     pub fn cents(&self) -> i64 {
-        self.value.minor_amount()
+        self.value
+    }
+
+    pub fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Money> {
+        if self.currency == to {
+            return Ok(*self);
+        }
+
+        let rate = exchange.rate(self.currency(), to)? as f64;
+
+        let dec_adjust =
+            10f64.powi(to.decimal_places() as i32 - self.currency.decimal_places() as i32);
+        let amount = (self.value as f64 * rate * dec_adjust).round() as i64;
+
+        Ok(Self {
+            value: amount,
+            currency: to,
+        })
+    }
+
+    pub fn abs(&self) -> Money {
+        Money {
+            value: self.value.abs(),
+            currency: self.currency,
+        }
     }
 
     pub fn zero(&self) -> bool {
-        self.cents() == 0
+        self.value == 0
     }
 
     pub fn positive(&self) -> bool {
-        self.cents() > 0
+        self.value > 0
     }
 
     pub fn negative(&self) -> bool {
-        self.cents() < 0
+        self.value < 0
     }
 
     pub fn to_number(self) -> f64 {
-        self.cents() as f64 / (10_i32.pow(self.currency().decimal_places().into())) as f64
-    }
-
-    fn formatted_value(value: &str, currency: Currency) -> String {
-        let (integer, fractional) = match value.rfind('.') {
-            None => (value, "."),
-            Some(index) => value.split_at(index),
-        };
-
-        let width = currency.decimal_places().into();
-
-        if fractional.len() > width {
-            format!(
-                "{}{:.*}{}",
-                integer.replace('+', ""),
-                width + 1,
-                fractional,
-                currency.code()
-            )
-        } else {
-            format!(
-                "{}{:0<width$}{}",
-                integer.replace('+', ""),
-                fractional,
-                currency.code(),
-                width = width + 1
-            )
-        }
-    }
-
-    fn symbol(&self) -> String {
-        let code = self.currency().code().to_lowercase();
-
-        match SYMBOLS.get(code.as_str()) {
-            Some(val) => (*val).to_string(),
-            None => CURRENCIES
-                .get(code.as_str())
-                .map_or(code, |v| v.symbol.to_string()),
-        }
+        self.value as f64 / (10_i32.pow(self.currency.decimal_places().into())) as f64
     }
 }

@@ -4,11 +4,11 @@ version = 3
 
 [[package]]
 name = "aho-corasick"
-version = "0.7.18"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e37cfd5e7657ada45f742d6e99ca5788580b5c529dc78faf11ece6dc702656f"
+checksum = "43f6cb1bf222025340178f382c426f13757b2960e89779dfcb319c32542a5a41"
 dependencies = [
- "memchr 2.4.1",
+ "memchr",
 ]
 
 [[package]]
@@ -58,7 +58,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba3569f383e8f1598449f1a423e72e99569137b47740b1da11ef19af3d5c3223"
 dependencies = [
  "lazy_static",
- "memchr 2.4.1",
+ "memchr",
  "regex-automata",
  "serde",
 ]
@@ -68,12 +68,6 @@ name = "bumpalo"
 version = "3.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4a45a46ab1f2412e53d3a0ade76ffad2025804294569aae387231a0cd6e0899"
-
-[[package]]
-name = "byteorder"
-version = "1.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
 name = "bytes"
@@ -168,17 +162,6 @@ checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
 
 [[package]]
 name = "csv"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ef22b37c7a51c564a365892c012dc0271221fdcc64c69b19ba4d6fa8bd96d9c"
-dependencies = [
- "byteorder",
- "memchr 1.0.2",
- "rustc-serialize",
-]
-
-[[package]]
-name = "csv"
 version = "1.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22813a6dc45b335f9bade10bf7271dc477e81113e89eb251a0bc2a8a81c536e1"
@@ -196,7 +179,7 @@ version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b2466559f260f48ad25fe6317b3c8dac77b5bdb5763ac7d9d6103530663bc90"
 dependencies = [
- "memchr 2.4.1",
+ "memchr",
 ]
 
 [[package]]
@@ -417,7 +400,7 @@ dependencies = [
  "futures-core",
  "futures-io",
  "futures-task",
- "memchr 2.4.1",
+ "memchr",
  "pin-project-lite",
  "pin-utils",
  "slab",
@@ -640,6 +623,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "iso_country"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20633e788d3948ea7336861fdb09ec247f5dae4267e8f0743fa97de26c28624d"
+dependencies = [
+ "lazy_static",
+]
+
+[[package]]
+name = "iso_currency"
+version = "0.4.3"
+source = "git+https://github.com/zbrox/iso_currency.git#a422c828110c9fef623397e34bf3a07ec5994663"
+dependencies = [
+ "iso_country",
+]
+
+[[package]]
 name = "itoa"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -672,13 +672,13 @@ version = "6.3.0"
 dependencies = [
  "chrono",
  "clap",
- "csv 1.1.6",
+ "csv",
  "custom_error",
  "enum_dispatch",
  "env_logger",
  "firefly-iii",
  "indicatif",
- "lazy_static",
+ "iso_currency",
  "lockfile",
  "log",
  "openssl",
@@ -691,7 +691,6 @@ dependencies = [
  "serde_yaml",
  "shellexpand",
  "sodiumoxide",
- "steel-cent",
  "tempfile",
  "tokio",
  "xdg",
@@ -762,18 +761,9 @@ checksum = "a3e378b66a060d48947b590737b30a1be76706c8dd7b8ba0f2fe3989c68a853f"
 
 [[package]]
 name = "memchr"
-version = "1.0.2"
+version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "148fab2e51b4f1cfc66da2a7c32981d1d3c083a803978268bb11fe4b86925e7a"
-dependencies = [
- "libc",
-]
-
-[[package]]
-name = "memchr"
-version = "2.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "308cc39be01b73d0d18f82a0e7b2a3df85245f84af96fdddc5d202d27e47b86a"
+checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
 name = "mime"
@@ -920,7 +910,7 @@ version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e22443d1643a904602595ba1cd8f7d896afe56d26712531c5ff73a15b2fbf64"
 dependencies = [
- "memchr 2.4.1",
+ "memchr",
 ]
 
 [[package]]
@@ -984,7 +974,7 @@ version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eea25e07510aa6ab6547308ebe3c036016d162b8da920dbb079e3ba8acf3d95a"
 dependencies = [
- "csv 1.1.6",
+ "csv",
  "encode_unicode 1.0.0",
  "is-terminal",
  "lazy_static",
@@ -1136,12 +1126,12 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.5.4"
+version = "1.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d07a8629359eb56f1e2fb1652bb04212c072a87ba68546a04065d525673ac461"
+checksum = "d0ab3ca65655bb1e41f2a8c8cd662eb4fb035e67c3f78da1d61dffe89d07300f"
 dependencies = [
  "aho-corasick",
- "memchr 2.4.1",
+ "memchr",
  "regex-syntax",
 ]
 
@@ -1153,9 +1143,9 @@ checksum = "6c230d73fb8d8c1b9c0b3135c5142a8acee3a0558fb8db5cf1cb65f8d7862132"
 
 [[package]]
 name = "regex-syntax"
-version = "0.6.25"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
+checksum = "436b050e76ed2903236f032a59761c1eb99e1b0aead2c257922771dab1fc8c78"
 
 [[package]]
 name = "remove_dir_all"
@@ -1209,12 +1199,6 @@ checksum = "1d7cf7a37d3ec90193e5a553d7f5ce283665a29c5e7e3973ceb08568c902dc07"
 dependencies = [
  "rand 0.7.3",
 ]
-
-[[package]]
-name = "rustc-serialize"
-version = "0.3.24"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dcf128d1287d2ea9d80910b5f1120d0b8eede3fbf1abe91c40d39ea7d51e6fda"
 
 [[package]]
 name = "rustix"
@@ -1404,16 +1388,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "steel-cent"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8835ce3377f7c77f2ea528e889ae1fef4f2b42c33cd95b47e7702a0cf2ebae77"
-dependencies = [
- "csv 0.15.0",
- "lazy_static",
-]
-
-[[package]]
 name = "strsim"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1513,7 +1487,7 @@ checksum = "fbbf1c778ec206785635ce8ad57fe52b3009ae9e0c9f574a728f3049d3e55838"
 dependencies = [
  "bytes",
  "libc",
- "memchr 2.4.1",
+ "memchr",
  "mio",
  "num_cpus",
  "once_cell",

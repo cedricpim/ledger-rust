@@ -30,7 +30,7 @@ pub fn currency(value: Option<&String>, config: &Config) -> CliResult<Currency> 
 
     let code = currency_code.to_uppercase();
 
-    match steel_cent::currency::with_code(&code) {
+    match iso_currency::Currency::from_code(&code) {
         Some(val) => Ok(val.into()),
         None => Err(CliError::IncorrectCurrencyCode { code }),
     }

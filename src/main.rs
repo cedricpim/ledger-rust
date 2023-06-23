@@ -2,9 +2,6 @@ use clap::{ArgEnum, Parser, Subcommand};
 
 use std::process;
 
-#[macro_use]
-extern crate lazy_static;
-
 mod cmd;
 mod config;
 mod crypto;

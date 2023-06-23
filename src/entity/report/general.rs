@@ -151,7 +151,7 @@ impl Report {
     }
 
     fn total(&self) -> Money {
-        steel_cent::Money::of_minor(self.currency.into(), self.total).into()
+        Money::new(self.currency, self.total)
     }
 
     fn percentage(&self) -> f64 {
@@ -293,11 +293,11 @@ impl Summary {
             self.income
         };
 
-        steel_cent::Money::of_minor(self.currency.into(), value).into()
+        Money::new(self.currency, value)
     }
 
     fn expense(&self) -> Money {
-        steel_cent::Money::of_minor(self.currency.into(), self.expense).into()
+        Money::new(self.currency, self.expense)
     }
 
     fn difference(&self) -> Money {

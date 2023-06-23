@@ -33,6 +33,6 @@ impl Total {
     }
 
     pub fn amount(&self) -> Money {
-        steel_cent::Money::of_minor(self.currency.into(), self.value).into()
+        Money::new(self.currency, self.value)
     }
 }

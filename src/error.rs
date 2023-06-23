@@ -8,7 +8,6 @@ custom_error! { pub CliError
     Value { source: std::num::ParseIntError }                     = @{ source },
     JustEtf { source: crate::service::justetf::Error }            = @{ source },
     NumberFormat { source: std::num::ParseFloatError }            = @{ source },
-    MoneyFormat { source: steel_cent::formatting::ParseError }    = @{ source },
     Exchange { source: crate::service::openexchangerates::Error } = @{ source },
     Firefly { source: crate::service::firefly::Error }            = @{ source },
 

@@ -10,7 +10,6 @@ keywords = ["ledger", "command"]
 license = "GNU General Public License v3.0"
 edition = "2018"
 autotests = false
-include = ["data/currencies.json"]
 
 [[bin]]
 name = "ledger"
@@ -43,9 +42,8 @@ tempfile = "3"
 rand = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
 enum_dispatch = "0.3"
-steel-cent = "0.2"
+iso_currency = { git = "https://github.com/zbrox/iso_currency.git" }
 prettytable-rs = "^0.10"
-lazy_static = "1.4"
 lockfile = "0.3"
 # Asset Price
 openssl = { version = "0.10", features = ["vendored"] }

@@ -108,8 +108,8 @@ impl Filter {
     }
 
     fn period(&self) -> RangeInclusive<Date> {
-        let lower = self.start.unwrap_or_else(|| chrono::naive::MIN_DATE.into());
-        let upper = self.end.unwrap_or_else(|| chrono::naive::MAX_DATE.into());
+        let lower = self.start.unwrap_or_else(|| chrono::NaiveDate::MIN.into());
+        let upper = self.end.unwrap_or_else(|| chrono::NaiveDate::MAX.into());
 
         lower..=upper
     }

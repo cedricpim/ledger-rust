@@ -23,7 +23,7 @@ impl std::fmt::Display for Date {
 impl Default for Date {
     fn default() -> Self {
         Date {
-            value: Utc::today().naive_local(),
+            value: Utc::now().date_naive(),
         }
     }
 }
@@ -70,15 +70,17 @@ impl std::str::FromStr for Date {
 
 impl Date {
     pub fn from_ymd(year: i32, month: u32, day: u32) -> Date {
-        chrono::naive::NaiveDate::from_ymd(year, month, day).into()
+        chrono::naive::NaiveDate::from_ymd_opt(year, month, day)
+            .unwrap()
+            .into()
     }
 
     pub fn today() -> Date {
-        chrono::Utc::today().naive_local().into()
+        chrono::Utc::now().date_naive().into()
     }
 
     pub fn pred(self) -> Date {
-        self.value.pred().into()
+        self.value.pred_opt().unwrap().into()
     }
 
     pub fn year(self) -> i32 {
@@ -103,9 +105,11 @@ impl Date {
 
     pub fn end_of_month(self) -> Date {
         match self.month() {
-            month @ 12 => chrono::naive::NaiveDate::from_ymd(self.year(), month, 31),
-            month => chrono::naive::NaiveDate::from_ymd(self.year(), month + 1, 1).pred(),
+            month @ 12 => chrono::naive::NaiveDate::from_ymd_opt(self.year(), month, 31),
+            month => chrono::naive::NaiveDate::from_ymd_opt(self.year(), month + 1, 1)
+                .and_then(|v| v.pred_opt()),
         }
+        .unwrap()
         .into()
     }
 

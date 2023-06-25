@@ -69,6 +69,7 @@ impl Push {
         pb.set_style(
             ProgressStyle::default_bar()
                 .template(PROGRESS_BAR_FORMAT)
+                .unwrap()
                 .progress_chars(PROGRESS_BAR_CHARS),
         );
 

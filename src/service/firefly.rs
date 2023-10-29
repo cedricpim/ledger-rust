@@ -1,17 +1,20 @@
 use custom_error::custom_error;
-use firefly_iii::apis::client::APIClient;
+use firefly_iii::apis::{accounts_api, about_api, currencies_api, transactions_api};
 use firefly_iii::apis::configuration::Configuration;
-use firefly_iii::models::account;
-use firefly_iii::models::account_read::AccountRead;
-use firefly_iii::models::currency_read::CurrencyRead;
-use firefly_iii::models::currency_single::CurrencySingle;
-use firefly_iii::models::meta_pagination::MetaPagination;
-use firefly_iii::models::transaction::Transaction;
-use firefly_iii::models::transaction_read::TransactionRead;
-use firefly_iii::models::transaction_split;
-use firefly_iii::models::transaction_split::TransactionSplit;
-use firefly_iii::models::transaction_type_filter::TransactionTypeFilter;
+use firefly_iii::models::ShortAccountTypeProperty;
+use firefly_iii::models::AccountRoleProperty;
+use firefly_iii::models::TransactionTypeProperty;
+use firefly_iii::models::AccountStore;
+use firefly_iii::models::AccountRead;
+use firefly_iii::models::CurrencyRead;
+use firefly_iii::models::CurrencySingle;
+use firefly_iii::models::MetaPagination;
+use firefly_iii::models::TransactionStore;
+use firefly_iii::models::TransactionRead;
+use firefly_iii::models::TransactionSplitStore;
+use firefly_iii::models::TransactionTypeFilter;
 use indicatif::{ProgressBar, ProgressStyle};
+use anyhow::{anyhow, Result};
 
 use crate::entity::line::{Line, Liner};
 use crate::entity::money::Money;
@@ -19,7 +22,7 @@ use crate::entity::sync::push;
 
 custom_error! { pub Error
     Reqwest { source: reqwest::Error }        = @{ source },
-    Api { source: firefly_iii::apis::Error }  = @{ source },
+    // Api { source: firefly_iii::apis::Error }  = @{ source },
     Value { source: std::num::ParseIntError } = @{ source },
 
     MissingExpectedOpeningBalance = "The account is missing an opening balance transaction",
@@ -29,68 +32,55 @@ static PROGRESS_BAR_FORMAT: &str = "{spinner:.green}▕{wide_bar:.cyan}▏{perce
 static PROGRESS_BAR_CHARS: &str = "█▉▊▋▌▍▎▏  ";
 
 pub struct Firefly {
-    client: APIClient,
+    configuration: Configuration,
 }
 
 impl Firefly {
     pub fn new(base_path: &str, token: &str) -> Self {
         Self {
-            client: APIClient::new(Configuration {
+            configuration: Configuration {
                 base_path: base_path.to_string(),
                 user_agent: None,
                 oauth_access_token: Some(token.to_string()),
                 ..Default::default()
-            }),
+            },
         }
     }
 
     #[tokio::main]
-    pub async fn user(&self) -> Result<String, Error> {
-        let response = self.client.about_api().get_current_user().await?;
+    pub async fn user(&self) -> Result<String> {
+        let response = about_api::get_current_user(&self.configuration).await?;
 
         Ok(response.data.id)
     }
 
     #[tokio::main]
-    pub async fn default_currency(&self, code: String) -> Result<CurrencySingle, Error> {
-        self.client
-            .currencies_api()
-            .default_currency(&code)
-            .await
-            .map_err(Error::from)
+    pub async fn default_currency(&self, code: String) -> Result<CurrencySingle> {
+        Ok(currencies_api::default_currency(&self.configuration, &code).await?)
     }
 
     #[tokio::main]
-    pub async fn enable_currency(&self, code: String) -> Result<CurrencySingle, Error> {
-        self.client
-            .currencies_api()
-            .enable_currency(&code)
-            .await
-            .map_err(Error::from)
+    pub async fn enable_currency(&self, code: String) -> Result<CurrencySingle> {
+        Ok(currencies_api::enable_currency(&self.configuration, &code).await?)
     }
 
     #[tokio::main]
-    pub async fn currencies(&self) -> Result<Vec<CurrencyRead>, Error> {
+    pub async fn currencies(&self) -> Result<Vec<CurrencyRead>> {
         let mut result: Vec<CurrencyRead> = Vec::new();
 
         let mut page = 0;
 
         loop {
-            let response = self.client.currencies_api().list_currency(Some(page)).await;
+            let response = currencies_api::list_currency(&self.configuration, Some(page)).await?;
 
-            match response {
-                Err(e) => return Err(Error::from(e)),
-                Ok(val) => {
-                    for currency in val.data {
-                        result.push(currency)
-                    }
+            for currency in response.data {
+                result.push(currency)
+            }
 
-                    if let Some(val) = val.meta.pagination.and_then(Self::next_page) {
-                        page = val
-                    } else {
-                        break;
-                    }
-                }
+            if let Some(val) = response.meta.pagination.and_then(Self::next_page) {
+                page = val
+            } else {
+                break;
             }
         }
 
@@ -98,7 +88,7 @@ impl Firefly {
     }
 
     #[tokio::main]
-    pub async fn transactions(&self, from: i32) -> Result<Vec<TransactionRead>, Error> {
+    pub async fn transactions(&self, from: i32) -> Result<Vec<TransactionRead>> {
         let mut result: Vec<TransactionRead> = Vec::new();
 
         let (missing_entries, per_page) = self.missing_entries_per_page(from).await?;
@@ -118,30 +108,21 @@ impl Firefly {
         let mut page = Some((missing_entries as f32 / per_page as f32).ceil() as i32);
 
         loop {
-            let response = self
-                .client
-                .transactions_api()
-                .list_transaction(page, None, None, Some(TransactionTypeFilter::All))
-                .await;
+            let response = transactions_api::list_transaction(&self.configuration, page, None, None, Some(TransactionTypeFilter::All)).await?;
 
-            match response {
-                Err(e) => return Err(Error::from(e)),
-                Ok(val) => {
-                    for transaction in val.data {
-                        let id = transaction.id.parse::<i32>().unwrap_or_default();
+            for transaction in response.data {
+                let id = transaction.id.parse::<i32>().unwrap_or_default();
 
-                        if id > from {
-                            pb.set_position((id - from) as u64);
-                            result.push(transaction)
-                        }
-                    }
-
-                    if let Some(val) = val.meta.pagination.and_then(Self::previous_page) {
-                        page = Some(val);
-                    } else {
-                        break;
-                    }
+                if id > from {
+                    pb.set_position((id - from) as u64);
+                    result.push(transaction)
                 }
+            }
+
+            if let Some(val) = response.meta.pagination.and_then(Self::previous_page) {
+                page = Some(val);
+            } else {
+                break;
             }
         }
 
@@ -149,31 +130,22 @@ impl Firefly {
     }
 
     #[tokio::main]
-    pub async fn accounts(&self) -> Result<Vec<AccountRead>, Error> {
+    pub async fn accounts(&self) -> Result<Vec<AccountRead>> {
         let mut result: Vec<AccountRead> = Vec::new();
 
         let mut page = 0;
 
         loop {
-            let response = self
-                .client
-                .accounts_api()
-                .list_account(Some(page), None, None)
-                .await;
+            let response = accounts_api::list_account(&self.configuration, Some(page), None, None).await?;
 
-            match response {
-                Err(e) => return Err(Error::from(e)),
-                Ok(val) => {
-                    for account in val.data {
-                        result.push(account)
-                    }
+            for account in response.data {
+                result.push(account)
+            }
 
-                    if let Some(val) = val.meta.pagination.and_then(Self::next_page) {
-                        page = val
-                    } else {
-                        break;
-                    }
-                }
+            if let Some(val) = response.meta.pagination.and_then(Self::next_page) {
+                page = val
+            } else {
+                break;
             }
         }
 
@@ -181,12 +153,10 @@ impl Firefly {
     }
 
     #[tokio::main]
-    pub async fn get_opening_balance_transaction(&self, id: i32) -> Result<String, Error> {
-        let mut response = self
-            .client
-            .accounts_api()
-            .list_transaction_by_account(
-                id,
+    pub async fn get_opening_balance_transaction(&self, id: i32) -> Result<String> {
+        let mut response = accounts_api::list_transaction_by_account(
+                &self.configuration,
+                &id.to_string(),
                 None,
                 Some(1),
                 None,
@@ -195,27 +165,23 @@ impl Firefly {
             )
             .await?;
 
-        response
-            .data
-            .pop()
-            .map(|v| v.id)
-            .ok_or(Error::MissingExpectedOpeningBalance)
+        response.data.pop().map(|v| v.id).ok_or(anyhow!("Account {} is missing an opening balance transaction", id))
     }
 
     #[tokio::main]
-    pub async fn create_account(&self, data: &push::AccountData) -> Result<String, Error> {
-        let mut account = account::Account::new(data.name.to_string(), data._type.clone());
+    pub async fn create_account(&self, data: &push::AccountData) -> Result<String> {
+        let mut account = AccountStore::new(data.name.to_string(), data._type.clone());
 
         account.currency_code = data.currency.clone();
         account.include_net_worth = Some(data.networth);
         account.opening_balance = data.value.map(|v| v.to_storage());
         account.opening_balance_date = data.date.map(|v| v.to_string());
 
-        if let account::Type::Asset = account._type {
-            account.account_role = Some(account::AccountRole::DefaultAsset);
+        if let ShortAccountTypeProperty::Asset = account._type {
+            account.account_role = Some(AccountRoleProperty::DefaultAsset);
         };
 
-        let response = self.client.accounts_api().store_account(account).await?;
+        let response = accounts_api::store_account(&self.configuration, account).await?;
 
         Ok(response.data.id)
     }
@@ -225,14 +191,13 @@ impl Firefly {
         &self,
         transfer: push::Transfer,
         user: i32,
-    ) -> Result<String, Error> {
+    ) -> Result<String> {
         if transfer.value().zero() {
             return Ok(String::new());
         }
 
-        let mut split = Firefly::build_split(transfer.line, transfer.value(), transfer.ids);
+        let mut split = Firefly::build_split(TransactionTypeProperty::Transfer, transfer.line, transfer.value(), transfer.ids);
 
-        split._type = Some(transaction_split::Type::Transfer);
         split.foreign_currency_code = Some(transfer.other_line.currency().code());
         split.foreign_amount = Some(transfer.other_line.amount().abs().to_number().to_string());
 
@@ -244,46 +209,39 @@ impl Firefly {
         &self,
         transaction: push::Transaction,
         user: i32,
-    ) -> Result<String, Error> {
+    ) -> Result<String> {
         if transaction.value().zero() {
             return Ok(String::new());
         }
 
-        let mut split =
-            Firefly::build_split(transaction.line, transaction.value(), transaction.ids);
-
-        if transaction.value().positive() {
-            split._type = Some(transaction_split::Type::Deposit);
+        let split = if transaction.value().positive() {
+            Firefly::build_split(TransactionTypeProperty::Deposit, transaction.line, transaction.value(), transaction.ids)
         } else {
-            split._type = Some(transaction_split::Type::Withdrawal);
-        }
+            Firefly::build_split(TransactionTypeProperty::Withdrawal, transaction.line, transaction.value(), transaction.ids)
+        };
 
         self.post_transaction(split, user).await
     }
 
-    async fn post_transaction(&self, split: TransactionSplit, user: i32) -> Result<String, Error> {
-        let mut transaction = Transaction::new(vec![split]);
+    async fn post_transaction(&self, split: TransactionSplitStore, _user: i32) -> Result<String> {
+        let transaction = TransactionStore::new(vec![split]);
 
-        transaction.user = Some(user.to_string());
-
-        let response = self
-            .client
-            .transactions_api()
-            .store_transaction(transaction)
-            .await?;
+        let response = transactions_api::store_transaction(&self.configuration, transaction).await?;
 
         Ok(response.data.id)
     }
 
-    fn build_split(line: &Line, amount: Money, ids: (i32, i32)) -> TransactionSplit {
-        let mut split = TransactionSplit::new(
+    fn build_split(_type: TransactionTypeProperty, line: &Line, amount: Money, ids: (i32, i32)) -> TransactionSplitStore {
+        let mut split = TransactionSplitStore::new(
+            _type,
             line.date().to_string(),
             amount.abs().to_number().to_string(),
             line.description(),
-            Some(ids.0.to_string()),
-            Some(ids.1.to_string()),
         );
 
+        split.source_id = Some(ids.0.to_string());
+        split.destination_id = Some(ids.1.to_string());
+        split.currency_code = Some(line.currency().code());
         split.currency_code = Some(line.currency().code());
         split.category_name = Some(line.venue());
         split.tags = Some(vec![line.trip()]);
@@ -292,27 +250,19 @@ impl Firefly {
         split
     }
 
-    async fn missing_entries_per_page(&self, from: i32) -> Result<(i32, i32), Error> {
-        match self
-            .client
-            .transactions_api()
-            .list_transaction(None, None, None, Some(TransactionTypeFilter::All))
-            .await
-        {
-            Err(e) => Err(Error::from(e)),
-            Ok(val) => {
-                let per_page = val
-                    .meta
-                    .pagination
-                    .map_or(0, |v| v.per_page.unwrap_or_default());
+    async fn missing_entries_per_page(&self, from: i32) -> Result<(i32, i32)> {
+        let response = transactions_api::list_transaction(&self.configuration, None, None, None, Some(TransactionTypeFilter::All)).await?;
 
-                match val.data.first() {
-                    None => Ok((0, per_page)),
-                    Some(transaction) => match transaction.id.parse::<i32>() {
-                        Err(e) => Err(Error::from(e)),
-                        Ok(id) => Ok((id - from, per_page)),
-                    },
-                }
+        let per_page = response
+            .meta
+            .pagination
+            .map_or(0, |v| v.per_page.unwrap_or_default());
+
+        match response.data.first() {
+            None => Ok((0, per_page)),
+            Some(transaction) => {
+                let id = transaction.id.parse::<i32>()?;
+                Ok((id - from, per_page))
             }
         }
     }

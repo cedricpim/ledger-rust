@@ -1,4 +1,4 @@
-use firefly_iii::models::account::Type;
+use firefly_iii::models::ShortAccountTypeProperty;
 use indicatif::{ProgressBar, ProgressStyle};
 
 use std::collections::hash_map::Entry;
@@ -173,7 +173,7 @@ pub struct AccountData {
     pub value: Option<Money>,
     pub currency: Option<String>,
     pub networth: bool,
-    pub _type: Type,
+    pub _type: ShortAccountTypeProperty,
 }
 
 impl AccountData {
@@ -185,7 +185,7 @@ impl AccountData {
             value: None,
             currency: None,
             networth: false,
-            _type: Type::Asset,
+            _type: ShortAccountTypeProperty::Asset,
         }
     }
 
@@ -194,7 +194,7 @@ impl AccountData {
 
         data.currency = Some(line.currency().code());
         data.networth = filter.accountable(&line.account());
-        data._type = Type::Asset;
+        data._type = ShortAccountTypeProperty::Asset;
 
         data
     }
@@ -226,12 +226,12 @@ impl Account {
 
         let mut data = AccountData::new(line.category());
         if value.negative() {
-            data._type = Type::Expense;
+            data._type = ShortAccountTypeProperty::Expense;
             data.id = Some(push.account(&data)?);
 
             Ok(Self::DoubleEntry(asset, data))
         } else {
-            data._type = Type::Revenue;
+            data._type = ShortAccountTypeProperty::Revenue;
             data.id = Some(push.account(&data)?);
 
             Ok(Self::DoubleEntry(data, asset))

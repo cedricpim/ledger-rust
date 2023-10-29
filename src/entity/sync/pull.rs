@@ -1,6 +1,6 @@
+use firefly_iii::models::TransactionTypeProperty;
 use firefly_iii::models::transaction_read::TransactionRead;
 use firefly_iii::models::transaction_split::TransactionSplit;
-use firefly_iii::models::transaction_split::Type;
 
 use crate::config::Config;
 use crate::config::FireflyOptions;
@@ -125,7 +125,7 @@ impl Transaction {
 
 impl Pullable for TransactionSplit {
     fn lines(&self, transfer: &str) -> CliResult<Vec<Line>> {
-        let result = if self._type == Some(Type::Transfer) {
+        let result = if self._type == TransactionTypeProperty::Transfer {
             vec![
                 self.build_line(
                     self.source_name.clone(),
@@ -138,7 +138,7 @@ impl Pullable for TransactionSplit {
                     format!("+{}", self.amount),
                 )?,
             ]
-        } else if self._type == Some(Type::Deposit) {
+        } else if self._type == TransactionTypeProperty::Deposit {
             vec![self.build_line(
                 self.destination_name.clone(),
                 self.source_name.clone(),

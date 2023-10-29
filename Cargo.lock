@@ -191,12 +191,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "custom_error"
-version = "1.9.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f8a51dd197fa6ba5b4dc98a990a43cc13693c23eb0089ebb0fcc1f04152bca6"
-
-[[package]]
 name = "dirs"
 version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -726,7 +720,6 @@ dependencies = [
  "chrono",
  "clap",
  "csv",
- "custom_error",
  "enum_dispatch",
  "env_logger",
  "firefly-iii",
@@ -744,7 +737,6 @@ dependencies = [
  "shellexpand",
  "sodiumoxide",
  "tempfile",
- "thiserror",
  "tokio",
  "xdg",
 ]

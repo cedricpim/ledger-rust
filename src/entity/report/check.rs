@@ -9,7 +9,7 @@ use crate::entity::line::{Line, Liner};
 use crate::entity::money::Money;
 use crate::filter::Filter;
 use crate::resource::Resource;
-use crate::{CliResult, Mode};
+use crate::Mode;
 
 #[derive(Default)]
 pub struct Report {
@@ -31,7 +31,7 @@ impl Report {
         ])
     }
 
-    pub fn new(config: &Config, filter: &Filter) -> CliResult<Report> {
+    pub fn new(config: &Config, filter: &Filter) -> anyhow::Result<Report> {
         let mut report = Self::default();
 
         let mut resource = Resource::new(config, Mode::Ledger)?;

@@ -7,7 +7,7 @@ use std::path::Path;
 use crate::entity::line::Liner;
 use crate::resource::Resource;
 use crate::xdg::Xdg;
-use crate::{util, CliResult, Mode};
+use crate::{util, Mode};
 
 const CONFIGURATION_FILENAME: &str = "config";
 
@@ -53,7 +53,7 @@ impl FireflyOptions {
 }
 
 impl Config {
-    pub fn new() -> CliResult<Config> {
+    pub fn new() -> anyhow::Result<Config> {
         let config_path = Config::path()?;
 
         let data: Config = if Path::new(&config_path).exists() {
@@ -66,7 +66,7 @@ impl Config {
         Ok(data)
     }
 
-    pub fn default(config_path: &str) -> CliResult<Config> {
+    pub fn default(config_path: &str) -> anyhow::Result<Config> {
         let default = Config {
             encryption: util::random_pass(),
             files: Files {
@@ -87,7 +87,7 @@ impl Config {
         Ok(default)
     }
 
-    pub fn path() -> CliResult<String> {
+    pub fn path() -> anyhow::Result<String> {
         Xdg::Config(CONFIGURATION_FILENAME.to_string()).filepath()
     }
 
@@ -111,7 +111,7 @@ impl Config {
         self.exchange_key.to_owned()
     }
 
-    pub fn total_pushable_lines(&self) -> CliResult<usize> {
+    pub fn total_pushable_lines(&self) -> anyhow::Result<usize> {
         let mut ledger_lines = 0;
         Resource::new(self, Mode::Ledger)?.line(&mut |record| {
             if record.pushable() {

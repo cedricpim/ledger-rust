@@ -1,16 +1,14 @@
+use anyhow::{anyhow, Context};
 use sodiumoxide::crypto::pwhash;
 use sodiumoxide::crypto::secretstream;
 
 use std::fs::File;
 use std::io::{Read, Write};
 
-use crate::error::CliError;
-use crate::CliResult;
-
 const CHUNK_SIZE: usize = 4096;
 const SIGNATURE: [u8; 4] = [0xC1, 0x0A, 0x4B, 0xED];
 
-pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str) -> CliResult<()> {
+pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str) -> anyhow::Result<()> {
     let mut buf = [0; CHUNK_SIZE];
     let mut bytes_left = in_file.metadata()?.len();
 
@@ -20,8 +18,9 @@ pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str) -> CliRe
     out_file.write_all(&salt.0)?;
 
     let key = key(password, &salt)?;
-    let (mut stream, header) =
-        secretstream::Stream::init_push(&key).map_err(|_| CliError::CryptoPushFailed)?;
+    let (mut stream, header) = secretstream::Stream::init_push(&key)
+        .ok()
+        .context("init_push failed")?;
     out_file.write_all(&header.0)?;
 
     loop {
@@ -35,10 +34,11 @@ pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str) -> CliRe
                 out_file.write_all(
                     &stream
                         .push(&buf[..num_read], None, tag)
-                        .map_err(|_| CliError::EncryptionFailed)?,
+                        .ok()
+                        .context("Encrypting file failed")?,
                 )?;
             }
-            Err(e) => return Err(CliError::from(e)),
+            Err(e) => return Err(e.into()),
             _ => break,
         }
     }
@@ -46,11 +46,11 @@ pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str) -> CliRe
     Ok(())
 }
 
-pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str) -> CliResult<()> {
+pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str) -> anyhow::Result<()> {
     if in_file.metadata()?.len()
         <= (pwhash::SALTBYTES + secretstream::HEADERBYTES + SIGNATURE.len()) as u64
     {
-        return Err(CliError::NotEncrypted);
+        return Err(anyhow!("File not big enough to have been encrypted"));
     }
 
     let mut salt = [0u8; pwhash::SALTBYTES];
@@ -74,25 +74,27 @@ pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str) -> CliRe
     let key = key(password, &salt)?;
 
     let mut buffer = [0u8; CHUNK_SIZE + secretstream::ABYTES];
-    let mut stream =
-        secretstream::Stream::init_pull(&header, &key).map_err(|_| CliError::CryptoPullFailed)?;
+    let mut stream = secretstream::Stream::init_pull(&header, &key)
+        .ok()
+        .context("init_pull failed")?;
 
     while stream.is_not_finalized() {
         match in_file.read(&mut buffer) {
             Ok(num_read) if num_read > 0 => {
                 let (decrypted, _tag) = stream
                     .pull(&buffer[..num_read], None)
-                    .map_err(|_| CliError::CryptoIncorrectPassword)?;
+                    .ok()
+                    .context("Incorrect password")?;
                 out_file.write_all(&decrypted)?;
             }
-            Err(_) => return Err(CliError::CryptoIncorrectPassword),
-            _ => return Err(CliError::DecryptionFailed),
+            Err(_) => return Err(anyhow!("Incorrect password")),
+            _ => return Err(anyhow!("Decrypting file failed")),
         }
     }
     Ok(())
 }
 
-fn key(password: &str, salt: &pwhash::Salt) -> CliResult<secretstream::Key> {
+fn key(password: &str, salt: &pwhash::Salt) -> anyhow::Result<secretstream::Key> {
     let mut key = [0u8; secretstream::KEYBYTES];
 
     match pwhash::derive_key(
@@ -103,6 +105,6 @@ fn key(password: &str, salt: &pwhash::Salt) -> CliResult<secretstream::Key> {
         pwhash::MEMLIMIT_INTERACTIVE,
     ) {
         Ok(_) => Ok(secretstream::Key(key)),
-        Err(_) => Err(CliError::CryptoDerivingKeyFailed),
+        Err(_) => Err(anyhow!("Deriving key failed")),
     }
 }

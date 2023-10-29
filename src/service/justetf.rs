@@ -1,19 +1,10 @@
-use crate::entity::money::{Currency, Money};
-use custom_error::custom_error;
+use anyhow::anyhow;
 use serde_json::Value;
+
+use crate::entity::money::{Currency, Money};
 
 const URL: &str =
     "https://www.justetf.com/api/etfs/cards?locale=en&currency={CURRENCY}&isin={ISIN}";
-
-custom_error! { pub Error
-    Reqwest { source: reqwest::Error }    = @{ source },
-    SerdeJson { source: serde_json::Error } = @{ source },
-    RepeatableReqwest { message: String } = "Repeatable error: {message}",
-
-    Parser        = "The element provided could not be parsed",
-    NameNotFound  = "Asset name could not be found",
-    ValueNotFound = "Asset value could not be found",
-}
 
 #[derive(Debug, Clone)]
 pub struct Asset {
@@ -23,7 +14,7 @@ pub struct Asset {
 }
 
 impl Asset {
-    pub fn download(isin: &str, currency: &Currency) -> Result<Asset, Error> {
+    pub fn download(isin: &str, currency: &Currency) -> anyhow::Result<Asset> {
         let data = Asset::data(isin, currency)?;
 
         let name = Asset::name(&data)?;
@@ -39,19 +30,19 @@ impl Asset {
         })
     }
 
-    fn money(data: &Value) -> Result<String, Error> {
+    fn money(data: &Value) -> anyhow::Result<String> {
         data.pointer("/etfs/0/quote/raw")
             .map(|val| val.to_string())
-            .ok_or(Error::ValueNotFound)
+            .ok_or(anyhow!("Asset value could not be found"))
     }
 
-    fn name(data: &Value) -> Result<&str, Error> {
+    fn name(data: &Value) -> anyhow::Result<&str> {
         data.pointer("/etfs/0/name")
             .and_then(|val| val.as_str())
-            .ok_or(Error::NameNotFound)
+            .ok_or(anyhow!("Asset name could not be found"))
     }
 
-    fn data(isin: &str, currency: &Currency) -> Result<Value, Error> {
+    fn data(isin: &str, currency: &Currency) -> anyhow::Result<Value> {
         let client = reqwest::blocking::Client::new();
 
         let url = URL

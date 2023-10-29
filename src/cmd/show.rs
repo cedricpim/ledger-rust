@@ -6,7 +6,7 @@ use crate::entity::line::Liner;
 use crate::exchange::Exchange;
 use crate::filter::Filter;
 use crate::resource::Resource;
-use crate::{util, CliResult};
+use crate::util;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -43,14 +43,14 @@ pub struct Args {
     networth: bool,
 }
 
-pub fn run(args: Args) -> CliResult<()> {
+pub fn run(args: Args) -> anyhow::Result<()> {
     let config = Config::new()?;
 
     args.show(&config)
 }
 
 impl Args {
-    fn show(&self, config: &Config) -> CliResult<()> {
+    fn show(&self, config: &Config) -> anyhow::Result<()> {
         let mut resource = Resource::new(config, self.mode)?;
 
         let filter = Filter::show(self);

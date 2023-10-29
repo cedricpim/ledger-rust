@@ -1,12 +1,11 @@
+use anyhow::anyhow;
 use clap::Parser;
 
 use std::path::Path;
 
 use crate::config::Config;
-use crate::error::CliError;
 
 use crate::resource::Resource;
-use crate::CliResult;
 
 static SUCCESS: &str = "Generated default file on";
 
@@ -27,20 +26,21 @@ pub struct Args {
     force: bool,
 }
 
-pub fn run(args: Args) -> CliResult<()> {
+pub fn run(args: Args) -> anyhow::Result<()> {
     let config = Config::new()?;
 
     args.create(&config)
 }
 
 impl Args {
-    fn create(&self, config: &Config) -> CliResult<()> {
+    fn create(&self, config: &Config) -> anyhow::Result<()> {
         let resource = Resource::new(config, self.mode)?;
 
         if Path::new(&resource.filepath).exists() && !self.force {
-            Err(CliError::ExistingFile {
-                filepath: resource.filepath,
-            })
+            Err(anyhow!(
+                "File {} already exists, use --force to overwrite it",
+                resource.filepath
+            ))
         } else {
             resource.create()?;
             crate::wout!("{} {}", SUCCESS, resource.filepath);

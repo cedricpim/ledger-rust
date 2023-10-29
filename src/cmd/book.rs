@@ -6,7 +6,6 @@ use std::io::prelude::*;
 use crate::config::Config;
 use crate::entity::line::Line;
 use crate::resource::Resource;
-use crate::CliResult;
 
 // This usage is necessary because, unfortunately, clap does not handle empty values as expected
 // for options that take multiple values.
@@ -30,14 +29,14 @@ pub struct Args {
     networth: bool,
 }
 
-pub fn run(args: Args) -> CliResult<()> {
+pub fn run(args: Args) -> anyhow::Result<()> {
     let config = Config::new()?;
 
     args.book(&config)
 }
 
 impl Args {
-    fn book(&self, config: &Config) -> CliResult<()> {
+    fn book(&self, config: &Config) -> anyhow::Result<()> {
         let mut resource = Resource::new(config, self.mode)?;
 
         let mut values = self.attributes.clone();
@@ -57,7 +56,11 @@ impl Args {
         resource.book(&[line])
     }
 
-    fn collect_attributes(&self, values: &mut Vec<String>, resource: &Resource) -> CliResult<()> {
+    fn collect_attributes(
+        &self,
+        values: &mut Vec<String>,
+        resource: &Resource,
+    ) -> anyhow::Result<()> {
         let stdout = io::stdout();
         let mut handle = stdout.lock();
 

@@ -9,7 +9,7 @@ use crate::entity::{date::Date, line::Line, line::Liner, money::Money, total::To
 use crate::exchange::Exchange;
 use crate::filter::Filter;
 use crate::resource::Resource;
-use crate::{util, CliResult, Mode};
+use crate::{util, Mode};
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -21,14 +21,14 @@ pub struct Args {
     pub date: Option<Date>,
 }
 
-pub fn run(args: Args) -> CliResult<()> {
+pub fn run(args: Args) -> anyhow::Result<()> {
     let config = Config::new()?;
 
     args.calculate(&config)
 }
 
 impl Args {
-    fn calculate(&self, config: &Config) -> CliResult<()> {
+    fn calculate(&self, config: &Config) -> anyhow::Result<()> {
         let exchange = Exchange::new(config)?;
 
         let filter = Filter::balance(self);
@@ -69,7 +69,7 @@ impl Report {
         config: &Config,
         exchange: &Exchange,
         filter: &Filter,
-    ) -> CliResult<Report> {
+    ) -> anyhow::Result<Report> {
         let mut report = Self {
             items: BTreeMap::new(),
         };

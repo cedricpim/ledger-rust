@@ -10,7 +10,7 @@ use crate::entity::money::{Currency, Money};
 use crate::entity::networth::Networth;
 use crate::exchange::Exchange;
 use crate::resource::Resource;
-use crate::{util, CliResult, Mode};
+use crate::{util, Mode};
 
 #[derive(Debug)]
 pub struct Report {
@@ -33,7 +33,7 @@ impl Report {
         ])
     }
 
-    pub fn new(config: Config, exchange: Exchange, currency: Currency) -> CliResult<Report> {
+    pub fn new(config: Config, exchange: Exchange, currency: Currency) -> anyhow::Result<Report> {
         Ok(Self {
             networth: Networth::new(&config, &exchange, currency)?,
             exchange,
@@ -41,7 +41,7 @@ impl Report {
         })
     }
 
-    pub fn save(&self) -> CliResult<()> {
+    pub fn save(&self) -> anyhow::Result<()> {
         let mut resource = Resource::new(&self.config, Mode::Networth)?;
 
         let entries = self.entries(&mut resource)?;
@@ -107,7 +107,7 @@ impl Report {
         table.printstd();
     }
 
-    fn entries(&self, resource: &mut Resource) -> CliResult<BTreeMap<Date, Line>> {
+    fn entries(&self, resource: &mut Resource) -> anyhow::Result<BTreeMap<Date, Line>> {
         let mut result: BTreeMap<Date, Line> = BTreeMap::new();
 
         resource.line(&mut |record| {

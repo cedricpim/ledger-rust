@@ -1,11 +1,10 @@
+use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 
 use std::cmp::Ordering;
 use std::ops::{Add, AddAssign, Mul, Sub};
 
-use crate::error::CliError;
 use crate::exchange::Exchange;
-use crate::CliResult;
 
 static DIFFERENT_CURRENCIES: &str = "Cannot perform operations between different currencies";
 
@@ -62,12 +61,13 @@ impl<'de> Deserialize<'de> for Currency {
 }
 
 impl Currency {
-    pub fn parse(code: &str) -> CliResult<Currency> {
+    pub fn parse(code: &str) -> anyhow::Result<Currency> {
         match iso_currency::Currency::from_code(code) {
             Some(value) => Ok(value.into()),
-            None => Err(CliError::IncorrectCurrencyCode {
-                code: code.to_string(),
-            }),
+            None => Err(anyhow!(
+                "The currency code '{}' does not exist",
+                code.to_string()
+            )),
         }
     }
 
@@ -182,18 +182,14 @@ impl Serialize for Money {
 }
 
 impl Money {
-    pub fn parse(value: &str, currency: Currency) -> CliResult<Money> {
-        match value.parse::<f64>() {
-            Err(err) => Err(CliError::from(err)),
-            Ok(val) => {
-                let cents = val * (10_i32.pow(currency.decimal_places().into())) as f64;
+    pub fn parse(value: &str, currency: Currency) -> anyhow::Result<Money> {
+        let val = value.parse::<f64>()?;
+        let cents = val * (10_i32.pow(currency.decimal_places().into())) as f64;
 
-                Ok(Money {
-                    value: cents.round() as i64,
-                    currency,
-                })
-            }
-        }
+        Ok(Money {
+            value: cents.round() as i64,
+            currency,
+        })
     }
 
     pub fn to_display(self) -> String {
@@ -245,7 +241,7 @@ impl Money {
         self.value
     }
 
-    pub fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Money> {
+    pub fn exchange(&self, to: Currency, exchange: &Exchange) -> anyhow::Result<Money> {
         if self.currency == to {
             return Ok(*self);
         }

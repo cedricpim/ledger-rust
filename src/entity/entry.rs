@@ -6,9 +6,7 @@ use std::fs::File;
 use crate::entity::date::Date;
 use crate::entity::line::{Line, Liner};
 use crate::entity::money::{Currency, Money};
-use crate::error::CliError;
 use crate::exchange::Exchange;
-use crate::CliResult;
 
 pub static DEFAULT_ACCOUNT: &str = "Investments";
 
@@ -26,7 +24,7 @@ pub struct Entry {
 }
 
 impl Entry {
-    pub fn build(values: Vec<String>) -> CliResult<Entry> {
+    pub fn build(values: Vec<String>) -> anyhow::Result<Entry> {
         let currency = Currency::parse(&values[4])?;
 
         Ok(Entry {
@@ -105,7 +103,7 @@ impl Liner for Entry {
         (self.id(), vec![self.clone().into()])
     }
 
-    fn exchange(&self, to: Currency, exchange: &Exchange) -> CliResult<Line> {
+    fn exchange(&self, to: Currency, exchange: &Exchange) -> anyhow::Result<Line> {
         Ok(Entry {
             date: self.date,
             invested: self.invested.exchange(to, exchange)?,
@@ -117,8 +115,8 @@ impl Liner for Entry {
         .into())
     }
 
-    fn write(&self, wrt: &mut csv::Writer<File>) -> CliResult<()> {
-        wrt.serialize(self).map_err(CliError::from)
+    fn write(&self, wrt: &mut csv::Writer<File>) -> anyhow::Result<()> {
+        Ok(wrt.serialize(self)?)
     }
 }
 

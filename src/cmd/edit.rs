@@ -4,7 +4,7 @@ use std::process::Command;
 
 use crate::config::Config;
 use crate::resource::Resource;
-use crate::{util, CliResult};
+use crate::util;
 
 static VIM: &str = "vim";
 
@@ -25,7 +25,7 @@ pub struct Args {
     networth: bool,
 }
 
-pub fn run(args: Args) -> CliResult<()> {
+pub fn run(args: Args) -> anyhow::Result<()> {
     let config = Config::new()?;
 
     args.edit(&config)
@@ -34,7 +34,7 @@ pub fn run(args: Args) -> CliResult<()> {
 impl Args {
     // After manual changes, validate the entries by loading all the records. This is done after
     // the file is saved so that errors can be fixed and all the data already input is not lost.
-    fn edit(&self, config: &Config) -> CliResult<()> {
+    fn edit(&self, config: &Config) -> anyhow::Result<()> {
         let editor = util::editor()?;
         let mut resource = Resource::new(config, self.mode)?;
 

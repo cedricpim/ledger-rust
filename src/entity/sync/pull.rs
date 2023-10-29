@@ -1,16 +1,16 @@
-use firefly_iii::models::TransactionTypeProperty;
+use anyhow::anyhow;
 use firefly_iii::models::transaction_read::TransactionRead;
 use firefly_iii::models::transaction_split::TransactionSplit;
+use firefly_iii::models::TransactionTypeProperty;
 
 use crate::config::Config;
 use crate::config::FireflyOptions;
 use crate::entity::entry;
 use crate::entity::line::{Line, Liner};
 use crate::entity::money::Money;
-use crate::error::CliError;
 use crate::resource::Resource;
 use crate::service::firefly::Firefly;
-use crate::{CliResult, Mode};
+use crate::Mode;
 
 pub struct Pull {
     from: i32,
@@ -27,7 +27,7 @@ impl Pull {
         }
     }
 
-    pub fn perform(&mut self, config: Config) -> CliResult<()> {
+    pub fn perform(&mut self, config: Config) -> anyhow::Result<()> {
         self.load(&config)?;
 
         self.pull(&config)?;
@@ -37,7 +37,7 @@ impl Pull {
         Ok(())
     }
 
-    fn load(&mut self, config: &Config) -> CliResult<()> {
+    fn load(&mut self, config: &Config) -> anyhow::Result<()> {
         Resource::new(config, Mode::Ledger)?.line(&mut |record| {
             self.find_highest_id(record);
             Ok(())
@@ -51,7 +51,7 @@ impl Pull {
         Ok(())
     }
 
-    fn pull(&mut self, config: &Config) -> CliResult<()> {
+    fn pull(&mut self, config: &Config) -> anyhow::Result<()> {
         for transaction in self.firefly.transactions(self.from)? {
             Transaction::new(transaction, config).process(&mut |record: Line| match record {
                 Line::Transaction { .. } => {
@@ -59,16 +59,14 @@ impl Pull {
 
                     Ok(())
                 }
-                Line::Entry { .. } => Err(CliError::NotPullableLine {
-                    line: format!("{:?}", record),
-                }),
+                Line::Entry { .. } => Err(anyhow!("The line {:?} could not be pulled", record)),
             })?;
         }
 
         Ok(())
     }
 
-    fn store(&mut self, config: &Config) -> CliResult<()> {
+    fn store(&mut self, config: &Config) -> anyhow::Result<()> {
         let sorter = |a: &Line, b: &Line| a.date().cmp(&b.date()).then(a.id().cmp(&b.id()));
 
         self.transactions.sort_by(sorter);
@@ -92,13 +90,13 @@ pub struct Transaction {
 }
 
 trait Pullable {
-    fn lines(&self, transfer: &str) -> CliResult<Vec<Line>>;
+    fn lines(&self, transfer: &str) -> anyhow::Result<Vec<Line>>;
     fn build_line(
         &self,
         source: Option<String>,
         destination: Option<String>,
         amount: String,
-    ) -> CliResult<Line>;
+    ) -> anyhow::Result<Line>;
 }
 
 impl Transaction {
@@ -109,9 +107,9 @@ impl Transaction {
         }
     }
 
-    pub fn process<F>(&mut self, action: &mut F) -> CliResult<()>
+    pub fn process<F>(&mut self, action: &mut F) -> anyhow::Result<()>
     where
-        F: FnMut(Line) -> CliResult<()>,
+        F: FnMut(Line) -> anyhow::Result<()>,
     {
         for split in &self.splits {
             for line in split.lines(&self.transfer)? {
@@ -124,7 +122,7 @@ impl Transaction {
 }
 
 impl Pullable for TransactionSplit {
-    fn lines(&self, transfer: &str) -> CliResult<Vec<Line>> {
+    fn lines(&self, transfer: &str) -> anyhow::Result<Vec<Line>> {
         let result = if self._type == TransactionTypeProperty::Transfer {
             vec![
                 self.build_line(
@@ -160,7 +158,7 @@ impl Pullable for TransactionSplit {
         source: Option<String>,
         destination: Option<String>,
         amount: String,
-    ) -> CliResult<Line> {
+    ) -> anyhow::Result<Line> {
         let mode = if source.clone().unwrap_or_default() == entry::DEFAULT_ACCOUNT {
             Mode::Networth
         } else {

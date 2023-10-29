@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 
 use std::collections::BTreeMap;
@@ -8,10 +9,8 @@ use std::time::{Duration, SystemTime};
 
 use crate::config::Config;
 use crate::entity::money::Currency;
-use crate::error::CliError;
 use crate::service::openexchangerates;
 use crate::xdg::Xdg;
-use crate::CliResult;
 
 const EXCHANGE_CACHE_FILENAME: &str = "exchange.yml";
 const EXCHANGE_CACHE_TTL: u64 = 43200; // 12 hours
@@ -29,7 +28,7 @@ pub struct Cache {
 }
 
 impl Cache {
-    pub fn new() -> CliResult<Self> {
+    pub fn new() -> anyhow::Result<Self> {
         Ok(Self {
             filepath: Xdg::Cache(EXCHANGE_CACHE_FILENAME.to_string()).filepath()?,
         })
@@ -53,12 +52,12 @@ impl Cache {
         path.exists() && interval < EXCHANGE_CACHE_TTL
     }
 
-    pub fn open(&self) -> CliResult<File> {
-        File::open(&self.filepath).map_err(CliError::from)
+    pub fn open(&self) -> anyhow::Result<File> {
+        Ok(File::open(&self.filepath)?)
     }
 
-    pub fn create(&self) -> CliResult<File> {
-        File::create(&self.filepath).map_err(CliError::from)
+    pub fn create(&self) -> anyhow::Result<File> {
+        Ok(File::create(&self.filepath)?)
     }
 }
 
@@ -73,7 +72,7 @@ impl From<openexchangerates::ExchangeRate> for Exchange {
 }
 
 impl Exchange {
-    pub fn new(config: &Config) -> CliResult<Exchange> {
+    pub fn new(config: &Config) -> anyhow::Result<Exchange> {
         let cache = Cache::new()?;
 
         if cache.valid() {
@@ -83,32 +82,33 @@ impl Exchange {
         }
     }
 
-    pub fn rate(&self, from: Currency, to: Currency) -> CliResult<f32> {
+    //     MissingExchangeRate {code: String }   = "There is no exchange currency for '{code}'",
+    pub fn rate(&self, from: Currency, to: Currency) -> anyhow::Result<f32> {
         match self.rates.get(&to.code()) {
-            None => Err(CliError::MissingExchangeRate { code: to.code() }),
+            None => Err(anyhow!("There is no exchange currency for '{}'", to.code())),
             Some(dividend) => match self.rates.get(&from.code()) {
-                None => Err(CliError::MissingExchangeRate { code: from.code() }),
+                None => Err(anyhow!(
+                    "There is no exchange currency for '{}'",
+                    from.code()
+                )),
                 Some(divisor) => Ok(dividend / divisor),
             },
         }
     }
 
-    fn load(cache: &Cache) -> CliResult<Exchange> {
-        serde_yaml::from_reader(cache.open()?).map_err(CliError::from)
+    fn load(cache: &Cache) -> anyhow::Result<Exchange> {
+        let filepath = cache.open()?;
+        Ok(serde_yaml::from_reader(filepath)?)
     }
 
-    fn download(config: &Config, cache: &Cache) -> CliResult<Exchange> {
+    fn download(config: &Config, cache: &Cache) -> anyhow::Result<Exchange> {
         match openexchangerates::Client::new(config.exchange_key()).latest() {
             Ok(result) => Exchange::store(result.into(), cache),
-            Err(openexchangerates::Error::Reqwest { .. }) => match Exchange::load(cache) {
-                Ok(val) => Ok(val),
-                Err(_) => Err(CliError::ExchangeInternetRequired),
-            },
-            Err(err) => Err(CliError::from(err)),
+            Err(_) => Exchange::load(cache),
         }
     }
 
-    fn store(exchange: Exchange, cache: &Cache) -> CliResult<Exchange> {
+    fn store(exchange: Exchange, cache: &Cache) -> anyhow::Result<Exchange> {
         let mut file = cache.create()?;
         let yaml = serde_yaml::to_string(&exchange)?;
         file.write_all(yaml.as_bytes())?;

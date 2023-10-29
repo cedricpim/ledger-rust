@@ -1,9 +1,7 @@
-use std::fmt;
-
+use anyhow::anyhow;
 use xdg::BaseDirectories;
 
-use crate::error::CliError;
-use crate::CliResult;
+use std::fmt;
 
 #[derive(Debug)]
 pub enum Xdg {
@@ -21,7 +19,7 @@ impl fmt::Display for Xdg {
 }
 
 impl Xdg {
-    pub fn filepath(&self) -> CliResult<String> {
+    pub fn filepath(&self) -> anyhow::Result<String> {
         let directory = Self::directory()?;
 
         let filepath = match self {
@@ -29,15 +27,13 @@ impl Xdg {
             Xdg::Cache(filename) => directory.place_cache_file(filename)?,
         };
 
-        filepath
-            .to_str()
-            .map(|v| v.to_string())
-            .ok_or(CliError::IncorrectPath {
-                message: self.to_string(),
-            })
+        filepath.to_str().map(|v| v.to_string()).ok_or(anyhow!(
+            "An error occurred while determining the path for: {}",
+            self.to_string()
+        ))
     }
 
-    fn directory() -> CliResult<BaseDirectories> {
-        BaseDirectories::with_prefix(env!("CARGO_PKG_NAME")).map_err(CliError::from)
+    fn directory() -> anyhow::Result<BaseDirectories> {
+        Ok(BaseDirectories::with_prefix(env!("CARGO_PKG_NAME"))?)
     }
 }

@@ -1,15 +1,8 @@
 //! A library for accessing OpenExchangeRates API.
 
-use custom_error::custom_error;
 use serde::Deserialize;
 
 use std::collections::BTreeMap;
-
-custom_error! { pub Error
-    Reqwest { source: reqwest::Error }      = @{ source },
-    Io { source: std::io::Error }           = @{ source },
-    SerdeJson { source: serde_json::Error } = @{ source },
-}
 
 #[derive(Deserialize, Debug)]
 pub struct ExchangeRate {
@@ -37,7 +30,7 @@ impl Client {
     /// Get the latest exchange rates.
     ///
     /// The corresponding endpoint in OpenExchangeRates is documented in [here](https://docs.openexchangerates.org/docs/latest-json).
-    pub fn latest(self) -> Result<ExchangeRate, Error> {
+    pub fn latest(self) -> anyhow::Result<ExchangeRate> {
         let url = &format!(
             "https://openexchangerates.org/api/latest.json?app_id={}",
             self.app_id

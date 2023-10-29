@@ -5,7 +5,6 @@ use crate::entity::report::{check, general};
 use crate::entity::{date::Date, total::Total};
 use crate::exchange::Exchange;
 use crate::filter::Filter;
-use crate::CliResult;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -32,14 +31,14 @@ pub struct Args {
     check: bool,
 }
 
-pub fn run(args: Args) -> CliResult<()> {
+pub fn run(args: Args) -> anyhow::Result<()> {
     let config = Config::new()?;
 
     args.generate(&config)
 }
 
 impl Args {
-    fn generate(&self, config: &Config) -> CliResult<()> {
+    fn generate(&self, config: &Config) -> anyhow::Result<()> {
         let exchange = Exchange::new(config)?;
 
         let filter = Filter::report(self, config);

@@ -6,12 +6,11 @@ use crate::entity::date::Date;
 use crate::entity::entry::Entry;
 use crate::entity::line::{Line, Liner};
 use crate::entity::money::{Currency, Money};
-use crate::error::CliError;
 use crate::exchange::Exchange;
 use crate::filter::Filter;
 use crate::resource::Resource;
 use crate::service::justetf::Asset;
-use crate::{CliResult, Mode};
+use crate::Mode;
 
 #[derive(Debug)]
 pub struct Networth {
@@ -23,7 +22,11 @@ pub struct Networth {
 }
 
 impl Networth {
-    pub fn new(config: &Config, exchange: &Exchange, currency: Currency) -> CliResult<Networth> {
+    pub fn new(
+        config: &Config,
+        exchange: &Exchange,
+        currency: Currency,
+    ) -> anyhow::Result<Networth> {
         let mut networth = Self {
             currency,
             cash: Money::new(currency, 0),
@@ -88,7 +91,7 @@ impl Networth {
         .into()
     }
 
-    fn add(&mut self, record: &Line, filter: &Filter, exchange: &Exchange) -> CliResult<()> {
+    fn add(&mut self, record: &Line, filter: &Filter, exchange: &Exchange) -> anyhow::Result<()> {
         let exchanged = record.exchange(self.currency, exchange)?;
 
         self.cash += exchanged.amount();
@@ -144,7 +147,6 @@ impl Investment {
         let quantity = record
             .quantity()
             .parse::<i64>()
-            .map_err(CliError::from)
             .unwrap_or_else(|e| crate::werr!(1, "{}", e));
 
         Self {
@@ -171,7 +173,6 @@ impl AddAssign<Line> for Investment {
         let quantity = other
             .quantity()
             .parse::<i64>()
-            .map_err(CliError::from)
             .unwrap_or_else(|e| crate::werr!(1, "{}", e));
 
         *self = Self {

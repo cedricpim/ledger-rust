@@ -1,3 +1,4 @@
+use anyhow::Context;
 use lockfile::Lockfile;
 use tempfile::NamedTempFile;
 
@@ -6,8 +7,7 @@ use std::fs::OpenOptions;
 
 use crate::entity::line::{Line, Liner};
 use crate::entity::{entry, transaction};
-use crate::error::CliError;
-use crate::{config, crypto, CliResult, Mode};
+use crate::{config, crypto, Mode};
 
 pub struct Resource {
     pub filepath: String,
@@ -18,7 +18,7 @@ pub struct Resource {
 }
 
 impl Resource {
-    pub fn new(config: &config::Config, mode: Mode) -> CliResult<Resource> {
+    pub fn new(config: &config::Config, mode: Mode) -> anyhow::Result<Resource> {
         let filepath = config.filepath(mode);
 
         Ok(Resource {
@@ -27,7 +27,7 @@ impl Resource {
             tempfile: tempfile::Builder::new().suffix(".csv").tempfile()?,
             mode,
             _lock: Lockfile::create(format!("{}.lock", filepath))
-                .map_err(|_| CliError::LockNotAcquired { filepath })?,
+                .with_context(|| format!("Another instance already loaded '{}'", filepath))?,
         })
     }
 
@@ -38,7 +38,7 @@ impl Resource {
         }
     }
 
-    pub fn create(&self) -> CliResult<()> {
+    pub fn create(&self) -> anyhow::Result<()> {
         let mut wtr = csv::WriterBuilder::new().from_writer(&self.tempfile);
 
         wtr.write_record(self.headers())?;
@@ -50,7 +50,7 @@ impl Resource {
         Ok(())
     }
 
-    pub fn create_with(&self, lines: Vec<Line>) -> CliResult<()> {
+    pub fn create_with(&self, lines: Vec<Line>) -> anyhow::Result<()> {
         let nfile = tempfile::Builder::new().suffix(".csv").tempfile()?;
 
         let mut wtr = csv::WriterBuilder::new().from_path(nfile.path())?;
@@ -66,7 +66,7 @@ impl Resource {
         Ok(())
     }
 
-    pub fn book(&mut self, lines: &[Line]) -> CliResult<()> {
+    pub fn book(&mut self, lines: &[Line]) -> anyhow::Result<()> {
         self.apply(|file| {
             let afile = OpenOptions::new().append(true).open(file.path())?;
             let mut wtr = csv::WriterBuilder::new()
@@ -83,9 +83,9 @@ impl Resource {
         })
     }
 
-    pub fn apply<F>(&mut self, action: F) -> CliResult<()>
+    pub fn apply<F>(&mut self, action: F) -> anyhow::Result<()>
     where
-        F: FnOnce(&NamedTempFile) -> CliResult<()>,
+        F: FnOnce(&NamedTempFile) -> anyhow::Result<()>,
     {
         self.open()?;
 
@@ -96,9 +96,9 @@ impl Resource {
         Ok(())
     }
 
-    pub fn rewrite<F>(&mut self, action: &mut F) -> CliResult<()>
+    pub fn rewrite<F>(&mut self, action: &mut F) -> anyhow::Result<()>
     where
-        F: FnMut(&mut Line) -> CliResult<Vec<Line>>,
+        F: FnMut(&mut Line) -> anyhow::Result<Vec<Line>>,
     {
         let accumulator = tempfile::Builder::new().suffix(".csv").tempfile()?;
 
@@ -119,9 +119,9 @@ impl Resource {
         Ok(())
     }
 
-    pub fn line<F>(&mut self, action: &mut F) -> CliResult<()>
+    pub fn line<F>(&mut self, action: &mut F) -> anyhow::Result<()>
     where
-        F: FnMut(&mut Line) -> CliResult<()>,
+        F: FnMut(&mut Line) -> anyhow::Result<()>,
     {
         let mode = self.mode;
 
@@ -147,7 +147,7 @@ impl Resource {
         Ok(())
     }
 
-    fn open(&mut self) -> CliResult<()> {
+    fn open(&mut self) -> anyhow::Result<()> {
         match self.pass.take() {
             Some(pass) => {
                 let mut in_file = File::open(&self.filepath)?;
@@ -156,14 +156,11 @@ impl Resource {
                 match crypto::decrypt(&mut in_file, &mut out_file, &pass) {
                     Ok(_) => {
                         self.pass = Some(pass);
-                        Ok(())
                     }
-                    Err(CliError::CryptoIncorrectPassword) => {
+                    Err(_) => {
                         std::fs::copy(&self.filepath, self.tempfile.path())?;
-                        Ok(())
                     }
-                    Err(err) => Err(err),
-                }?;
+                };
             }
             None => {
                 std::fs::copy(&self.filepath, self.tempfile.path())?;
@@ -173,7 +170,7 @@ impl Resource {
         Ok(())
     }
 
-    fn close(&self, tempfile: &NamedTempFile) -> CliResult<()> {
+    fn close(&self, tempfile: &NamedTempFile) -> anyhow::Result<()> {
         match &self.pass {
             Some(pass) => {
                 let mut in_file = tempfile.reopen()?;

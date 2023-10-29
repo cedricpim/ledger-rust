@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Context};
 use prettytable::format::Alignment;
 use prettytable::{color, Attr, Cell};
 use rand::Rng;
@@ -6,11 +7,9 @@ use std::iter;
 
 use crate::config::Config;
 use crate::entity::money::{Currency, Money};
-use crate::error::CliError;
-use crate::CliResult;
 
-pub fn editor() -> CliResult<String> {
-    std::env::var("EDITOR").map_err(|_| CliError::UndefinedEditor)
+pub fn editor() -> anyhow::Result<String> {
+    std::env::var("EDITOR").context("EDITOR variable is not set")
 }
 
 pub fn random_pass() -> Option<String> {
@@ -25,14 +24,14 @@ pub fn random_pass() -> Option<String> {
     Some(value)
 }
 
-pub fn currency(value: Option<&String>, config: &Config) -> CliResult<Currency> {
+pub fn currency(value: Option<&String>, config: &Config) -> anyhow::Result<Currency> {
     let currency_code = value.unwrap_or(&config.currency);
 
     let code = currency_code.to_uppercase();
 
     match iso_currency::Currency::from_code(&code) {
         Some(val) => Ok(val.into()),
-        None => Err(CliError::IncorrectCurrencyCode { code }),
+        None => Err(anyhow!("The currency code '{}' does not exist", code)),
     }
 }
 

@@ -1,32 +1,23 @@
-use custom_error::custom_error;
-use firefly_iii::apis::{accounts_api, about_api, currencies_api, transactions_api};
+use anyhow::{anyhow, Result};
 use firefly_iii::apis::configuration::Configuration;
-use firefly_iii::models::ShortAccountTypeProperty;
-use firefly_iii::models::AccountRoleProperty;
-use firefly_iii::models::TransactionTypeProperty;
-use firefly_iii::models::AccountStore;
+use firefly_iii::apis::{about_api, accounts_api, currencies_api, transactions_api};
 use firefly_iii::models::AccountRead;
+use firefly_iii::models::AccountRoleProperty;
+use firefly_iii::models::AccountStore;
 use firefly_iii::models::CurrencyRead;
 use firefly_iii::models::CurrencySingle;
 use firefly_iii::models::MetaPagination;
-use firefly_iii::models::TransactionStore;
+use firefly_iii::models::ShortAccountTypeProperty;
 use firefly_iii::models::TransactionRead;
 use firefly_iii::models::TransactionSplitStore;
+use firefly_iii::models::TransactionStore;
 use firefly_iii::models::TransactionTypeFilter;
+use firefly_iii::models::TransactionTypeProperty;
 use indicatif::{ProgressBar, ProgressStyle};
-use anyhow::{anyhow, Result};
 
 use crate::entity::line::{Line, Liner};
 use crate::entity::money::Money;
 use crate::entity::sync::push;
-
-custom_error! { pub Error
-    Reqwest { source: reqwest::Error }        = @{ source },
-    // Api { source: firefly_iii::apis::Error }  = @{ source },
-    Value { source: std::num::ParseIntError } = @{ source },
-
-    MissingExpectedOpeningBalance = "The account is missing an opening balance transaction",
-}
 
 static PROGRESS_BAR_FORMAT: &str = "{spinner:.green}▕{wide_bar:.cyan}▏{percent}% ({eta})";
 static PROGRESS_BAR_CHARS: &str = "█▉▊▋▌▍▎▏  ";
@@ -108,7 +99,14 @@ impl Firefly {
         let mut page = Some((missing_entries as f32 / per_page as f32).ceil() as i32);
 
         loop {
-            let response = transactions_api::list_transaction(&self.configuration, page, None, None, Some(TransactionTypeFilter::All)).await?;
+            let response = transactions_api::list_transaction(
+                &self.configuration,
+                page,
+                None,
+                None,
+                Some(TransactionTypeFilter::All),
+            )
+            .await?;
 
             for transaction in response.data {
                 let id = transaction.id.parse::<i32>().unwrap_or_default();
@@ -136,7 +134,8 @@ impl Firefly {
         let mut page = 0;
 
         loop {
-            let response = accounts_api::list_account(&self.configuration, Some(page), None, None).await?;
+            let response =
+                accounts_api::list_account(&self.configuration, Some(page), None, None).await?;
 
             for account in response.data {
                 result.push(account)
@@ -155,22 +154,25 @@ impl Firefly {
     #[tokio::main]
     pub async fn get_opening_balance_transaction(&self, id: i32) -> Result<String> {
         let mut response = accounts_api::list_transaction_by_account(
-                &self.configuration,
-                &id.to_string(),
-                None,
-                Some(1),
-                None,
-                None,
-                Some(TransactionTypeFilter::OpeningBalance),
-            )
-            .await?;
+            &self.configuration,
+            &id.to_string(),
+            None,
+            Some(1),
+            None,
+            None,
+            Some(TransactionTypeFilter::OpeningBalance),
+        )
+        .await?;
 
-        response.data.pop().map(|v| v.id).ok_or(anyhow!("Account {} is missing an opening balance transaction", id))
+        response.data.pop().map(|v| v.id).ok_or(anyhow!(
+            "Account {} is missing an opening balance transaction",
+            id
+        ))
     }
 
     #[tokio::main]
     pub async fn create_account(&self, data: &push::AccountData) -> Result<String> {
-        let mut account = AccountStore::new(data.name.to_string(), data._type.clone());
+        let mut account = AccountStore::new(data.name.to_string(), data._type);
 
         account.currency_code = data.currency.clone();
         account.include_net_worth = Some(data.networth);
@@ -187,16 +189,17 @@ impl Firefly {
     }
 
     #[tokio::main]
-    pub async fn create_transfer(
-        &self,
-        transfer: push::Transfer,
-        user: i32,
-    ) -> Result<String> {
+    pub async fn create_transfer(&self, transfer: push::Transfer, user: i32) -> Result<String> {
         if transfer.value().zero() {
             return Ok(String::new());
         }
 
-        let mut split = Firefly::build_split(TransactionTypeProperty::Transfer, transfer.line, transfer.value(), transfer.ids);
+        let mut split = Firefly::build_split(
+            TransactionTypeProperty::Transfer,
+            transfer.line,
+            transfer.value(),
+            transfer.ids,
+        );
 
         split.foreign_currency_code = Some(transfer.other_line.currency().code());
         split.foreign_amount = Some(transfer.other_line.amount().abs().to_number().to_string());
@@ -215,9 +218,19 @@ impl Firefly {
         }
 
         let split = if transaction.value().positive() {
-            Firefly::build_split(TransactionTypeProperty::Deposit, transaction.line, transaction.value(), transaction.ids)
+            Firefly::build_split(
+                TransactionTypeProperty::Deposit,
+                transaction.line,
+                transaction.value(),
+                transaction.ids,
+            )
         } else {
-            Firefly::build_split(TransactionTypeProperty::Withdrawal, transaction.line, transaction.value(), transaction.ids)
+            Firefly::build_split(
+                TransactionTypeProperty::Withdrawal,
+                transaction.line,
+                transaction.value(),
+                transaction.ids,
+            )
         };
 
         self.post_transaction(split, user).await
@@ -226,12 +239,18 @@ impl Firefly {
     async fn post_transaction(&self, split: TransactionSplitStore, _user: i32) -> Result<String> {
         let transaction = TransactionStore::new(vec![split]);
 
-        let response = transactions_api::store_transaction(&self.configuration, transaction).await?;
+        let response =
+            transactions_api::store_transaction(&self.configuration, transaction).await?;
 
         Ok(response.data.id)
     }
 
-    fn build_split(_type: TransactionTypeProperty, line: &Line, amount: Money, ids: (i32, i32)) -> TransactionSplitStore {
+    fn build_split(
+        _type: TransactionTypeProperty,
+        line: &Line,
+        amount: Money,
+        ids: (i32, i32),
+    ) -> TransactionSplitStore {
         let mut split = TransactionSplitStore::new(
             _type,
             line.date().to_string(),
@@ -251,7 +270,14 @@ impl Firefly {
     }
 
     async fn missing_entries_per_page(&self, from: i32) -> Result<(i32, i32)> {
-        let response = transactions_api::list_transaction(&self.configuration, None, None, None, Some(TransactionTypeFilter::All)).await?;
+        let response = transactions_api::list_transaction(
+            &self.configuration,
+            None,
+            None,
+            None,
+            Some(TransactionTypeFilter::All),
+        )
+        .await?;
 
         let per_page = response
             .meta

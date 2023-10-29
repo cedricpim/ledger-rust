@@ -1,11 +1,9 @@
+use anyhow::anyhow;
 use chrono::format::strftime::StrftimeItems;
 use chrono::format::DelayedFormat;
 use chrono::naive::NaiveDate;
 use chrono::{DateTime, Datelike, Utc};
 use serde::{Deserialize, Serialize};
-
-use crate::error::CliError;
-use crate::CliResult;
 
 static DATE_FORMAT: &str = "%Y-%m-%d";
 
@@ -61,7 +59,7 @@ impl<'de> Deserialize<'de> for Date {
 }
 
 impl std::str::FromStr for Date {
-    type Err = crate::error::CliError;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Date::parse(s)
@@ -113,16 +111,17 @@ impl Date {
         .into()
     }
 
-    pub fn parse(value: &str) -> CliResult<Date> {
+    pub fn parse(value: &str) -> anyhow::Result<Date> {
         match value {
             "" => Ok(Default::default()),
             val => match NaiveDate::parse_from_str(val, DATE_FORMAT) {
                 Ok(value) => Ok(value.into()),
                 Err(_) => match DateTime::parse_from_rfc3339(val) {
                     Ok(datetime) => Ok(datetime.naive_local().date().into()),
-                    Err(_) => Err(CliError::InvalidDateFormat {
-                        date: value.to_string(),
-                    }),
+                    Err(_) => Err(anyhow!(
+                        "Invalid format for date: {} (only accept %Y-%m-%d)",
+                        value.to_string()
+                    )),
                 },
             },
         }

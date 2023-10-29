@@ -12,7 +12,7 @@ use crate::entity::total::Total;
 use crate::exchange::Exchange;
 use crate::filter::Filter;
 use crate::resource::Resource;
-use crate::{util, CliResult, Mode};
+use crate::{util, Mode};
 
 #[derive(Default, Debug, Clone)]
 pub struct Report {
@@ -45,7 +45,7 @@ impl Report {
         config: &Config,
         exchange: &Exchange,
         filter: &Filter,
-    ) -> CliResult<Report> {
+    ) -> anyhow::Result<Report> {
         let mut report = Self {
             currency: util::currency(args.currency.as_ref(), config)?,
             ..Default::default()
@@ -108,7 +108,7 @@ impl Report {
         category: String,
         filter: &Filter,
         exchange: &Exchange,
-    ) -> CliResult<()> {
+    ) -> anyhow::Result<()> {
         if !filter.accountable(&record.account()) {
             return Ok(());
         };

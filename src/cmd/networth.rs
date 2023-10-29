@@ -3,7 +3,7 @@ use clap::Parser;
 use crate::config::Config;
 use crate::entity::report::networth;
 use crate::exchange::Exchange;
-use crate::{util, CliResult};
+use crate::util;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -15,14 +15,14 @@ pub struct Args {
     save: bool,
 }
 
-pub fn run(args: Args) -> CliResult<()> {
+pub fn run(args: Args) -> anyhow::Result<()> {
     let config = Config::new()?;
 
     args.generate(config)
 }
 
 impl Args {
-    fn generate(&self, config: Config) -> CliResult<()> {
+    fn generate(&self, config: Config) -> anyhow::Result<()> {
         let exchange = Exchange::new(&config)?;
 
         let currency = util::currency(self.currency.as_ref(), &config)?;

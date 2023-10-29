@@ -6,7 +6,6 @@ mod cmd;
 mod config;
 mod crypto;
 mod entity;
-mod error;
 mod exchange;
 mod filter;
 mod resource;
@@ -33,8 +32,6 @@ macro_rules! werr {
         process::exit($signal);
     });
 }
-
-pub type CliResult<T> = Result<T, error::CliError>;
 
 #[derive(Parser, Debug)]
 #[clap(author, about, version)]

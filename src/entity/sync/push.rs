@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use firefly_iii::models::ShortAccountTypeProperty;
 use indicatif::{ProgressBar, ProgressStyle};
 
@@ -9,11 +10,10 @@ use crate::config::FireflyOptions;
 use crate::entity::date::Date;
 use crate::entity::line::{Line, Liner};
 use crate::entity::money::Money;
-use crate::error::CliError;
 use crate::filter::Filter;
 use crate::resource::Resource;
 use crate::service::firefly::Firefly;
-use crate::{CliResult, Mode};
+use crate::Mode;
 
 static PROGRESS_BAR_FORMAT: &str = "{spinner:.green}▕{wide_bar:.cyan}▏{percent}% ({eta})";
 static PROGRESS_BAR_CHARS: &str = "█▉▊▋▌▍▎▏  ";
@@ -27,13 +27,18 @@ pub struct Push {
 }
 
 impl Push {
-    fn process<F>(config: &Config, mode: Mode, pb: &ProgressBar, action: &mut F) -> CliResult<()>
+    fn process<F>(
+        config: &Config,
+        mode: Mode,
+        pb: &ProgressBar,
+        action: &mut F,
+    ) -> anyhow::Result<()>
     where
-        F: FnMut(&mut Line, &mut Option<CliError>) -> CliResult<(String, Vec<Line>)>,
+        F: FnMut(&mut Line, &mut Option<anyhow::Error>) -> anyhow::Result<(String, Vec<Line>)>,
     {
         let mut resource = Resource::new(config, mode)?;
 
-        let mut error: Option<CliError> = None;
+        let mut error: Option<anyhow::Error> = None;
 
         resource.rewrite(&mut |record| {
             if record.pushable() {
@@ -52,7 +57,7 @@ impl Push {
         error.map_or(Ok(()), Err)
     }
 
-    pub fn new(options: &FireflyOptions, config: &Config) -> CliResult<Self> {
+    pub fn new(options: &FireflyOptions, config: &Config) -> anyhow::Result<Self> {
         let client = Firefly::new(&options.base_path, &options.token);
 
         Ok(Self {
@@ -64,7 +69,7 @@ impl Push {
         })
     }
 
-    pub fn perform(&mut self, config: Config) -> CliResult<()> {
+    pub fn perform(&mut self, config: Config) -> anyhow::Result<()> {
         let pb = ProgressBar::new(config.total_pushable_lines()? as u64);
         pb.set_style(
             ProgressStyle::default_bar()
@@ -87,7 +92,7 @@ impl Push {
         Ok(())
     }
 
-    pub fn account(&mut self, account: &AccountData) -> CliResult<i32> {
+    pub fn account(&mut self, account: &AccountData) -> anyhow::Result<i32> {
         match self.accounts.entry(account.key()) {
             Entry::Occupied(v) => Ok(*v.get()),
             Entry::Vacant(v) => {
@@ -108,7 +113,7 @@ impl Push {
         mode: Mode,
         entity: &'a mut T,
         pb: &ProgressBar,
-    ) -> CliResult<()>
+    ) -> anyhow::Result<()>
     where
         T: Pushable<'a>,
     {
@@ -118,7 +123,7 @@ impl Push {
                     .process_currency(record)
                     .and(entity.process(record, self));
 
-                let handle_error = |e: CliError| -> CliResult<(String, Vec<Line>)> {
+                let handle_error = |e: anyhow::Error| -> anyhow::Result<(String, Vec<Line>)> {
                     *error = Some(e);
                     Ok(entity.previous().map_or_else(
                         || record.pushed(),
@@ -132,7 +137,7 @@ impl Push {
         })
     }
 
-    fn process_currency(&mut self, record: &Line) -> CliResult<()> {
+    fn process_currency(&mut self, record: &Line) -> anyhow::Result<()> {
         if !self.currencies.contains(&record.currency().code()) {
             self.firefly.enable_currency(record.currency().code())?;
             self.currencies.insert(record.currency().code());
@@ -141,7 +146,7 @@ impl Push {
         Ok(())
     }
 
-    fn load(&mut self) -> CliResult<()> {
+    fn load(&mut self) -> anyhow::Result<()> {
         self.firefly
             .default_currency(self.options.currency.to_string())?;
 
@@ -210,7 +215,12 @@ pub enum Account {
 }
 
 impl Account {
-    fn balance(line: &Line, value: Money, filter: &Filter, push: &mut Push) -> CliResult<Self> {
+    fn balance(
+        line: &Line,
+        value: Money,
+        filter: &Filter,
+        push: &mut Push,
+    ) -> anyhow::Result<Self> {
         let mut account = AccountData::asset(line, filter);
 
         account.date = Some(line.date());
@@ -220,7 +230,12 @@ impl Account {
         Ok(Self::Balance(account))
     }
 
-    fn transaction(line: &Line, value: Money, filter: &Filter, push: &mut Push) -> CliResult<Self> {
+    fn transaction(
+        line: &Line,
+        value: Money,
+        filter: &Filter,
+        push: &mut Push,
+    ) -> anyhow::Result<Self> {
         let mut asset = AccountData::asset(line, filter);
         asset.id = Some(push.account(&asset)?);
 
@@ -243,7 +258,7 @@ impl Account {
         other_line: &Line,
         filter: &Filter,
         push: &mut Push,
-    ) -> CliResult<Self> {
+    ) -> anyhow::Result<Self> {
         let mut one = AccountData::asset(line, filter);
         one.id = Some(push.account(&one)?);
 
@@ -257,19 +272,19 @@ impl Account {
         }
     }
 
-    fn id(&self) -> CliResult<i32> {
+    fn id(&self) -> anyhow::Result<i32> {
         match self {
-            Self::Balance(account) => account.id.ok_or(CliError::MissingAccountId),
-            Self::DoubleEntry(_, _) => Err(CliError::MissingAccountId),
+            Self::Balance(account) => account.id.ok_or(anyhow!("Id of the account is missing")),
+            Self::DoubleEntry(_, _) => Err(anyhow!("Id of the account is missing")),
         }
     }
 
-    fn ids(&self) -> CliResult<(i32, i32)> {
+    fn ids(&self) -> anyhow::Result<(i32, i32)> {
         match self {
-            Self::Balance(_) => Err(CliError::MissingAccountId),
+            Self::Balance(_) => Err(anyhow!("Id of the account is missing")),
             Self::DoubleEntry(one, other) => Ok((
-                one.id.ok_or(CliError::MissingAccountId)?,
-                other.id.ok_or(CliError::MissingAccountId)?,
+                one.id.ok_or(anyhow!("Id of the account is missing"))?,
+                other.id.ok_or(anyhow!("Id of the account is missing"))?,
             )),
         }
     }
@@ -283,7 +298,12 @@ pub struct Transaction<'a> {
 }
 
 impl<'a> Transaction<'a> {
-    pub fn new(line: &'a Line, value: Money, filter: &Filter, push: &mut Push) -> CliResult<Self> {
+    pub fn new(
+        line: &'a Line,
+        value: Money,
+        filter: &Filter,
+        push: &mut Push,
+    ) -> anyhow::Result<Self> {
         let accounts = Account::transaction(line, value, filter, push)?;
 
         Ok(Self {
@@ -311,7 +331,7 @@ impl<'a> Transfer<'a> {
         other_line: &'a Line,
         filter: &Filter,
         push: &mut Push,
-    ) -> CliResult<Self> {
+    ) -> anyhow::Result<Self> {
         let accounts = Account::transfer(line, other_line, filter, push)?;
 
         Ok(Self {
@@ -354,7 +374,7 @@ impl<'a> Ledger<'a> {
         &mut self,
         record: &Line,
         push: &mut Push,
-    ) -> CliResult<(String, Vec<Line>)> {
+    ) -> anyhow::Result<(String, Vec<Line>)> {
         let (mut id, mut lines) = (String::new(), Vec::<Line>::new());
 
         match &self.previous {
@@ -392,7 +412,7 @@ impl<'a> Networth<'a> {
 }
 
 pub trait Pushable<'a> {
-    fn process(&mut self, record: &Line, push: &mut Push) -> CliResult<(String, Vec<Line>)>;
+    fn process(&mut self, record: &Line, push: &mut Push) -> anyhow::Result<(String, Vec<Line>)>;
 
     fn opening_balance(&self, record: &Line) -> bool;
 
@@ -412,7 +432,7 @@ pub trait Pushable<'a> {
         &mut self,
         record: &Line,
         push: &mut Push,
-    ) -> CliResult<(String, Vec<Line>)> {
+    ) -> anyhow::Result<(String, Vec<Line>)> {
         let id = if self.opening_balance(record) {
             let account = Account::balance(record, self.balance(record), self.filter(), push)?;
 
@@ -430,7 +450,7 @@ pub trait Pushable<'a> {
 }
 
 impl<'a> Pushable<'a> for Ledger<'a> {
-    fn process(&mut self, record: &Line, push: &mut Push) -> CliResult<(String, Vec<Line>)> {
+    fn process(&mut self, record: &Line, push: &mut Push) -> anyhow::Result<(String, Vec<Line>)> {
         if record.pushable() {
             if record.category() == self.options.transfer {
                 self.process_transfer(record, push)
@@ -472,7 +492,7 @@ impl<'a> Pushable<'a> for Ledger<'a> {
 }
 
 impl<'a> Pushable<'a> for Networth<'a> {
-    fn process(&mut self, record: &Line, push: &mut Push) -> CliResult<(String, Vec<Line>)> {
+    fn process(&mut self, record: &Line, push: &mut Push) -> anyhow::Result<(String, Vec<Line>)> {
         let result = if record.pushable() {
             self.process_transaction(record, push)?
         } else {

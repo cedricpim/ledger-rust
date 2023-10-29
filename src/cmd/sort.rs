@@ -3,7 +3,6 @@ use clap::Parser;
 use crate::config::Config;
 use crate::entity::line::Line;
 use crate::resource::Resource;
-use crate::CliResult;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -19,14 +18,14 @@ pub struct Args {
     networth: bool,
 }
 
-pub fn run(args: Args) -> CliResult<()> {
+pub fn run(args: Args) -> anyhow::Result<()> {
     let config = Config::new()?;
 
     args.sort(&config)
 }
 
 impl Args {
-    fn sort(&self, config: &Config) -> CliResult<()> {
+    fn sort(&self, config: &Config) -> anyhow::Result<()> {
         let mut resource = Resource::new(config, self.mode)?;
 
         let mut lines: Vec<Line> = Vec::new();

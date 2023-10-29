@@ -1,10 +1,9 @@
+use anyhow::anyhow;
 use clap::Parser;
 
 use std::path::Path;
 
 use crate::config::Config;
-use crate::error::CliError;
-use crate::CliResult;
 
 static SUCCESS: &str = "Generated default configuration file on";
 
@@ -15,16 +14,18 @@ pub struct Args {
     force: bool,
 }
 
-pub fn run(args: Args) -> CliResult<()> {
+pub fn run(args: Args) -> anyhow::Result<()> {
     args.configure()
 }
 
 impl Args {
-    fn configure(&self) -> CliResult<()> {
+    fn configure(&self) -> anyhow::Result<()> {
         let config_path = Config::path()?;
 
         if Path::new(&config_path).exists() && !self.force {
-            Err(CliError::ExistingConfiguration)
+            Err(anyhow!(
+                "Configuration file already exists, use --force to overwrite it"
+            ))
         } else {
             Config::default(&config_path)?;
             crate::wout!("{} {}", SUCCESS, config_path);

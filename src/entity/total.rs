@@ -4,7 +4,7 @@ use crate::entity::line::{Line, Liner};
 use crate::entity::money::{Currency, Money};
 use crate::exchange::Exchange;
 use crate::filter::Filter;
-use crate::{util, CliResult};
+use crate::util;
 
 #[derive(Debug)]
 pub struct Total {
@@ -14,7 +14,11 @@ pub struct Total {
 }
 
 impl Total {
-    pub fn new(currency: Option<&String>, config: &Config, date: Option<Date>) -> CliResult<Self> {
+    pub fn new(
+        currency: Option<&String>,
+        config: &Config,
+        date: Option<Date>,
+    ) -> anyhow::Result<Self> {
         Ok(Self {
             value: 0,
             currency: util::currency(currency, config)?,
@@ -22,7 +26,7 @@ impl Total {
         })
     }
 
-    pub fn sum(&mut self, record: &Line, exchange: &Exchange) -> CliResult<()> {
+    pub fn sum(&mut self, record: &Line, exchange: &Exchange) -> anyhow::Result<()> {
         let exchanged = record.exchange(self.currency, exchange)?;
 
         if self.filter.accountable(&record.account()) && self.filter.within(record.date()) {

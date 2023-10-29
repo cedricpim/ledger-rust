@@ -42,6 +42,7 @@ impl Firefly {
                 oauth_access_token: Some(token.to_string()),
                 client: reqwest::Client::builder()
                     .default_headers(headers)
+                    .connection_verbose(true)
                     .build()
                     .unwrap_or(reqwest::Client::new()),
                 ..Default::default()

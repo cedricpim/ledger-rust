@@ -152,10 +152,10 @@ impl Firefly {
     }
 
     #[tokio::main]
-    pub async fn get_opening_balance_transaction(&self, id: i32) -> Result<String> {
+    pub async fn get_opening_balance_transaction(&self, id: String) -> Result<String> {
         let mut response = accounts_api::list_transaction_by_account(
             &self.configuration,
-            &id.to_string(),
+            &id,
             None,
             Some(1),
             None,
@@ -249,7 +249,7 @@ impl Firefly {
         _type: TransactionTypeProperty,
         line: &Line,
         amount: Money,
-        ids: (i32, i32),
+        ids: (String, String),
     ) -> TransactionSplitStore {
         let mut split = TransactionSplitStore::new(
             _type,
@@ -258,8 +258,8 @@ impl Firefly {
             line.description(),
         );
 
-        split.source_id = Some(ids.0.to_string());
-        split.destination_id = Some(ids.1.to_string());
+        split.source_id = Some(ids.0);
+        split.destination_id = Some(ids.1);
         split.currency_code = Some(line.currency().code());
         split.currency_code = Some(line.currency().code());
         split.category_name = Some(line.venue());

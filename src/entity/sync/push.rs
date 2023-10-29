@@ -23,7 +23,7 @@ pub struct Push {
     firefly: Firefly,
     options: FireflyOptions,
     currencies: HashSet<String>,
-    accounts: HashMap<(String, String), i32>,
+    accounts: HashMap<(String, String), String>,
 }
 
 impl Push {
@@ -92,17 +92,15 @@ impl Push {
         Ok(())
     }
 
-    pub fn account(&mut self, account: &AccountData) -> anyhow::Result<i32> {
+    pub fn account(&mut self, account: &AccountData) -> anyhow::Result<String> {
         match self.accounts.entry(account.key()) {
-            Entry::Occupied(v) => Ok(*v.get()),
+            Entry::Occupied(v) => Ok(v.get().to_string()),
             Entry::Vacant(v) => {
                 let id = self.firefly.create_account(account)?;
 
-                let parsed_id = id.parse::<i32>()?;
+                v.insert(id.to_string());
 
-                v.insert(parsed_id);
-
-                Ok(parsed_id)
+                Ok(id)
             }
         }
     }
@@ -156,9 +154,7 @@ impl Push {
                 format!("{:?}", account.attributes._type),
             );
 
-            let id = account.id.parse::<i32>()?;
-
-            self.accounts.entry(info).or_insert_with(|| id);
+            self.accounts.entry(info).or_insert_with(|| account.id);
         }
 
         for currency in self.firefly.currencies()? {
@@ -172,7 +168,7 @@ impl Push {
 }
 
 pub struct AccountData {
-    pub id: Option<i32>,
+    pub id: Option<String>,
     pub name: String,
     pub date: Option<Date>,
     pub value: Option<Money>,
@@ -272,27 +268,27 @@ impl Account {
         }
     }
 
-    fn id(&self) -> anyhow::Result<i32> {
+    fn id(&self) -> anyhow::Result<String> {
         match self {
-            Self::Balance(account) => account.id.ok_or(anyhow!("Id of the account is missing")),
+            Self::Balance(account) => account.id.clone().ok_or(anyhow!("Id of the account is missing")),
             Self::DoubleEntry(_, _) => Err(anyhow!("Id of the account is missing")),
         }
     }
 
-    fn ids(&self) -> anyhow::Result<(i32, i32)> {
+    fn ids(&self) -> anyhow::Result<(String, String)> {
         match self {
             Self::Balance(_) => Err(anyhow!("Id of the account is missing")),
             Self::DoubleEntry(one, other) => Ok((
-                one.id.ok_or(anyhow!("Id of the account is missing"))?,
-                other.id.ok_or(anyhow!("Id of the account is missing"))?,
+                one.id.clone().ok_or(anyhow!("Id of the account is missing"))?,
+                other.id.clone().ok_or(anyhow!("Id of the account is missing"))?,
             )),
         }
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Transaction<'a> {
-    pub ids: (i32, i32),
+    pub ids: (String, String),
     pub line: &'a Line,
     pub value: Money,
 }
@@ -318,9 +314,9 @@ impl<'a> Transaction<'a> {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Transfer<'a> {
-    pub ids: (i32, i32),
+    pub ids: (String, String),
     pub line: &'a Line,
     pub other_line: &'a Line,
 }

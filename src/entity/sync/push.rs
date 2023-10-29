@@ -270,7 +270,10 @@ impl Account {
 
     fn id(&self) -> anyhow::Result<String> {
         match self {
-            Self::Balance(account) => account.id.clone().ok_or(anyhow!("Id of the account is missing")),
+            Self::Balance(account) => account
+                .id
+                .clone()
+                .ok_or(anyhow!("Id of the account is missing")),
             Self::DoubleEntry(_, _) => Err(anyhow!("Id of the account is missing")),
         }
     }
@@ -279,8 +282,13 @@ impl Account {
         match self {
             Self::Balance(_) => Err(anyhow!("Id of the account is missing")),
             Self::DoubleEntry(one, other) => Ok((
-                one.id.clone().ok_or(anyhow!("Id of the account is missing"))?,
-                other.id.clone().ok_or(anyhow!("Id of the account is missing"))?,
+                one.id
+                    .clone()
+                    .ok_or(anyhow!("Id of the account is missing"))?,
+                other
+                    .id
+                    .clone()
+                    .ok_or(anyhow!("Id of the account is missing"))?,
             )),
         }
     }

@@ -14,6 +14,7 @@ use firefly_iii::models::TransactionStore;
 use firefly_iii::models::TransactionTypeFilter;
 use firefly_iii::models::TransactionTypeProperty;
 use indicatif::{ProgressBar, ProgressStyle};
+use reqwest::header;
 
 use crate::entity::line::{Line, Liner};
 use crate::entity::money::Money;
@@ -28,11 +29,21 @@ pub struct Firefly {
 
 impl Firefly {
     pub fn new(base_path: &str, token: &str) -> Self {
+        let mut headers = header::HeaderMap::new();
+        headers.insert(
+            header::CONTENT_TYPE,
+            header::HeaderValue::from_static("application/json"),
+        );
+
         Self {
             configuration: Configuration {
                 base_path: base_path.to_string(),
                 user_agent: None,
                 oauth_access_token: Some(token.to_string()),
+                client: reqwest::Client::builder()
+                    .default_headers(headers)
+                    .build()
+                    .unwrap_or(reqwest::Client::new()),
                 ..Default::default()
             },
         }

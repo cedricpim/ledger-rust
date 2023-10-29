@@ -10,7 +10,7 @@ static SUCCESS: &str = "Generated default configuration file on";
 #[derive(Parser, Debug)]
 pub struct Args {
     /// Copy the default configuration file, overriding existing file
-    #[clap(short, long)]
+    #[arg(short, long)]
     force: bool,
 }
 

@@ -1,4 +1,4 @@
-use clap::{ArgEnum, Parser, Subcommand};
+use clap::{ValueEnum, Parser, Subcommand};
 
 use std::process;
 
@@ -34,7 +34,7 @@ macro_rules! werr {
 }
 
 #[derive(Parser, Debug)]
-#[clap(author, about, version)]
+#[command(author, about, version)]
 pub struct App {
     #[clap(subcommand)]
     pub command: Commands,
@@ -139,7 +139,7 @@ pub enum Commands {
     Sort(cmd::sort::Args),
 }
 
-#[derive(ArgEnum, Clone, Copy, Debug)]
+#[derive(ValueEnum, Clone, Copy, Debug)]
 pub enum Mode {
     Ledger,
     Networth,

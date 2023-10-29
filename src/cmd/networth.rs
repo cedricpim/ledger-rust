@@ -8,10 +8,10 @@ use crate::util;
 #[derive(Parser, Debug)]
 pub struct Args {
     /// Display entries on the same currency (format ISO 4217)
-    #[clap(short, long)]
+    #[arg(short, long)]
     currency: Option<String>,
     /// Save the total networth to the networth CSV
-    #[clap(short, long)]
+    #[arg(short, long)]
     save: bool,
 }
 

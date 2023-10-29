@@ -11,17 +11,17 @@ static VIM: &str = "vim";
 #[derive(Parser, Debug)]
 pub struct Args {
     /// Open file with cursor in the last line (Only supported for vim and variants)
-    #[clap(short, long)]
+    #[arg(short, long)]
     bottom: bool,
-    #[clap(
-        arg_enum,
+    #[arg(
+        value_enum,
         default_value = "ledger",
-        default_value_if("networth", None, Some("networth")),
+        default_value_if("networth", "", Some("networth")),
         hide = true
     )]
     mode: crate::Mode,
     /// Open networth CSV instead of ledger CSV
-    #[clap(short, long)]
+    #[arg(short, long)]
     networth: bool,
 }
 

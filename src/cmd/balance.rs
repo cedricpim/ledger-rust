@@ -14,10 +14,10 @@ use crate::{util, Mode};
 #[derive(Parser, Debug)]
 pub struct Args {
     /// Display all accounts
-    #[clap(short, long)]
+    #[arg(short, long)]
     all: bool,
     /// Calculate the current balance at a given date
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub date: Option<Date>,
 }
 

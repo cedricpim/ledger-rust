@@ -9,25 +9,25 @@ use crate::filter::Filter;
 #[derive(Parser, Debug)]
 pub struct Args {
     /// Select entries that occurred on the year
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub year: Option<i32>,
     /// Select entries that occurred on the month
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub month: Option<u32>,
     /// Select entries that occurred after the date
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub from: Option<Date>,
     /// Select entries that occurred before the date
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub till: Option<Date>,
     /// Exclude entries that match the categories
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub exclude: Vec<String>,
     /// Display entries on the same currency (format ISO 4217)
-    #[clap(short = 'C', long)]
+    #[arg(short = 'C', long)]
     pub currency: Option<String>,
     /// Display report with aggregated information
-    #[clap(short, long)]
+    #[arg(short, long)]
     check: bool,
 }
 

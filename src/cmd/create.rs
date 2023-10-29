@@ -11,18 +11,18 @@ static SUCCESS: &str = "Generated default file on";
 
 #[derive(Parser, Debug)]
 pub struct Args {
-    #[clap(
-        arg_enum,
+    #[arg(
+        value_enum,
         default_value = "ledger",
-        default_value_if("networth", None, Some("networth")),
+        default_value_if("networth", "", Some("networth")),
         hide = true
     )]
     mode: crate::Mode,
     /// Create networth CSV instead of ledger CSV
-    #[clap(short, long)]
+    #[arg(short, long)]
     networth: bool,
     /// Create the initial file, overriding existing one
-    #[clap(short, long)]
+    #[arg(short, long)]
     force: bool,
 }
 

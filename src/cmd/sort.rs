@@ -6,15 +6,15 @@ use crate::resource::Resource;
 
 #[derive(Parser, Debug)]
 pub struct Args {
-    #[clap(
-        arg_enum,
+    #[arg(
+        value_enum,
         default_value = "ledger",
-        default_value_if("networth", None, Some("networth")),
+        default_value_if("networth", "", Some("networth")),
         hide = true
     )]
     mode: crate::Mode,
     /// Sort entries from networth CSV instead of ledger CSV
-    #[clap(short, long)]
+    #[arg(short, long)]
     networth: bool,
 }
 

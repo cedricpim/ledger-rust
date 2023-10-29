@@ -11,35 +11,35 @@ use crate::util;
 #[derive(Parser, Debug)]
 pub struct Args {
     /// Select entries that occurred on the year
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub year: Option<i32>,
     /// Select entries that occurred on the month
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub month: Option<u32>,
     /// Select entries that occurred after the date
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub from: Option<Date>,
     /// Select entries that occurred before the date
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub till: Option<Date>,
     /// Select entries that match the categories
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub categories: Vec<String>,
     /// Display entries on the same currency (format ISO 4217)
-    #[clap(short = 'C', long)]
+    #[arg(short = 'C', long)]
     currency: Option<String>,
     /// Print selected entries to the output
-    #[clap(short, long, default_value = "/dev/stdout")]
+    #[arg(short, long, default_value = "/dev/stdout")]
     output: String,
-    #[clap(
-        arg_enum,
+    #[arg(
+        value_enum,
         default_value = "ledger",
-        default_value_if("networth", None, Some("networth")),
+        default_value_if("networth", "", Some("networth")),
         hide = true
     )]
     mode: crate::Mode,
     /// Select entries from networth CSV instead of ledger CSV
-    #[clap(short, long)]
+    #[arg(short, long)]
     networth: bool,
 }
 

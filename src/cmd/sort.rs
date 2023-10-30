@@ -9,7 +9,7 @@ pub struct Args {
     #[arg(
         value_enum,
         default_value = "ledger",
-        default_value_if("networth", "", Some("networth")),
+        default_value_if("networth", "true", Some("networth")),
         hide = true
     )]
     mode: crate::Mode,

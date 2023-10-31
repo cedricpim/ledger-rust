@@ -72,7 +72,7 @@ impl Liner for Entry {
     }
 
     fn venue(&self) -> String {
-        "".to_string()
+        "Investments".to_string()
     }
 
     fn trip(&self) -> String {

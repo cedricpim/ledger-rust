@@ -34,6 +34,10 @@ impl Firefly {
             header::CONTENT_TYPE,
             header::HeaderValue::from_static("application/json"),
         );
+        headers.insert(
+            header::ACCEPT,
+            header::HeaderValue::from_static("application/json"),
+        );
 
         Self {
             configuration: Configuration {

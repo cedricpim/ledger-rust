@@ -22,6 +22,7 @@ fmt:
 clippy:
 	cargo clippy
 
+# Also install rustup and musl
 release:
 	rustup target add $(TARGET)
 	mkdir -p builds

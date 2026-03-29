@@ -87,6 +87,7 @@ impl Networth {
             currency: self.currency,
             investment,
             id: "".to_string(),
+            exported: String::new(),
         }
         .into()
     }

@@ -8,7 +8,7 @@ use crate::entity::line::{Line, Liner};
 use crate::entity::money::{Currency, Money};
 use crate::exchange::Exchange;
 
-pub static FIELDS: [&str; 10] = [
+pub static FIELDS: [&str; 11] = [
     "Account",
     "Date",
     "Category",
@@ -19,6 +19,7 @@ pub static FIELDS: [&str; 10] = [
     "Currency",
     "Trip",
     "Id",
+    "Exported",
 ];
 
 #[derive(Clone, Debug, Serialize, Default)]
@@ -34,6 +35,7 @@ pub struct Transaction {
     pub currency: Currency,
     pub trip: String,
     pub id: String,
+    pub exported: String,
 }
 
 impl Transaction {
@@ -51,6 +53,7 @@ impl Transaction {
             currency,
             trip: values[8].to_string(),
             id: values[9].to_string(),
+            exported: if values.len() > 10 { values[10].to_string() } else { String::new() },
         })
     }
 }
@@ -104,6 +107,14 @@ impl Liner for Transaction {
         self.id = value;
     }
 
+    fn exported(&self) -> String {
+        self.exported.to_string()
+    }
+
+    fn set_exported(&mut self, value: String) {
+        self.exported = value;
+    }
+
     fn set_invested(&mut self, _value: Money) {}
     fn set_amount(&mut self, _value: Money) {}
 
@@ -129,6 +140,7 @@ impl Liner for Transaction {
             amount: money,
             trip: self.trip.to_string(),
             id: self.id.to_string(),
+            exported: self.exported.to_string(),
         }
         .into())
     }
@@ -156,6 +168,7 @@ impl<'de> Deserialize<'de> for Transaction {
             Currency,
             Trip,
             Id,
+            Exported,
         }
 
         struct TransactionVisitor;
@@ -181,6 +194,7 @@ impl<'de> Deserialize<'de> for Transaction {
                 let mut currency = None;
                 let mut trip = None;
                 let mut id = None;
+                let mut exported = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
@@ -244,6 +258,12 @@ impl<'de> Deserialize<'de> for Transaction {
                             }
                             id = Some(map.next_value()?);
                         }
+                        Field::Exported => {
+                            if exported.is_some() {
+                                return Err(de::Error::duplicate_field("exported"));
+                            }
+                            exported = Some(map.next_value()?);
+                        }
                     }
                 }
 
@@ -262,6 +282,7 @@ impl<'de> Deserialize<'de> for Transaction {
                     currency,
                     trip: trip.ok_or_else(|| de::Error::missing_field("trip"))?,
                     id: id.ok_or_else(|| de::Error::missing_field("id"))?,
+                    exported: exported.unwrap_or_default(),
                 })
             }
         }
@@ -277,6 +298,7 @@ impl<'de> Deserialize<'de> for Transaction {
             "currency",
             "trip",
             "id",
+            "exported",
         ];
         deserializer.deserialize_struct("Transaction", FIELDS, TransactionVisitor)
     }

@@ -56,7 +56,9 @@ pub trait Liner {
     fn venue(&self) -> String;
     fn trip(&self) -> String;
     fn investment(&self) -> Money;
+    fn exported(&self) -> String;
     fn set_id(&mut self, value: String);
+    fn set_exported(&mut self, value: String);
     fn set_invested(&mut self, value: Money);
     fn set_amount(&mut self, value: Money);
     fn pushable(&self) -> bool;

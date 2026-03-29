@@ -87,6 +87,15 @@ pub enum Commands {
     /// This command does just that, while handling the decryption/encryption
     /// (if enabled).
     Edit(cmd::edit::Args),
+    /// Export unexported transactions to per-account CSV files
+    ///
+    /// This command scans the ledger for transactions that have not yet been
+    /// exported and writes one CSV file per account to the specified output
+    /// directory (default: current working directory). Each exported record is
+    /// marked with the export date so it will not appear in future exports.
+    /// Transfer transactions are collapsed to a single entry on the source
+    /// account side, with the destination account name used as the payee.
+    Export(cmd::export::Args),
     /// Calculate current networth
     ///
     /// This command will print the list of the current networth, per asset.
@@ -156,6 +165,7 @@ fn main() {
         Commands::Balance(args) => cmd::balance::run(args),
         Commands::Book(args) => cmd::book::run(args),
         Commands::Edit(args) => cmd::edit::run(args),
+        Commands::Export(args) => cmd::export::run(args),
         Commands::Configure(args) => cmd::configure::run(args),
         Commands::Convert(args) => cmd::convert::run(args),
         Commands::Create(args) => cmd::create::run(args),

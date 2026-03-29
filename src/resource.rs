@@ -4,6 +4,7 @@ use tempfile::NamedTempFile;
 
 use std::fs::File;
 use std::fs::OpenOptions;
+use std::io::Seek;
 
 use crate::entity::line::{Line, Liner};
 use crate::entity::{entry, transaction};
@@ -166,6 +167,8 @@ impl Resource {
                 std::fs::copy(&self.filepath, self.tempfile.path())?;
             }
         };
+
+        self.tempfile.seek(std::io::SeekFrom::Start(0))?;
 
         Ok(())
     }

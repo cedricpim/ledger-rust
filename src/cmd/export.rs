@@ -128,12 +128,21 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     let mut nw_exports: HashMap<String, Vec<ExportRow>> = HashMap::new();
     let mut nw_marked: HashSet<usize> = HashSet::new();
     let mut nw_index = 0usize;
+    let mut previous_investment: Option<crate::entity::money::Money> = None;
 
     nw_resource.line(&mut |record| {
         let current = nw_index;
         nw_index += 1;
 
+        let prev = previous_investment;
+        previous_investment = Some(record.investment());
+
         if record.exported().is_empty() {
+            let zero = crate::entity::money::Money::new(record.currency(), 0);
+            let delta = record.investment() - prev.unwrap_or(zero);
+            let amount = delta.exchange(default_currency, &exchange)?;
+            let prec = default_currency.decimal_places() as usize;
+
             nw_exports
                 .entry(record.account())
                 .or_default()
@@ -142,7 +151,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
                     payee: String::new(),
                     notes: "Daily".to_string(),
                     category: record.category(),
-                    amount: format_amount(record, default_currency, &exchange)?,
+                    amount: format!("{:.prec$}", amount.to_number()),
                 });
 
             nw_marked.insert(current);

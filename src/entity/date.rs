@@ -97,7 +97,7 @@ impl Date {
         self.value > chrono::Local::now().naive_local().date()
     }
 
-    pub fn format(self, fmt: &str) -> DelayedFormat<StrftimeItems> {
+    pub fn format(self, fmt: &str) -> DelayedFormat<StrftimeItems<'_>> {
         self.value.format(fmt)
     }
 

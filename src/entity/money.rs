@@ -92,11 +92,7 @@ pub struct Money {
 
 impl PartialOrd for Money {
     fn partial_cmp(&self, other: &Money) -> Option<Ordering> {
-        if self.currency == other.currency {
-            self.value.partial_cmp(&other.value)
-        } else {
-            None
-        }
+        Some(self.cmp(other))
     }
 }
 

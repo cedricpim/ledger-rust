@@ -4,8 +4,6 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-use crate::entity::line::Liner;
-use crate::resource::Resource;
 use crate::xdg::Xdg;
 use crate::{util, Mode};
 
@@ -20,36 +18,12 @@ pub struct Config {
     pub ignored_accounts: Vec<String>,
     pub investments: String,
     pub currency: String,
-    pub firefly: Option<FireflyOptions>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Files {
     ledger: String,
     networth: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct FireflyOptions {
-    pub base_path: String,
-    pub token: String,
-    pub opening_balance: String,
-    #[serde(skip)]
-    pub currency: String,
-    #[serde(skip)]
-    pub transfer: String,
-}
-
-impl FireflyOptions {
-    pub fn build(firefly_options: &FireflyOptions, config: &Config) -> Self {
-        Self {
-            base_path: firefly_options.base_path.to_string(),
-            token: firefly_options.token.to_string(),
-            opening_balance: firefly_options.opening_balance.to_string(),
-            currency: config.currency.to_string(),
-            transfer: config.transfer.to_string(),
-        }
-    }
 }
 
 impl Config {
@@ -78,7 +52,6 @@ impl Config {
             transfer: "Transfer".to_string(),
             ignored_accounts: vec!["Personal".to_string()],
             investments: "Investment".to_string(),
-            firefly: None,
         };
 
         let mut file = File::create(config_path)?;
@@ -109,25 +82,5 @@ impl Config {
 
     pub fn exchange_key(&self) -> String {
         self.exchange_key.to_owned()
-    }
-
-    pub fn total_pushable_lines(&self) -> anyhow::Result<usize> {
-        let mut ledger_lines = 0;
-        Resource::new(self, Mode::Ledger)?.line(&mut |record| {
-            if record.pushable() {
-                ledger_lines += 1
-            };
-            Ok(())
-        })?;
-
-        let mut networth_lines = 0;
-        Resource::new(self, Mode::Networth)?.line(&mut |record| {
-            if record.pushable() {
-                networth_lines += 1
-            };
-            Ok(())
-        })?;
-
-        Ok(networth_lines + ledger_lines)
     }
 }

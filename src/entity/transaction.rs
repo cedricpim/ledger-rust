@@ -8,7 +8,7 @@ use crate::entity::line::{Line, Liner};
 use crate::entity::money::{Currency, Money};
 use crate::exchange::Exchange;
 
-pub static FIELDS: [&str; 11] = [
+pub static FIELDS: [&str; 10] = [
     "Account",
     "Date",
     "Category",
@@ -18,7 +18,6 @@ pub static FIELDS: [&str; 11] = [
     "Amount",
     "Currency",
     "Trip",
-    "Id",
     "Exported",
 ];
 
@@ -34,7 +33,6 @@ pub struct Transaction {
     pub amount: Money,
     pub currency: Currency,
     pub trip: String,
-    pub id: String,
     pub exported: String,
 }
 
@@ -52,8 +50,7 @@ impl Transaction {
             amount: Money::parse(&values[6], currency)?,
             currency,
             trip: values[8].to_string(),
-            id: values[9].to_string(),
-            exported: if values.len() > 10 { values[10].to_string() } else { String::new() },
+            exported: values[9].to_string(),
         })
     }
 }
@@ -87,10 +84,6 @@ impl Liner for Transaction {
         self.currency
     }
 
-    fn id(&self) -> String {
-        self.id.to_string()
-    }
-
     fn venue(&self) -> String {
         self.venue.to_string()
     }
@@ -103,10 +96,6 @@ impl Liner for Transaction {
         Money::new(self.currency, 0)
     }
 
-    fn set_id(&mut self, value: String) {
-        self.id = value;
-    }
-
     fn exported(&self) -> String {
         self.exported.to_string()
     }
@@ -117,14 +106,6 @@ impl Liner for Transaction {
 
     fn set_invested(&mut self, _value: Money) {}
     fn set_amount(&mut self, _value: Money) {}
-
-    fn pushable(&self) -> bool {
-        self.id().is_empty() && !self.date().future()
-    }
-
-    fn pushed(&self) -> (String, Vec<Line>) {
-        (self.id(), vec![self.clone().into()])
-    }
 
     fn exchange(&self, to: Currency, exchange: &Exchange) -> anyhow::Result<Line> {
         let money = self.amount.exchange(to, exchange)?;
@@ -139,7 +120,6 @@ impl Liner for Transaction {
             currency: money.currency(),
             amount: money,
             trip: self.trip.to_string(),
-            id: self.id.to_string(),
             exported: self.exported.to_string(),
         }
         .into())
@@ -167,7 +147,6 @@ impl<'de> Deserialize<'de> for Transaction {
             Amount,
             Currency,
             Trip,
-            Id,
             Exported,
         }
 
@@ -193,7 +172,6 @@ impl<'de> Deserialize<'de> for Transaction {
                 let mut amount = None;
                 let mut currency = None;
                 let mut trip = None;
-                let mut id = None;
                 let mut exported = None;
 
                 while let Some(key) = map.next_key()? {
@@ -252,12 +230,6 @@ impl<'de> Deserialize<'de> for Transaction {
                             }
                             trip = Some(map.next_value()?);
                         }
-                        Field::Id => {
-                            if id.is_some() {
-                                return Err(de::Error::duplicate_field("id"));
-                            }
-                            id = Some(map.next_value()?);
-                        }
                         Field::Exported => {
                             if exported.is_some() {
                                 return Err(de::Error::duplicate_field("exported"));
@@ -281,8 +253,7 @@ impl<'de> Deserialize<'de> for Transaction {
                     amount: Money::parse(amount, currency).map_err(de::Error::custom)?,
                     currency,
                     trip: trip.ok_or_else(|| de::Error::missing_field("trip"))?,
-                    id: id.ok_or_else(|| de::Error::missing_field("id"))?,
-                    exported: exported.unwrap_or_default(),
+                    exported: exported.ok_or_else(|| de::Error::missing_field("exported"))?,
                 })
             }
         }
@@ -297,7 +268,6 @@ impl<'de> Deserialize<'de> for Transaction {
             "amount",
             "currency",
             "trip",
-            "id",
             "exported",
         ];
         deserializer.deserialize_struct("Transaction", FIELDS, TransactionVisitor)

@@ -23,6 +23,10 @@ fmt:
 clippy:
 	cargo clippy
 
+# Open a shell in the builder container with local code mounted
+docker-shell:
+	docker run --rm -it -v $(PWD):/app $(DOCKER_IMAGE) /bin/sh
+
 # Build the Docker image used for compilation
 docker-image:
 	docker build --target builder -t $(DOCKER_IMAGE) .

@@ -102,26 +102,6 @@ pub enum Commands {
     /// If the storage option is provided, then the total amount of the
     /// current networth is stored in the networth CSV as a new entry.
     Networth(cmd::networth::Args),
-    /// Pull new changes from Firefly III
-    ///
-    /// This command will get the latest transaction locally (by id), and
-    /// pull and the entries above that id from Firefly III (if the
-    /// configuration file is set for Firefly). For setting up the
-    /// configuration with Firefly, ensure that the key "firefly" has
-    /// a valid access token in the configuration file.
-    Pull(cmd::pull::Args),
-    /// Sync new changes from and push local changes to Firefly III
-    ///
-    /// This command will first pull any new entries and transactions from
-    /// Firefly III into local storage and, only after, it will push the
-    /// existing local changes to Firefly III (if the configuration file is
-    /// set for Firefly). This command also replaces the usage of push
-    /// command since pushing entries without first pulling any new entries
-    /// could create problems in the system (since a new id for the pushed
-    /// local change would be stored locally). For setting up the
-    /// configuration with Firefly, ensure that the key "firefly" has
-    /// a valid access token in the configuration file.
-    Sync(cmd::sync::Args),
     /// Create a report about the transactions on the ledger
     ///
     /// This command will generate a report, based on a defined time period,
@@ -170,8 +150,6 @@ fn main() {
         Commands::Convert(args) => cmd::convert::run(args),
         Commands::Create(args) => cmd::create::run(args),
         Commands::Networth(args) => cmd::networth::run(args),
-        Commands::Pull(args) => cmd::pull::run(args),
-        Commands::Sync(args) => cmd::sync::run(args),
         Commands::Report(args) => cmd::report::run(args),
         Commands::Show(args) => cmd::show::run(args),
         Commands::Sort(args) => cmd::sort::run(args),

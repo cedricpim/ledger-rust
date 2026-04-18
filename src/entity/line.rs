@@ -49,7 +49,6 @@ pub trait Liner {
     fn category(&self) -> String;
     fn description(&self) -> String;
     fn quantity(&self) -> String;
-    fn id(&self) -> String;
     fn amount(&self) -> Money;
     fn date(&self) -> Date;
     fn currency(&self) -> Currency;
@@ -57,12 +56,9 @@ pub trait Liner {
     fn trip(&self) -> String;
     fn investment(&self) -> Money;
     fn exported(&self) -> String;
-    fn set_id(&mut self, value: String);
     fn set_exported(&mut self, value: String);
     fn set_invested(&mut self, value: Money);
     fn set_amount(&mut self, value: Money);
-    fn pushable(&self) -> bool;
-    fn pushed(&self) -> (String, Vec<Line>);
     fn exchange(&self, to: Currency, exchange: &Exchange) -> anyhow::Result<Line>;
     fn write(&self, wrt: &mut csv::Writer<File>) -> anyhow::Result<()>;
 }

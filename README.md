@@ -15,13 +15,6 @@ track my current assets (including the current value of investments). This is
 available through a single command, so it can be set to automatically run daily
 and get the values to generate a, hopefully, nice and motivating graph.
 
-After some usage, I found that I would like to have some graphs about the data
-collected, so I found this open-source project called [Firefly
-III](https://github.com/firefly-iii/firefly-iii), and decided to integrate with
-it. This way, `ledger` can continue to be used from the console (everytime you
-want to track expenses) but you can still have access to nice graphs to see your
-progression and everything else provided by Firefly.
-
 ### Installation
 
 1) Download the most recent release from https://github.com/cedricpim/ledger-rust/releases
@@ -48,10 +41,6 @@ transfer: Transfer
 ignored_accounts: ['Vacation', 'Personal']
 investments: Investment
 currency: EUR
-firefly:
-  base_path: https://demo.firefly-iii.org/login
-  opening_balance: Balance
-  token: TOKEN
 ```
 
 #### Encryption
@@ -90,8 +79,7 @@ be two entries (an expense and an income) from one account to the other. These
 type of lines could result in incorrect reports that would show a much higher
 value of income and of expenses. To avoid that, the value defined for `transfer`
 can be assigned to the line category and reports will ignore such values in the
-calculations (also, in Firefly, such entries will be marked correctly as
-transfers).
+calculations.
 
 #### Ignored Accounts
 
@@ -116,21 +104,6 @@ all values should be converted when generating a report (mostly useful when
 handling multiple accounts with different currencies). The format for the value
 is the currency code for ISO 4217.
 
-#### Firefly
-
-This is optional and it allows `ledger` to be integrated with Firefly III. This
-integration means that the ledger can continue to be used locally but `ledger`
-provides commands to sync the local data to the server so that the data can be
-visualised and sliced in ways that wouldn't be possible in the terminal.
-Furthermore, it is also possible to pull changes from Firefly (for example, for
-the cases when you would choose to use one of its mobile apps). `base_path` is
-the URL where Firefly is running, `opening_balance` is the category that defines
-that a line is an opening balance for that account (for example, when starting
-to use `ledger`, some of your accounts might already have a balance. That
-account should automatically be created with that balance instead of having
-a transaction for that amount) and `token` is a "Personal Access Token" to
-authenticate `ledger` on requests made to Firefly.
-
 ### Usage
 
 `ledger --help` will provide with most of the information needed.
@@ -153,21 +126,6 @@ When append `--save`, the whole value (cash + investments valuation) will be
 summed and added as a new entry (with the current date) to the networth file (as
 part of that entry, it will also be calculated the total amount invested in the
 current date as well as the total value of investments only).
-
-#### Firefly
-
-`ledger pull` will pull entries from Firefly III while `ledger sync` will first
-pull the changes from Firefly III and then push the local changes.
-
-*Note*: The ledger and networth files include a column called Id that
-corresponds to the Id of the record in Firefly III. If not integrated with it,
-this column is never used, but when integrated, the system relies on that empty
-field to know that the entry must be pushed (returning an ID that is then
-stored).
-
-*Note*: No single push command is provided since `pull` is done based in the ID of
-the entry and if push is done before a pull, it could generate a higher entry ID
-locally and the previous entries would never be synced.
 
 ### Development
 

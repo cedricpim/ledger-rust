@@ -86,7 +86,6 @@ impl Networth {
             amount: self.current_on(today) + self.investments(),
             currency: self.currency,
             investment,
-            id: "".to_string(),
             exported: String::new(),
         }
         .into()
